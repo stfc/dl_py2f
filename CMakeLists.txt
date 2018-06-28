@@ -17,27 +17,24 @@
 #  <http://www.gnu.org/licenses/>.
 
 # paths
-set(CMAKE_Fortran_MODULE_DIRECTORY ${CHEMSH_BUILD_DIR}/modules/py2f)
+set(CMAKE_Fortran_MODULE_DIRECTORY ${CHEMSH_BUILD_DIR}/modules/dl_py2f)
 
 # source files
-list(APPEND PY2F_FSOURCES py2f.f90
-#                          py2f_dictionary.f90
-#                          py2f_datatypes.f90
-#                          py2f_objects.f90
+list(APPEND PY2F_FSOURCES dl_py2f.f90
 )
 
 include_directories(${CHEMSH_BUILD_DIR}/modules
-                    ${CHEMSH_BUILD_DIR}/modules/py2f
+                    ${CHEMSH_BUILD_DIR}/modules/dl_py2f
                    )
 
-add_library(py2f SHARED ${PY2F_FSOURCES})
+add_library(dl_py2f SHARED ${PY2F_FSOURCES})
 
-#target_link_libraries(py2f chemsh)
+#target_link_libraries(dl_py2f chemsh)
 
 if(DEBUG)
 else()
     if(${CHEMSH_ARCH} STREQUAL "intel")
-        set_target_properties(py2f PROPERTIES COMPILE_FLAGS "-diag-disable=8753")
+        set_target_properties(dl_py2f PROPERTIES COMPILE_FLAGS "-diag-disable=8753")
     endif()
 endif()
 
