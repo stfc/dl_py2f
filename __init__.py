@@ -141,8 +141,14 @@ def py2f(obj):
         initialiser.append(pointer(bar))
 
 
-    def _dict2(foo):
-        pass
+    # we currently do not support dict type so convert to None
+    def __dict2None(foo):
+        '''<dict> to c Null (<None>)'''
+
+        print(" >>> DL_PY2F WARNING: unsupport <class dict> entry \""+key+"\" will be treated as None.")
+
+        fields.append((key, c_void_p))
+        initialiser.append(None)
 
 
     def __float2cdouble(foo):
@@ -154,6 +160,7 @@ def py2f(obj):
 
     def __bool2cbool(foo):
         '''<bool> to <c_bool>'''
+
         # c_bool must be passed as pointer, otherwise the item next to it is affected due to c_bool's short byte length
         fields.append((key, POINTER(c_bool)))
         initialiser.append(pointer(c_bool(foo)))
@@ -161,18 +168,21 @@ def py2f(obj):
 
     def __None2ptr(foo):
         '''<None> to c Null'''
+
         fields.append((key, c_void_p))
         initialiser.append(None)
 
 
-    selectcases = { str       :__str2bytes,
-                    int       :__int2cint,
-                    float     :__float2cdouble,
+    selectcases = { 
                     bool      :__bool2cbool,
+                    dict      :__dict2None,
+                    float     :__float2cdouble,
+                    int       :__int2cint,
                     list      :__list2ndp,
-                    tuple     :__list2ndp,
-                    ModuleType:__module2bytes,
                     object    :__obj2ptr,
+                    tuple     :__list2ndp,
+                    str       :__str2bytes,
+                    ModuleType:__module2bytes,
                     # there is no longer <NoneType> in <module> types
                     type(None):__None2ptr }
 
@@ -212,7 +222,12 @@ def py2f(obj):
         initialiser.append(c_bool(objutils.getType(val) is list and key in getattr(obj, '_fields', [])))
 
         # initialiser: G. attributes (by selecting methods from the above dict)
-        selectcases[objutils.getType(getattr(obj, key))](getattr(obj, key))
+        try:
+            selectcases[objutils.getType(getattr(obj, key))](getattr(obj, key))
+        except KeyError:
+            print(" >>> DL_PY2F ERROR: type "+str(objutils.getType(getattr(obj, key)))+" of entry \""+key+"\" not supported.\n")
+        except:
+            print(" >>> DL_PY2F ERROR: error processing entry \""+key+"\".\n")
 
 
     # labels for types, attributes, etc. (CStructType in objects.f90)
