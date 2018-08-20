@@ -368,7 +368,6 @@ module DL_PY2F
                             endif
 
                         case default
-                        !    print *, "### assignDict: case default"
 
                     endselect
 
@@ -1186,7 +1185,11 @@ module DL_PY2F
         integer ncols
 
         val => metaObj%returnPyPtr(key)
-        ncols = val%width
+
+        ! some versions of GNU compiler segfaults if the Python object is None (c_ptr_null)
+        if(associated(val)) then
+            ncols = val%width
+        endif
 
     endsubroutine getPyPtr
 
