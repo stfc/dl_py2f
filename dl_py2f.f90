@@ -181,6 +181,7 @@ module DL_PY2F
         type(CStructType) , pointer                        :: cdata(:)
         type(PyType)      , pointer                        :: pyptrbuff
         integer(c_long)   , pointer                        :: cintbuff
+        character(len=8)  , parameter                      :: nonetype = "NoneType"
         integer(c_long)   , pointer                        :: intarraybuff(:,:) , onedimintbuff(:) , twodimintbuff(:,:)
         logical(c_bool)   , pointer                        :: bbuff
         real(c_double)    , pointer                        :: cdblbuff
@@ -207,7 +208,7 @@ module DL_PY2F
             selectcase(trim(cdata(i)%type))
 
                 case('NoneType')
-                    call metaobj%assign(trim(cdata(i)%name), c_null_ptr)
+                    call metaobj%assign(trim(cdata(i)%name), nonetype)
 
                 case('object')
                     call c_f_pointer(cdata(i)%attr, pyptrbuff)
@@ -371,9 +372,6 @@ module DL_PY2F
 
                     endselect
 
-! TODO
-!                case("NoneType")
-!!                    print *, "##################################### float"
             endselect
 
         enddo
@@ -389,9 +387,6 @@ module DL_PY2F
         class(dictType) ,         intent(inout) :: metaObj
         character(len=*),         intent(in)    :: key
         class(*)        , target, intent(in)    :: source
-
-        character(len=:), pointer :: val
-        class(*)        , pointer              :: tmp
 
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
@@ -728,11 +723,22 @@ module DL_PY2F
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
                 ptr => metaObj%scalar
-                if(c_associated(ptr)) then
-                    val => metaObj%scalar
-                else
-                    val => null()
-                endif
+                ! YL 18/09/18: the method of c_null_ptr does not work (randomly returning F or T when querying with c_associated) since some point (GNU 5 or 7 in Ubuntu 18?)
+!                if(c_associated(ptr)) then
+!                    val => metaObj%scalar
+!                else
+!                    val => null()
+!                endif
+                selecttype(tmp=>metaObj%scalar)
+                    type is (character(len=*))
+                        if(tmp.eq."NoneType") then
+                            val => null()
+                        else
+                            val => metaObj%scalar
+                        endif
+                    class default
+                        val => metaObj%scalar
+                endselect
             else
                 val => returnPyPtr(metaObj%next, key)
             endif
