@@ -32,13 +32,14 @@ module DL_PY2F
     public  :: ptr2dict, dictType, PyType
 
     type, bind(c) :: CStructType
-        character(len=16, kind=c_char) :: type
-        character(len=16, kind=c_char) :: name
-        character(len=16, kind=c_char) :: dtype = C_NULL_CHAR
-        integer(c_long)                :: size
-        integer(c_long)                :: sizem
-        logical(c_bool)                :: isfield
-        type(c_ptr)                    :: attr
+        ! YL 09/10/2018: components %type, %name, or %dtype of length > 1 no longer allowed by gfortran 8 or later
+        character(len=1, kind=c_char) :: type(16)
+        character(len=1, kind=c_char) :: name(16)
+        character(len=1, kind=c_char) :: dtype(16)
+        integer(c_long)               :: size
+        integer(c_long)               :: sizem
+        logical(c_bool)               :: isfield
+        type(c_ptr)                   :: attr
     endtype CStructType
     ! Python object type
     ! YL: bind(c) is necessary here since PyType objects are used
@@ -178,6 +179,7 @@ module DL_PY2F
         type(PyType)      , pointer, intent(in)            :: PyPtr
         logical                    , intent(in) , optional :: keepRef
 
+        integer           , parameter                      :: LENSTR = 16
         type(CStructType) , pointer                        :: cdata(:)
         type(PyType)      , pointer                        :: pyptrbuff
         integer(c_long)   , pointer                        :: cintbuff
@@ -187,12 +189,13 @@ module DL_PY2F
         real(c_double)    , pointer                        :: cdblbuff
         real(c_double)    , pointer                        :: dblarraybuff(:,:) , onedimdblbuff(:) , twodimdblbuff(:,:)
         real(c_double)    , pointer                        :: twodimdblbuff2(:,:), twodimdblbuff3(:,:)
+        character(len=LENSTR)                              :: namebuff, typebuff, dtypebuff
         character(len=8)  , pointer                        :: chararraybuff(:,:)
         character(len=8)  , pointer                        :: onedimcharbuff(:), twodimcharbuff(:,:)
         ! should NOT have deferred length!
         character(len=255), pointer                        :: cbuff
 
-        integer                                            :: i, ncols, sizem, sizen
+        integer                                            :: i, j, ncols, sizem, sizen
         logical                                            :: keepReference
 
         if(.not.present(keepRef)) then
@@ -205,30 +208,40 @@ module DL_PY2F
         ! loop over components of Python object and set values to dictionary
         do i = 1, PyPtr%nattrs
 
-            selectcase(trim(cdata(i)%type))
+            ! YL 09/10/2018: as per gfortran 8, components %type, %name, or %dtype cannot be of length > 1
+            ! (Error: Component ‘dtype’ of BIND(C) type at (1) must have length one)
+            ! see: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=84885
+            ! so let's use array of characters
+            do j = 1, 16
+                typebuff(j:j)  = cdata(i)%type(j)
+                namebuff(j:j)  = cdata(i)%name(j)
+                dtypebuff(j:j) = cdata(i)%dtype(j)
+            enddo
+
+            selectcase(trim(typebuff))
 
                 case('NoneType')
-                    call metaobj%assign(trim(cdata(i)%name), nonetype)
+                    call metaobj%assign(trim(namebuff), nonetype)
 
                 case('object')
                     call c_f_pointer(cdata(i)%attr, pyptrbuff)
-                    call metaObj%assign(trim(cdata(i)%name), pyptrbuff)
+                    call metaObj%assign(trim(namebuff), pyptrbuff)
 
                 case('int')
                     call c_f_pointer(cdata(i)%attr, cintbuff)
-                    call metaObj%assign(trim(cdata(i)%name), cintbuff)
+                    call metaObj%assign(trim(namebuff), cintbuff)
 
                 case('float')
                     call c_f_pointer(cdata(i)%attr, cdblbuff)
-                    call metaObj%assign(trim(cdata(i)%name), cdblbuff)
+                    call metaObj%assign(trim(namebuff), cdblbuff)
 
                 case('bool')
                     call c_f_pointer(cdata(i)%attr, bbuff)
-                    call metaObj%assign(trim(cdata(i)%name), bbuff)
+                    call metaObj%assign(trim(namebuff), bbuff)
 
                 case('str')
                     call c_f_pointer(cdata(i)%attr, cbuff)
-                    call metaObj%assign(trim(cdata(i)%name), cbuff)
+                    call metaObj%assign(trim(namebuff), cbuff)
 
                 case('list')
 
@@ -243,7 +256,7 @@ module DL_PY2F
                         sizen = 0
                     endif
 
-                    selectcase(trim(cdata(i)%dtype))
+                    selectcase(trim(dtypebuff))
 
                         case('bytes64')
 
@@ -258,11 +271,11 @@ module DL_PY2F
             
                                 if(sizen.eq.1) then
                                     onedimcharbuff => chararraybuff(1,1:sizem)
-                                    call metaObj%assign(trim(cdata(i)%name), onedimcharbuff, keepReference)
+                                    call metaObj%assign(trim(namebuff), onedimcharbuff, keepReference)
                                 elseif(sizen.gt.1) then
                                     print *, ">>> DL_PY2F ERROR: 2-D char array not yet supported..."
     !                                twodimcharbuff => chararraybuff(1:sizen,:)
-    !                                call metaObj%assign(trim(cdata(i)%name), twodimcharbuff, keepReference)
+    !                                call metaObj%assign(trim(namebuff), twodimcharbuff, keepReference)
                                 endif
 
                             ! array is not part of the _master array
@@ -274,14 +287,14 @@ module DL_PY2F
                                 if(sizen.eq.1) then
 
                                     onedimcharbuff => chararraybuff(1,:)
-                                    call metaObj%assign(trim(cdata(i)%name), onedimcharbuff, keepReference)
+                                    call metaObj%assign(trim(namebuff), onedimcharbuff, keepReference)
 
                                 elseif(sizen.gt.1) then
 
                                     ! cast to a 2D array
                                     call c_f_pointer(c_loc(chararraybuff), twodimcharbuff, [sizen,sizem])
                                     print *, ">>> DL_PY2F ERROR: 2-D char array not yet supported..."
-                                    !call metaObj%assign(trim(cdata(i)%name), twodimcharbuff, keepReference)
+                                    !call metaObj%assign(trim(namebuff), twodimcharbuff, keepReference)
 
                                 endif
 
@@ -301,10 +314,10 @@ module DL_PY2F
             
                                 if(sizen.eq.1) then
                                     onedimdblbuff => dblarraybuff(1,1:sizem)
-                                    call metaObj%assign(trim(cdata(i)%name), onedimdblbuff, keepReference)
+                                    call metaObj%assign(trim(namebuff), onedimdblbuff, keepReference)
                                 elseif(sizen.gt.1) then
                                     twodimdblbuff => dblarraybuff(1:sizen,:)
-                                    call metaObj%assign(trim(cdata(i)%name), twodimdblbuff, keepReference)
+                                    call metaObj%assign(trim(namebuff), twodimdblbuff, keepReference)
                                 endif
 
                             ! array is not part of the _master array
@@ -316,13 +329,13 @@ module DL_PY2F
                                 if(sizen.eq.1) then
 
                                     onedimdblbuff => dblarraybuff(1,:)
-                                    call metaObj%assign(trim(cdata(i)%name), onedimdblbuff, keepReference)
+                                    call metaObj%assign(trim(namebuff), onedimdblbuff, keepReference)
 
                                 elseif(sizen.gt.1) then
 
                                     ! cast to a 2D array
                                     call c_f_pointer(c_loc(dblarraybuff), twodimdblbuff, [sizen,sizem])
-                                    call metaObj%assign(trim(cdata(i)%name), twodimdblbuff, keepReference)
+                                    call metaObj%assign(trim(namebuff), twodimdblbuff, keepReference)
 
                                 endif
 
@@ -341,10 +354,10 @@ module DL_PY2F
             
                                 if(sizen.eq.1) then
                                     onedimintbuff => intarraybuff(1,1:sizem)
-                                    call metaObj%assign(trim(cdata(i)%name), onedimintbuff, keepReference)
+                                    call metaObj%assign(trim(namebuff), onedimintbuff, keepReference)
                                 elseif(sizen.gt.1) then
                                     twodimintbuff => intarraybuff(1:sizen,:)
-                                    call metaObj%assign(trim(cdata(i)%name), twodimintbuff, keepReference)
+                                    call metaObj%assign(trim(namebuff), twodimintbuff, keepReference)
                                 endif
 
                             ! array is not part of the _master array
@@ -356,13 +369,13 @@ module DL_PY2F
                                 if(sizen.eq.1) then
 
                                     onedimintbuff => intarraybuff(1,:)
-                                    call metaObj%assign(trim(cdata(i)%name), onedimintbuff, keepReference)
+                                    call metaObj%assign(trim(namebuff), onedimintbuff, keepReference)
 
                                 elseif(sizen.gt.1) then
 
                                     ! cast to a 2D array
                                     call c_f_pointer(c_loc(intarraybuff), twodimintbuff, [sizen,sizem])
-                                    call metaObj%assign(trim(cdata(i)%name), twodimintbuff, keepReference)
+                                    call metaObj%assign(trim(namebuff), twodimintbuff, keepReference)
 
                                 endif
 
