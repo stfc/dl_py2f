@@ -18,7 +18,7 @@
 
 
 # paths
-if(${DL_PY2F_BUILD_DIR} STREQUAL "")
+if("${DL_PY2F_BUILD_DIR}" STREQUAL "")
     set(DL_PY2F_BUILD_DIR ${CMAKE_CURRENT_LIST_DIR})
 endif()
 set(CMAKE_Fortran_MODULE_DIRECTORY ${DL_PY2F_BUILD_DIR}/modules/dl_py2f)
