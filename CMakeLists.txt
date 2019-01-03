@@ -16,29 +16,19 @@
 #  License along with Py-ChemShell.  If not, see
 #  <http://www.gnu.org/licenses/>.
 
+
 # paths
-set(CMAKE_Fortran_MODULE_DIRECTORY ${CHEMSH_BUILD_DIR}/modules/dl_py2f)
-
-# source files
-list(APPEND PY2F_FSOURCES dl_py2f.f90
-)
-
-include_directories(${CHEMSH_BUILD_DIR}/modules
-                    ${CHEMSH_BUILD_DIR}/modules/dl_py2f
-                   )
-
-add_library(dl_py2f SHARED ${PY2F_FSOURCES})
-
-#target_link_libraries(dl_py2f chemsh)
-
-if(DEBUG)
-else()
-    if(${CHEMSH_ARCH} STREQUAL "intel")
-        set_target_properties(dl_py2f PROPERTIES COMPILE_FLAGS "-diag-disable=8753")
-    endif()
+if(${DL_PY2F_BUILD_DIR} STREQUAL "")
+    set(DL_PY2F_BUILD_DIR ${CMAKE_CURRENT_LIST_DIR})
 endif()
+set(CMAKE_Fortran_MODULE_DIRECTORY ${DL_PY2F_BUILD_DIR}/modules/dl_py2f)
+include_directories(${DL_PY2F_BUILD_DIR}/modules/dl_py2f)
 
+# compile
+add_library(dl_py2f SHARED dl_py2f.f90)
 
-# rules of `make clean`
-set(CURRENT_DIR ${CMAKE_CURRENT_LIST_DIR})
-include(${CHEMSH_DIR}/chemsh/utils/cmake/clean.cmake)
+# rules for `make clean`
+set_property(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+             APPEND
+             PROPERTY ADDITIONAL_MAKE_CLEAN_FILES Makefile CMakeCache.txt cmake_install.cmake __pycache__ ${DL_PY2F_BUILD_DIR}/modules/dl_py2f
+            )

@@ -1,10 +1,10 @@
 '''DL_PY2F is a library for direct coupling of Python/NumPy and Fortran'''
 
 __author__     = [ 'You Lu', 'Thomas W. Keal' ]
-__copyright__  = 'Copyright (C) 2017 The authors of Py-ChemShell'
+__copyright__  = 'Copyright (C) 2018 The authors of Py-ChemShell'
 __credits__    = [ 'You Lu', 'Thomas W. Keal' ]
 __license__    = 'LGPLv3'
-__version__    = '0.9a'
+__version__    = '2018b'
 __maintainer__ = __author__[0]
 __email__      = 'you.lu@stfc.ac.uk'
 __status__     = ''
@@ -20,11 +20,11 @@ __status__     = ''
 #
 #  Py-ChemShell is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 #  GNU Lesser General Public License for more details.
 #
 #  You should have received a copy of the GNU Lesser General Public
-#  License along with Py-ChemShell.  If not, see
+#  License along with Py-ChemShell. If not, see
 #  <http://www.gnu.org/licenses/>.
 
 #  Copyright (C) 2017 The authors of DL_PY2F
@@ -38,26 +38,89 @@ __status__     = ''
 #
 #  DL_PY2F is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 #  GNU Lesser General Public License for more details.
 #
 #  You should have received a copy of the GNU Lesser General Public
-#  License along with DL_PY2F.  If not, see
+#  License along with DL_PY2F. If not, see
 #  <http://www.gnu.org/licenses/>.
 
-from ctypes  import c_long, c_double, c_bool, c_char, c_wchar_p, c_char_p, c_void_p, addressof, pointer, POINTER, Structure
-from numpy   import asarray, ctypeslib
-from types   import ModuleType
-from ..utils import objutils
+
+# change this name as your application needs, for example:
+# from ctypes import Structure
+# from numpy  import full, zeros
+# class Fragment(Structure)
+#    _attrs = {
+#               'bqs'     : BQs(),
+#               'coords'  : zeros(shape=(1,3),     dtype=float64),
+#               'connmode':'covalent',
+#               'frozen'  : zeros(shape=(1,) ,     dtype=int64),
+#               'grid'    : None,
+#               'names'   : full((1)         , '', dtype='S8'),
+#               'natoms'  : 0,
+#             }
+__dictname = '_attrs'
+
+def __getType(obj):
+    '''Return type'''
+
+    from numpy  import ndarray, float64, float32, int64, int32
+    from types  import ModuleType, FunctionType
+
+    # numpy.ndarray treated as list
+    if isinstance(obj, ndarray):
+        return list
+
+    # list
+    elif isinstance(obj, list):
+        return list
+
+    # str
+    elif isinstance(obj, str):
+        return str
+
+    # bytes
+    elif isinstance(obj, bytes):
+        return bytes
+
+    # float
+    elif isinstance(obj, float64) or isinstance(obj, float32):
+        return float
+
+    # int
+    elif isinstance(obj, int64) or isinstance(obj, int32):
+        return int
+
+    # module
+    elif isinstance(obj, ModuleType):
+        return ModuleType
+
+    # function
+    elif isinstance(obj, FunctionType):
+        return FunctionType
+
+    # application <objects>
+    elif hasattr(obj, __dictname) and type(obj).__module__ is not 'builtins':
+        return object
+
+    # anything else
+    else:
+        return type(obj)
+
 
 def py2f(obj):
     '''Convert a Python object to <ctypes.Structure> (recursively)'''
+
+    from ctypes import c_long, c_double, c_bool, c_char, c_wchar_p, c_char_p, c_void_p, addressof, pointer, POINTER, Structure
+    from numpy  import asarray, ctypeslib
+    from types  import ModuleType
 
     MAXLEN = 256
     ATTRLEN = 16
 
     # sort the attributes to fix the order
-    _attrs = sorted(obj._attrs.items())
+    dictbuff = getattr(obj, __dictname)
+    _attrs = sorted(dictbuff.items())
 
     # add an attribute name to each attribute by concatenating " "*MAXLEN to the original name
     fields      = []
@@ -195,9 +258,9 @@ def py2f(obj):
 
         # initialiser: A. type names as string byte by applying .encode()
         try:
-            initialiser.append((objutils.getType(getattr(obj, key)).__name__ + " "*ATTRLEN)[:ATTRLEN].encode('ascii'))
+            initialiser.append((__getType(getattr(obj, key)).__name__ + " "*ATTRLEN)[:ATTRLEN].encode('ascii'))
         except:
-            initialiser.append((objutils.getType(getattr(obj, key)).__class__.__name__ + " "*ATTRLEN)[:ATTRLEN].encode('ascii'))
+            initialiser.append((__getType(getattr(obj, key)).__class__.__name__ + " "*ATTRLEN)[:ATTRLEN].encode('ascii'))
 
 
         # initialiser: B. attribute names
@@ -210,7 +273,7 @@ def py2f(obj):
         # initialiser: C. dtype name of array (has to be truncated by ATTRLEN!) or '' for scalar
         # initialiser: D. size of array or 0 for scalar
         # initialiser: E. shape of array (0 for scalar)
-        if objutils.getType(val) is list:
+        if __getType(val) is list:
             abuff = asarray(getattr(obj, key))
             initialiser += [ (abuff.dtype.name+' '*ATTRLEN)[:ATTRLEN].encode('ascii'),
                              c_long(abuff.size),
@@ -219,13 +282,13 @@ def py2f(obj):
             initialiser += [ (' '*ATTRLEN)[:ATTRLEN].encode('ascii') ] + [ c_long(0) ]*2
 
         # initialiser: F. if the attribute belongs to the _master array
-        initialiser.append(c_bool(objutils.getType(val) is list and key in getattr(obj, '_fields', [])))
+        initialiser.append(c_bool(__getType(val) is list and key in getattr(obj, '_fields', [])))
 
         # initialiser: G. attributes (by selecting methods from the above dict)
         try:
-            selectcases[objutils.getType(getattr(obj, key))](getattr(obj, key))
+            selectcases[__getType(getattr(obj, key))](getattr(obj, key))
         except KeyError:
-            print(" >>> DL_PY2F ERROR: type "+str(objutils.getType(getattr(obj, key)))+" of entry \""+key+"\" not supported.\n")
+            print(" >>> DL_PY2F ERROR: type "+str(__getType(getattr(obj, key)))+" of entry \""+key+"\" not supported.\n")
         except:
             print(" >>> DL_PY2F ERROR: error processing entry \""+key+"\".\n")
 
