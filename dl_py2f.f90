@@ -1155,14 +1155,15 @@ module DL_PY2F
         ! YL 01/03/2018: allocate(tmp, metaObj%returnScalar(key)) won't work
         ! YL 01/03/2018: gfortran 7 does not work with tmp => metaObj%returnScalar(key) and selecttype(tmp) however
         !                ifort does not work with selecttype(tmp=>metaObj%returnScalar(key))
-        ! YL 08/01/2018: no longer works as per Intel 18: intel => metaObj%returnScalar(key)
-        allocate(intel, source=metaObj%returnScalar(key))
-        selecttype(intel)
-            type is (character(*))
-                if(trim(intel).ne."") then
-                    val => intel
-                endif
-        endselect
+        ! YL 08/01/2019: no longer works as per Intel 18: intel => metaObj%returnScalar(key)
+! YL 15/01/2019: gfortran does not compile this
+!        allocate(intel, source=metaObj%returnScalar(key))
+!        selecttype(intel)
+!            type is (character(*))
+!                if(trim(intel).ne."") then
+!                    val => intel
+!                endif
+!        endselect
         selecttype(gnu=>metaObj%returnScalar(key))
             type is (character(*))
                 if(trim(gnu).ne."") then
