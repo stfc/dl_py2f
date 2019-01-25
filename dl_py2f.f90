@@ -1068,11 +1068,14 @@ module DL_PY2F
         endselect
 
     endsubroutine getDouble
+! not in use
     subroutine getOneDimChar(metaObj, key, array)
 
         class(dictType) , intent(in)  :: metaObj
         character(len=*), intent(in)  :: key
         character(len=8), intent(out) :: array(:)
+
+        array = ""
 
 ! FIXME: gfortran doesn't compile!
 !        array = metaObj%returnOneDimChar(key)
@@ -1147,6 +1150,17 @@ module DL_PY2F
         class(*)        , pointer              :: gnu, intel
         character       , target               :: blanc = ""
 
+!        character(len=*), pointer, bind(c)              :: tmp
+
+        ! this is a workaround before gfortran 9 is widedly used (see below)
+        ! must be sequence to point to unlimited polymorphic returned by metaObj%returnScalar()
+        type charType
+            sequence
+            ! hopefully 255 is long enough in most cases
+            character(len=255) :: char
+        endtype charType
+        type(charType)  , pointer              :: charbuff
+
         gnu   => blanc
         intel => blanc
 
@@ -1156,14 +1170,22 @@ module DL_PY2F
         ! YL 01/03/2018: gfortran 7 does not work with tmp => metaObj%returnScalar(key) and selecttype(tmp) however
         !                ifort does not work with selecttype(tmp=>metaObj%returnScalar(key))
         ! YL 08/01/2019: no longer works as per Intel 18: intel => metaObj%returnScalar(key)
-! YL 15/01/2019: gfortran does not compile this
+        !intel => metaObj%returnScalar(key)
+        ! YL 15/01/2019: however gfortran 7/8 does not compile this at all! see: https://github.com/oseledets/ttpy/issues/60
+        !                it's said to be fixed in gfortran 9
 !        allocate(intel, source=metaObj%returnScalar(key))
-!        selecttype(intel)
+!        selecttype(tmp=>intel)
 !            type is (character(*))
-!                if(trim(intel).ne."") then
-!                    val => intel
+!                if(trim(tmp).ne."") then
+!                    val => tmp
 !                endif
 !        endselect
+
+        ! this is a workaround for Intel since gfortran 7/8 doesn't compile the above method
+        charbuff => metaObj%returnScalar(key)
+        val => charbuff%char
+
+        ! this is the GNU way
         selecttype(gnu=>metaObj%returnScalar(key))
             type is (character(*))
                 if(trim(gnu).ne."") then
