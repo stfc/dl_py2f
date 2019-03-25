@@ -4,28 +4,10 @@ __author__     = [ 'You Lu', 'Thomas W. Keal' ]
 __copyright__  = 'Copyright (C) 2018 The authors of Py-ChemShell'
 __credits__    = [ 'You Lu', 'Thomas W. Keal' ]
 __license__    = 'LGPLv3'
-__version__    = '2018b'
+__version__    = '19.0 (beta)'
 __maintainer__ = __author__[0]
 __email__      = 'you.lu@stfc.ac.uk'
 __status__     = ''
-
-#  Copyright (C) 2017 The authors of Py-ChemShell
-#
-#  This file is part of Py-ChemShell.
-#
-#  Py-ChemShell is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU Lesser General Public License as
-#  published by the Free Software Foundation, either version 3 of the
-#  License, or (at your option) any later version.
-#
-#  Py-ChemShell is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-#  GNU Lesser General Public License for more details.
-#
-#  You should have received a copy of the GNU Lesser General Public
-#  License along with Py-ChemShell. If not, see
-#  <http://www.gnu.org/licenses/>.
 
 #  Copyright (C) 2017 The authors of DL_PY2F
 #
@@ -108,7 +90,7 @@ def __getType(obj):
         return type(obj)
 
 
-def py2f(obj):
+def py2f(obj, debug=0):
     '''Convert a Python object to <ctypes.Structure> (recursively)'''
 
     from ctypes import c_long, c_double, c_bool, c_char, c_wchar_p, c_char_p, c_void_p, addressof, pointer, POINTER, Structure
@@ -123,7 +105,7 @@ def py2f(obj):
     _attrs = sorted(dictbuff.items())
 
     # add an attribute name to each attribute by concatenating " "*MAXLEN to the original name
-    fields      = []
+    fbuff       = []
     initialiser = []
 
     def __list2ndp(foo):
@@ -133,7 +115,7 @@ def py2f(obj):
         if hasattr(foo, "dtype"):
 
             def _addNPArray(_ctype):
-                '''Convert to uniform ndarray and add to fields and initialiser'''
+                '''Convert to uniform ndarray and add to fields (fbuff) and initialiser'''
 
                 npptr = ctypeslib.ndpointer(_ctype)
 
@@ -142,7 +124,7 @@ def py2f(obj):
                     npptr._shape_ = getattr(obj, key).shape
 
                 # do NOT use ndarray.astype(_ctype) which does not work
-                fields.append((key, npptr))
+                fbuff.append((key, npptr))
                 initialiser.append(asarray(getattr(obj, key), dtype=_ctype).ctypes.data)
 
             selectcases = { 'int64'  : c_long,
@@ -164,34 +146,53 @@ def py2f(obj):
         else:
             try:
                 initialiser.append(asarray([i for i in getattr(obj, key)], dtype=c_long).ctypes.data)
-                fields.append((key, ctypeslib.ndpointer(c_long)))
+                fbuff.append((key, ctypeslib.ndpointer(c_long)))
             except:
                 print(" >>> WARNING: DL_PY2F cannot convert non-integer list/tuple `%s` of"%key, obj, "to NumPy ndarray")
                 initialiser.append(None)
-                fields.append((key, c_void_p))
+                fbuff.append((key, c_void_p))
 
 
     def __int2cint(foo):
         '''<int> to <ctypes.c_long>'''
 
-        fields.append((key, POINTER(c_long)))
+        fbuff.append((key, POINTER(c_long)))
         initialiser.append(pointer(c_long(foo)))
+
+
+    def __func2cfunptr(foo):
+        '''<class function> to <ctypes.CFUNCTYPE>'''
+
+        from typing import get_type_hints
+
+        # automatic function returned value detection: requiring type hinting
+
+        selectcases = { float: c_double,
+                        int  : c_long }
+
+        # default returned type is int
+        c_type = selectcases.get(get_type_hints(foo).get('return', int), c_long)
+
+        # TODO: automatic function arguments detection: requiring type hinting
+        fbuff.append((key, POINTER(CFUNCTYPE(c_type, c_void_p))))
+        initialiser.append(pointer(CFUNCTYPE(c_type, c_void_p)(foo)))
 
 
     def __str2bytes(foo):
         '''<str> to <bytes>'''
 
-        fields.append((key, c_char_p))
+        fbuff.append((key, c_char_p))
         # OBSOLETE: obj.path could be <module>
 #        if isinstance(foo, ModuleType):
 #            initialiser.append(c_char_p((foo.__name__ + " "*MAXLEN)[:MAXLEN].encode('ascii')))
 #        else:
         initialiser.append(c_char_p((foo + " "*MAXLEN)[:MAXLEN].encode('ascii')))
 
+
     def __module2bytes(foo):
         '''<ModuleType> to <bytes>'''
 
-        fields.append((key, c_char_p))
+        fbuff.append((key, c_char_p))
         initialiser.append(c_char_p((foo.__name__ + " "*MAXLEN)[:MAXLEN].encode('ascii')))
 
 
@@ -200,7 +201,7 @@ def py2f(obj):
         '''<object> to <ctypes.pointer> of <ctypes.Structure>, recursively'''
 
         bar = py2f(foo)
-        fields.append((key, POINTER(type(bar))))
+        fbuff.append((key, POINTER(type(bar))))
         initialiser.append(pointer(bar))
 
 
@@ -210,14 +211,14 @@ def py2f(obj):
 
         print(" >>> DL_PY2F WARNING: unsupport <class dict> entry \""+key+"\" will be treated as None.")
 
-        fields.append((key, c_void_p))
+        fbuff.append((key, c_void_p))
         initialiser.append(None)
 
 
     def __float2cdouble(foo):
         '''<float> to <c_double>'''
 
-        fields.append((key, POINTER(c_double)))
+        fbuff.append((key, POINTER(c_double)))
         initialiser.append(pointer(c_double(foo)))
 
 
@@ -225,32 +226,36 @@ def py2f(obj):
         '''<bool> to <c_bool>'''
 
         # c_bool must be passed as pointer, otherwise the item next to it is affected due to c_bool's short byte length
-        fields.append((key, POINTER(c_bool)))
+        fbuff.append((key, POINTER(c_bool)))
         initialiser.append(pointer(c_bool(foo)))
 
 
     def __None2ptr(foo):
         '''<None> to c Null'''
 
-        fields.append((key, c_void_p))
+        fbuff.append((key, c_void_p))
         initialiser.append(None)
 
 
+
+
     selectcases = { 
-                    bool      :__bool2cbool,
-                    dict      :__dict2None,
-                    float     :__float2cdouble,
-                    int       :__int2cint,
-                    list      :__list2ndp,
-                    object    :__obj2ptr,
-                    tuple     :__list2ndp,
-                    str       :__str2bytes,
-                    ModuleType:__module2bytes,
+                    bool            :__bool2cbool,
+                    dict            :__dict2None,
+                    float           :__float2cdouble,
+                    int             :__int2cint,
+                    list            :__list2ndp,
+                    object          :__obj2ptr,
+                    tuple           :__list2ndp,
+                    type(lambda x:x):__func2cfunptr,
+                    str             :__str2bytes,
+                    ModuleType      :__module2bytes,
                     # there is no longer <NoneType> in <module> types
-                    type(None):__None2ptr }
+                    type(None)      :__None2ptr }
 
 
     for key, val in _attrs:
+
 
         # do NOT pass internal attributes
         if key.startswith('_'):
@@ -292,24 +297,26 @@ def py2f(obj):
         except:
             print(" >>> DL_PY2F ERROR: error processing entry \""+key+"\".\n")
 
-
     # labels for types, attributes, etc. (CStructType in objects.f90)
     # string names can be arbitrary and different from their Fortran counterparts,
     # but identical names are NOT allowed (so use "type"/"size"+name to avoid)
-    fields = [ item for sublist in zip(zip([ 'type' + f[0]      for f in fields ], # fields: A. type names
-                                           [ c_char*ATTRLEN for f in fields ]),
-                                       zip([ f[0] + " "*ATTRLEN for f in fields ], # fields: B. attribute names
-                                           [ c_char*ATTRLEN for f in fields ]),
-                                       zip([ 'dtype' + f[0]     for f in fields ], # fields: C. NumPy dtype
-                                           [ c_char*ATTRLEN for f in fields ]),
-                                       zip([ 'size' + f[0]      for f in fields ], # fields: D. data size
-                                           [ c_long         for f in fields ]),
-                                       zip([ 'sizem' + f[0]     for f in fields ], # fields: E. data shape[0]
-                                           [ c_long         for f in fields ]),
-                                       zip([ 'isfield' + f[0]   for f in fields ], # fields: F. if in _fieds (namely if part of the _master array)
-                                           [ c_bool         for f in fields ]),
-                                       fields)                                     # fields: G. attributes
+    fields = [ item for sublist in zip(zip([ 'type'    + f[0]   for f in fbuff ], # fields: A. type names
+                                           [ c_char*ATTRLEN     for f in fbuff ]),
+                                       zip([ f[0] + ' '*ATTRLEN for f in fbuff ], # fields: B. attribute names
+                                           [ c_char*ATTRLEN     for f in fbuff ]),
+                                       zip([ 'dtype'   + f[0]   for f in fbuff ], # fields: C. NumPy dtype
+                                           [ c_char*ATTRLEN     for f in fbuff ]),
+                                       zip([ 'size'    + f[0]   for f in fbuff ], # fields: D. data size
+                                           [ c_long             for f in fbuff ]),
+                                       zip([ 'sizem'   + f[0]   for f in fbuff ], # fields: E. data shape[0]
+                                           [ c_long             for f in fbuff ]),
+                                       zip([ 'isfield' + f[0]   for f in fbuff ], # fields: F. if in _fields (namely if part of the _master array)
+                                           [ c_bool             for f in fbuff ]),
+                                       fbuff)                                     # fields: G. attributes
                     for item in sublist ]
+
+    if len(fields) != len(initialiser):
+        print(" >>> DL_PY2F WARNING: fields and initialiser have different lengths!")
 
     # number of attributes
     fields.insert(0, ('nattrs', c_long))
@@ -330,6 +337,13 @@ def py2f(obj):
     except:
         initialiser.insert(3, c_long(0))
 
+    # debugging
+    if debug >= 5:
+        print("\n >>> DL_PY2F DEBUG: Components of wrapped Python object", obj)
+        print("\n     {:5}    {:32}    {:24} {}".format('index', 'field name', 'field type', 'value'))
+        for i, v in enumerate(initialiser):
+            print("     {:5d}    {:32.32}    {:24.24} {}".format(i, '\"'+fields[i][0]+'\"', fields[i][1].__name__, v))
+
 
     # TODO: debugging print
     class CStruct(Structure):
@@ -339,6 +353,7 @@ def py2f(obj):
         # has to be __new__() rather than __init__()?
         def __new__(cls, *args):
             ''''''
+
             inst = Structure.__new__(cls)
             return inst
 

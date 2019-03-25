@@ -97,7 +97,8 @@ module DL_PY2F
                                      getChar,       &
                                      getBool,       &
                                      getPyPtr,      &
-                                     getCPtr
+                                     getCPtr,       &
+                                     getCFuncPtr
         generic, public :: set    => setOneDimDbl,  &
                                      setTwoDimDbl,  &
                                      setOneDimInt,  &
@@ -131,6 +132,7 @@ module DL_PY2F
         procedure, private :: getBool
         procedure, private :: getPyPtr
         procedure, private :: getCPtr
+        procedure, private :: getCFuncPtr
         ! setters
         procedure, private :: setOneDimDbl
         procedure, private :: setTwoDimDbl
@@ -143,6 +145,7 @@ module DL_PY2F
         ! tools
         procedure, private :: returnScalar
         procedure, private :: returnPyPtr
+        procedure, private :: returnCFuncPtr
         procedure, private :: returnOneDimChar
         procedure, private :: returnOneDimInt
         procedure, private :: returnTwoDimInt
@@ -183,6 +186,7 @@ module DL_PY2F
         type(CStructType) , pointer                        :: cdata(:)
         type(PyType)      , pointer                        :: pyptrbuff
         integer(c_long)   , pointer                        :: cintbuff
+        type(c_funptr)    , pointer                        :: cfuncbuff
         character(len=8)  , parameter                      :: nonetype = "NoneType"
         integer(c_long)   , pointer                        :: intarraybuff(:,:) , onedimintbuff(:) , twodimintbuff(:,:)
         logical(c_bool)   , pointer                        :: bbuff
@@ -222,6 +226,10 @@ module DL_PY2F
 
                 case('NoneType')
                     call metaobj%assign(trim(namebuff), nonetype)
+
+                case('function')
+                    call c_f_pointer(cdata(i)%attr, cfuncbuff)
+                    call metaobj%assign(trim(namebuff), cfuncbuff)
 
                 case('object')
                     call c_f_pointer(cdata(i)%attr, pyptrbuff)
@@ -385,6 +393,11 @@ module DL_PY2F
 
                     endselect
 
+                case default
+                    write(*, '(/1X,A,1X,3A,1X,A/)') ">>> DL_PY2F WARNING: type" , &
+                                                   '"', trim(typebuff), '"', &
+                                                   "could not be assigned"
+
             endselect
 
         enddo
@@ -394,7 +407,6 @@ module DL_PY2F
 ! END OF INITIALISER
 ! ASSIGNERS
 
-    ! val shall not be pointer, otherwise the current method is not recognised as "type-bound generic subroutine"
     recursive subroutine assignScalar(metaObj, key, source)
 
         class(dictType) ,         intent(inout) :: metaObj
@@ -701,7 +713,6 @@ module DL_PY2F
         class(dictType) , intent(in) :: metaObj
         character(len=*), intent(in) :: key
         class(*)        , pointer    :: val
-        class(*)        , pointer              :: tmp
 
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
@@ -724,6 +735,27 @@ module DL_PY2F
         endif
 
     endfunction returnScalar
+    recursive function returnCFuncPtr(metaObj, key) result(val)
+
+        class(dictType)          , intent(in) :: metaObj
+        character(len=*)         , intent(in) :: key
+        type(c_funptr)  , pointer             :: val
+
+        if(associated(metaObj%key)) then
+            if(metaObj%key.eq.key) then
+                call flush(6)
+!                allocate(val, source=metaObj%scalar)
+                val => metaObj%scalar
+            else
+                val => returnCFuncPtr(metaObj%next, key)
+!                val = c_loc(returnCFuncPtr(metaObj%next, key))
+            endif
+        else
+            print *, '>>> DL_PY2F ERROR: keyword \"', key, '\"not found in dictionary.'
+            call flush(6)
+        endif
+
+    endfunction returnCFuncPtr
     recursive function returnPyPtr(metaObj, key) result(val)
 
         class(dictType) , intent(in) :: metaObj
@@ -1196,8 +1228,8 @@ module DL_PY2F
     endsubroutine getChar
     subroutine getCPtr(metaObj, key, val)
 
-        class(dictType) , intent(in)  :: metaObj
-        character(len=*), intent(in)  :: key
+        class(dictType)          , intent(in)  :: metaObj
+        character(len=*)         , intent(in)  :: key
         type(c_ptr)     , pointer, intent(out) :: val
 
 !        selecttype(tmp=>metaObj%returnScalar(key))
@@ -1207,6 +1239,22 @@ module DL_PY2F
 !        endselect
 
     endsubroutine getCPtr
+    subroutine getCFuncPtr(metaObj, key, val)
+
+        class(dictType)          , intent(in)  :: metaObj
+        character(len=*)         , intent(in)  :: key
+        ! GNU segfaults at runtime if val is a pointer; while with Intel compiler val can be a pointer (val => metaObj%...)
+        type(c_funptr)           , intent(out) :: val
+
+!        allocate(val, source=metaObj%returnCFuncPtr(key))
+        val = metaObj%returnCFuncPtr(key)
+!        selecttype(tmp=>metaObj%returnCFuncPtr(key))
+!            class is(type(c_funptr))
+!            class default
+!                val => tmp
+!        endselect
+
+    endsubroutine getCFuncPtr
     subroutine getBool(metaObj, key, val)
 
         class(dictType) , intent(in)  :: metaObj
@@ -1214,7 +1262,7 @@ module DL_PY2F
         logical         , intent(out) :: val
 
         selecttype(tmp=>metaObj%returnScalar(key))
-            type is (logical(c_bool))
+            type is(logical(c_bool))
                 val = merge(.true., .false., tmp)
         endselect
 
