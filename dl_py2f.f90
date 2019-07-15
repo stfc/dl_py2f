@@ -95,7 +95,8 @@ module DL_PY2F
                                      getTwoDimDbl,  &
                                      getChar,       &
                                      getCCharArray, &
-                                     getBool,       &
+                                     getLogical,    &
+                                     getCLogical,   &
                                      getPyPtr,      &
                                      getCPtr,       &
                                      getCFuncPtr
@@ -131,7 +132,8 @@ module DL_PY2F
         procedure, private :: getTwoDimDbl
         procedure, private :: getChar
         procedure, private :: getCCharArray
-        procedure, private :: getBool
+        procedure, private :: getLogical
+        procedure, private :: getCLogical
         procedure, private :: getPyPtr
         procedure, private :: getCPtr
         procedure, private :: getCFuncPtr
@@ -1337,7 +1339,7 @@ module DL_PY2F
 !        endselect
 
     endsubroutine getCFuncPtr
-    subroutine getBool(metaObj, key, val)
+    subroutine getLogical(metaObj, key, val)
 
         class(dictType) , intent(in)  :: metaObj
         character(len=*), intent(in)  :: key
@@ -1348,7 +1350,19 @@ module DL_PY2F
                 val = merge(.true., .false., tmp)
         endselect
 
-    endsubroutine getBool
+    endsubroutine getLogical
+    subroutine getCLogical(metaObj, key, val)
+
+        class(dictType) , intent(in)  :: metaObj
+        character(len=*), intent(in)  :: key
+        logical(c_bool) , intent(out) :: val
+
+        selecttype(tmp=>metaObj%returnScalar(key))
+            type is(logical(c_bool))
+                val = merge(.true., .false., tmp)
+        endselect
+
+    endsubroutine getCLogical
     subroutine getPyPtr(metaObj, key, val)
 
         class(dictType)          , intent(in)  :: metaObj

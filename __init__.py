@@ -208,21 +208,14 @@ def py2f(obj, debug=0, byref=False):
                 fbuff.append((key, c_void_p))
 
 
-    def __int2cint(obj, key, foo):
+    def __int2cint(foo):
         '''<int> to <ctypes.c_long>'''
 
-        from sys import stdout
-
-        setattr(obj, '__'+key+'_ctype', c_long(foo))
         fbuff.append((key, POINTER(c_long)))
-        initialiser.append(pointer(getattr(obj, '__'+key+'_ctype')))
-
-#        __scalar2property(obj, key)
-
-        stdout.flush()
+        initialiser.append(pointer(c_long(foo)))
 
 
-    def __func2cfunptr(obj, key, foo):
+    def __func2cfunptr(foo):
         '''<class function> to <ctypes.CFUNCTYPE>'''
 
         from typing import get_type_hints
