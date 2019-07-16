@@ -93,7 +93,7 @@ def __getType(obj):
 def py2f(obj, debug=0, byref=False):
     '''Convert a Python object to <ctypes.Structure> (recursively)'''
 
-    from ctypes import c_long, c_double, c_bool, c_char, c_wchar_p, c_char_p, c_void_p, addressof, pointer, POINTER, Structure
+    from ctypes import c_byte, c_long, c_double, c_bool, c_char, c_wchar_p, c_char_p, c_void_p, addressof, pointer, POINTER, Structure
     from numpy  import asarray, ctypeslib
     from types  import ModuleType
 
@@ -154,17 +154,20 @@ def py2f(obj, debug=0, byref=False):
         # <numpy.ndarray>
         if hasattr(foo, "dtype"):
 
+            # YL 16/07/2019: from NumPy 1.16, ctypeslib.ndpointer() no longer supports c_char_p but it didn't work at all anyway
+            #                (and luckily array of characters hasn't been need by Fortran). so i'm changing all c_char_p to 'U8' here
+            #                but haven't validated if it can work. and in fact here requires a dtype of NumPy rather than a ctypes type
             selectcases = { 'int64'  : c_long,
                             'int32'  : c_long,
                             'float64': c_double,
                             'float32': c_double,
                             'bool'   : c_long,
                             'object' : c_long,
-                            'bytes64': c_char_p,
-                            'bytes32': c_char_p,
-                            'str32'  : c_char_p,
-                            'str64'  : c_char_p,
-                            'str256' : c_char_p,
+                            'bytes64':'U8',
+                            'bytes32':'U8',
+                            'str32'  :'U8',
+                            'str64'  :'U8',
+                            'str256' :'U8',
                             'record' : foo.dtype,
                           }
 
@@ -190,7 +193,6 @@ def py2f(obj, debug=0, byref=False):
                     # we skipped initialisers A-F
                     _appendInitAtoF(initialiser, foo, field, list)
                     _addNPArray(selectcases[_ctype.fields[field][0].name], field, _arr[field])
-
 
             try:
                 _addNPArray(selectcases[foo.dtype.name], key, getattr(obj, key))
