@@ -90,10 +90,10 @@ def __getType(obj):
         return type(obj)
 
 
-def py2f(obj, debug=0):
+def py2f(obj, debug=0, byref=False):
     '''Convert a Python object to <ctypes.Structure> (recursively)'''
 
-    from ctypes import c_long, c_double, c_bool, c_char, c_wchar_p, c_char_p, c_void_p, addressof, pointer, POINTER, Structure
+    from ctypes import c_byte, c_long, c_double, c_bool, c_char, c_wchar_p, c_char_p, c_void_p, addressof, pointer, POINTER, Structure
     from numpy  import asarray, ctypeslib
     from types  import ModuleType
 
@@ -108,39 +108,96 @@ def py2f(obj, debug=0):
     fbuff       = []
     initialiser = []
 
-    def __list2ndp(foo):
+# YL 08/078/2019: failed to overload an attribute with a property() instance to get value from ctype-converted
+#                 initialiser to enable %set() function for scalar values
+#    def __scalar2property(obj, key):
+#        ''''''
+#
+#        try:
+#            setattr(obj, key, property(lambda self: getattr(getattr(self, '__'+key+'_ctype'), 'value')))
+#        except:
+#            pass
+
+    def _appendInitAtoF(_initialiser, _obj, _key, _default_type):
+
+        # initialiser: A. type names as string byte by applying .encode()
+        try:
+            _initialiser.append((__getType(getattr(_obj, _key)).__name__ + " "*ATTRLEN)[:ATTRLEN].encode('ascii'))
+        except:
+            _initialiser.append((__getType(getattr(_obj, _key)).__class__.__name__ + " "*ATTRLEN)[:ATTRLEN].encode('ascii'))
+
+
+        # initialiser: B. attribute names
+        try:
+            # in case there are synons
+            _initialiser.append((_obj.synons[_key.strip()] + " "*ATTRLEN)[:ATTRLEN].encode('ascii'))
+        except:
+            _initialiser.append((_key+' '*ATTRLEN)[:ATTRLEN].encode('ascii'))
+
+        # initialiser: C. dtype name of array (has to be truncated by ATTRLEN!) or '' for scalar
+        # initialiser: D. size of array or 0 for scalar
+        # initialiser: E. shape of array (0 for scalar)
+        if _default_type is list:
+            abuff = asarray(getattr(_obj, _key))
+            _initialiser += [ (abuff.dtype.name+' '*ATTRLEN)[:ATTRLEN].encode('ascii'),
+                             c_long(abuff.size),
+                             c_long(abuff.shape[0]) ]
+        else:
+            _initialiser += [ (' '*ATTRLEN)[:ATTRLEN].encode('ascii') ] + [ c_long(0) ]*2
+
+        # initialiser: F. if the attribute belongs to the _master array
+        _initialiser.append(c_bool(_default_type is list and _key in getattr(_obj, '_fields', [])))
+
+    def __list2ndp(obj, key, foo):
         '''<list> to <numpy.ctypeslib.ndpointer>'''
 
         # <numpy.ndarray>
         if hasattr(foo, "dtype"):
 
-            def _addNPArray(_ctype):
-                '''Convert to uniform ndarray and add to fields (fbuff) and initialiser'''
-
-                npptr = ctypeslib.ndpointer(_ctype)
-
-                # only copy shape when obj is fully ready, otherwise ndpointer is destroyed
-                if getattr(obj, key).size > 0:
-                    npptr._shape_ = getattr(obj, key).shape
-
-                # do NOT use ndarray.astype(_ctype) which does not work
-                fbuff.append((key, npptr))
-                initialiser.append(asarray(getattr(obj, key), dtype=_ctype).ctypes.data)
-
+            # YL 16/07/2019: from NumPy 1.16, ctypeslib.ndpointer() no longer supports c_char_p but it didn't work at all anyway
+            #                (and luckily array of characters hasn't been need by Fortran). so i'm changing all c_char_p to 'U8' here
+            #                but haven't validated if it can work. and in fact here requires a dtype of NumPy rather than a ctypes type
             selectcases = { 'int64'  : c_long,
                             'int32'  : c_long,
                             'float64': c_double,
                             'float32': c_double,
                             'bool'   : c_long,
                             'object' : c_long,
-                            'bytes64': c_char_p,
-                            'bytes32': c_char_p,
-                            'str32'  : c_char_p,
-                            'str64'  : c_char_p,
-                            'str256' : c_char_p
+                            'bytes64':'U8',
+                            'bytes32':'U8',
+                            'str32'  :'U8',
+                            'str64'  :'U8',
+                            'str256' :'U8',
+                            'record' : foo.dtype,
                           }
 
-            _addNPArray(selectcases[foo.dtype.name])
+            # NumPy ndarray
+            def _addNPArray(_ctype, _key, _val):
+                '''Convert to uniform ndarray and add to fields (fbuff) and initialiser'''
+
+                npptr = ctypeslib.ndpointer(_ctype)
+
+                # only copy shape when obj is fully ready, otherwise ndpointer is destroyed
+                if _val.size > 0:
+                    npptr._shape_ = _val.shape
+
+                # do NOT use ndarray.astype(_ctype) which does not work
+                fbuff.append((_key, npptr))
+                initialiser.append(asarray(_val, dtype=_ctype).ctypes.data)
+
+            # NumPy recarray
+            def _addRecArray(_ctype, _arr):
+                '''Record array'''
+
+                for field in _ctype.names:
+                    # we skipped initialisers A-F
+                    _appendInitAtoF(initialiser, foo, field, list)
+                    _addNPArray(selectcases[_ctype.fields[field][0].name], field, _arr[field])
+
+            try:
+                _addNPArray(selectcases[foo.dtype.name], key, getattr(obj, key))
+            except KeyError:
+                _addRecArray(selectcases[foo.dtype.name[:6]], getattr(obj, key))
 
         # <tuple>/<list> of integer, will be converted to ndarray
         else:
@@ -153,14 +210,14 @@ def py2f(obj, debug=0):
                 fbuff.append((key, c_void_p))
 
 
-    def __int2cint(foo):
+    def __int2cint(obj, key, foo):
         '''<int> to <ctypes.c_long>'''
 
         fbuff.append((key, POINTER(c_long)))
         initialiser.append(pointer(c_long(foo)))
 
 
-    def __func2cfunptr(foo):
+    def __func2cfunptr(obj, key, foo):
         '''<class function> to <ctypes.CFUNCTYPE>'''
 
         from typing import get_type_hints
@@ -178,7 +235,7 @@ def py2f(obj, debug=0):
         initialiser.append(pointer(CFUNCTYPE(c_type, c_void_p)(foo)))
 
 
-    def __str2bytes(foo):
+    def __str2bytes(obj, key, foo):
         '''<str> to <bytes>'''
 
         fbuff.append((key, c_char_p))
@@ -189,7 +246,7 @@ def py2f(obj, debug=0):
         initialiser.append(c_char_p((foo + " "*MAXLEN)[:MAXLEN].encode('ascii')))
 
 
-    def __module2bytes(foo):
+    def __module2bytes(obj, key, foo):
         '''<ModuleType> to <bytes>'''
 
         fbuff.append((key, c_char_p))
@@ -197,7 +254,7 @@ def py2f(obj, debug=0):
 
 
     # type of <object> foo must be ctypes.Structure or its offspring, otherwise TypeError is raised
-    def __obj2ptr(foo):
+    def __obj2ptr(obj, key, foo):
         '''<object> to <ctypes.pointer> of <ctypes.Structure>, recursively'''
 
         bar = py2f(foo)
@@ -206,7 +263,7 @@ def py2f(obj, debug=0):
 
 
     # we currently do not support dict type so convert to None
-    def __dict2None(foo):
+    def __dict2None(obj, key, foo):
         '''<dict> to c Null (<None>)'''
 
         print(" >>> DL_PY2F WARNING: unsupport <class dict> entry \""+key+"\" will be treated as None.")
@@ -215,14 +272,14 @@ def py2f(obj, debug=0):
         initialiser.append(None)
 
 
-    def __float2cdouble(foo):
+    def __float2cdouble(obj, key, foo):
         '''<float> to <c_double>'''
 
         fbuff.append((key, POINTER(c_double)))
         initialiser.append(pointer(c_double(foo)))
 
 
-    def __bool2cbool(foo):
+    def __bool2cbool(obj, key, foo):
         '''<bool> to <c_bool>'''
 
         # c_bool must be passed as pointer, otherwise the item next to it is affected due to c_bool's short byte length
@@ -230,7 +287,7 @@ def py2f(obj, debug=0):
         initialiser.append(pointer(c_bool(foo)))
 
 
-    def __None2ptr(foo):
+    def __None2ptr(obj, key, foo):
         '''<None> to c Null'''
 
         fbuff.append((key, c_void_p))
@@ -254,48 +311,27 @@ def py2f(obj, debug=0):
                     type(None)      :__None2ptr }
 
 
-    for key, val in _attrs:
 
 
-        # do NOT pass internal attributes
+    for key, default_val in _attrs:
+
+        # do NOT pass "internal" attributes
         if key.startswith('_'):
             continue
 
-        # initialiser: A. type names as string byte by applying .encode()
+        # record arrays need special treatment (see: __list2ndp())
         try:
-            initialiser.append((__getType(getattr(obj, key)).__name__ + " "*ATTRLEN)[:ATTRLEN].encode('ascii'))
+            isRec = getattr(obj, key).dtype.name.startswith('record')
         except:
-            initialiser.append((__getType(getattr(obj, key)).__class__.__name__ + " "*ATTRLEN)[:ATTRLEN].encode('ascii'))
-
-
-        # initialiser: B. attribute names
-        try:
-            # in case there are synons
-            initialiser.append((obj.synons[key.strip()] + " "*ATTRLEN)[:ATTRLEN].encode('ascii'))
-        except:
-            initialiser.append((key+' '*ATTRLEN)[:ATTRLEN].encode('ascii'))
-
-        # initialiser: C. dtype name of array (has to be truncated by ATTRLEN!) or '' for scalar
-        # initialiser: D. size of array or 0 for scalar
-        # initialiser: E. shape of array (0 for scalar)
-        if __getType(val) is list:
-            abuff = asarray(getattr(obj, key))
-            initialiser += [ (abuff.dtype.name+' '*ATTRLEN)[:ATTRLEN].encode('ascii'),
-                             c_long(abuff.size),
-                             c_long(abuff.shape[0]) ]
-        else:
-            initialiser += [ (' '*ATTRLEN)[:ATTRLEN].encode('ascii') ] + [ c_long(0) ]*2
-
-        # initialiser: F. if the attribute belongs to the _master array
-        initialiser.append(c_bool(__getType(val) is list and key in getattr(obj, '_fields', [])))
+            isRec = False
+        if not isRec:
+            _appendInitAtoF(initialiser, obj, key, __getType(default_val))
 
         # initialiser: G. attributes (by selecting methods from the above dict)
         try:
-            selectcases[__getType(getattr(obj, key))](getattr(obj, key))
+            selectcases[__getType(getattr(obj, key))](obj, key, getattr(obj, key))
         except KeyError:
             print(" >>> DL_PY2F ERROR: type "+str(__getType(getattr(obj, key)))+" of entry \""+key+"\" not supported.\n")
-        except:
-            print(" >>> DL_PY2F ERROR: error processing entry \""+key+"\".\n")
 
     # labels for types, attributes, etc. (CStructType in objects.f90)
     # string names can be arbitrary and different from their Fortran counterparts,
@@ -316,7 +352,23 @@ def py2f(obj, debug=0):
                     for item in sublist ]
 
     if len(fields) != len(initialiser):
-        print(" >>> DL_PY2F WARNING: fields and initialiser have different lengths!")
+        print(" >>> DL_PY2F WARNING: fields (len: {}) and initialiser (len: {}) mismatch:".format(len(fields),len(initialiser)))
+        print(" "*4+"-"*48)
+        print("    {:20}  |  {}".format('field', 'initialiser'))
+        for i in range(max(len(fields), len(initialiser))):
+            try:
+                if type(initialiser[i]) is bytes and fields[i][0].startswith('type'):
+                    print(" "*4+"-"*48)
+                print("    {:20}  |  {}".format(fields[i][0].strip(), initialiser[i]))
+            except IndexError:
+                try:
+                    print("    {:20}  |  {}".format('', initialiser[i]))
+                except:
+                    print("    {:20}  |    ".format(fields[i][0].strip()))
+        print(" "*4+"-"*48)
+            #    print("### {<20s}  |  {<20s}".format(f[i].strip(), initialiser[i]))
+            #except:
+            #    print("### {}".format(initialiser[i]))
 
     # number of attributes
     fields.insert(0, ('nattrs', c_long))
@@ -358,7 +410,11 @@ def py2f(obj, debug=0):
             return inst
 
 
-    return CStruct(*initialiser)
+    if not byref:
+        return CStruct(*initialiser)
+    else:
+        from ctypes import byref as ctypes_byref
+        return ctypes_byref(CStruct(*initialiser))
 
 
 

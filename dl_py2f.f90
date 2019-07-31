@@ -87,7 +87,6 @@ module DL_PY2F
                                      getIntCLong,   &
                                      getReal,       &
                                      getDouble,     &
-                                     getOneDimChar, &
                                      getOneDimInt,  &
                                      getOneDimLong, &
                                      getOneDimDbl,  &
@@ -95,6 +94,7 @@ module DL_PY2F
                                      getTwoDimLong, &
                                      getTwoDimDbl,  &
                                      getChar,       &
+                                     getCCharArray, &
                                      getLogical,    &
                                      getCLogical,   &
                                      getPyPtr,      &
@@ -105,7 +105,9 @@ module DL_PY2F
                                      setOneDimInt,  &
                                      setTwoDimInt,  &
                                      setOneDimLong, &
-                                     setTwoDimLong
+                                     setTwoDimLong, &
+                                     setCCharArray, &
+                                     setScalar
         ! initialiser
         procedure, public  :: init
         ! assigners
@@ -122,7 +124,6 @@ module DL_PY2F
         procedure, private :: getInt
         procedure, private :: getReal
         procedure, private :: getDouble
-        procedure, private :: getOneDimChar
         procedure, private :: getOneDimInt
         procedure, private :: getOneDimLong
         procedure, private :: getOneDimDbl
@@ -130,6 +131,7 @@ module DL_PY2F
         procedure, private :: getTwoDimLong
         procedure, private :: getTwoDimDbl
         procedure, private :: getChar
+        procedure, private :: getCCharArray
         procedure, private :: getLogical
         procedure, private :: getCLogical
         procedure, private :: getPyPtr
@@ -142,6 +144,8 @@ module DL_PY2F
         procedure, private :: setTwoDimInt
         procedure, private :: setOneDimLong
         procedure, private :: setTwoDimLong
+        procedure, private :: setCCharArray
+        procedure, private :: setScalar
         ! pointers
         procedure, public  :: ptr
         ! tools
@@ -157,6 +161,8 @@ module DL_PY2F
         procedure, private :: returnShape
         procedure, public  :: keys
     endtype dictType
+
+    integer, parameter :: debug = 0
 
     contains
 
@@ -428,6 +434,13 @@ module DL_PY2F
         else
             allocate(metaObj%key, source=key)
             metaObj%scalar => source
+            if(debug.gt.4) then
+                selecttype(tmp=>metaObj%scalar)
+                    type is(character(kind=c_char, len=*))
+                        write(*,*) " ### DL_PY2F assignScalar: assigning character(kind=c_char, len=*)..."
+                        write(*,*) "key = ", key, ", loc(metaObj%scalar) =", loc(tmp)
+                endselect
+            endif
         endif
 
     endsubroutine assignScalar
@@ -924,6 +937,72 @@ module DL_PY2F
 ! END OF TOOLS
 ! SETTERS
 
+    ! YL 08/07/2019: in Python this can only change the value of the c_types-wrapped entity rather than the original attribute because only address of the former is passed in
+    recursive subroutine setScalar(metaObj, key, val)
+
+        class(dictType) , intent(inout) :: metaObj
+        character(len=*), intent(in)    :: key
+        class(*)        , intent(in)    :: val
+
+        if(associated(metaObj%key)) then
+            if(metaObj%key.eq.key) then
+                selecttype(val)
+                    type is(integer(kind=4))
+                        selecttype(tmp=>metaObj%scalar)
+                            type is(integer(kind=4))
+                                tmp = val
+                            type is(integer(kind=8))
+                                tmp = val
+                            class default
+                                write(*,*) ">>> DL_PY2F ERROR: given value's type does not match the saved entry ", key
+                        endselect
+                    type is(integer(kind=8))
+                        selecttype(tmp=>metaObj%scalar)
+                            type is(integer(kind=4))
+                                tmp = val
+                            type is(integer(kind=8))
+                                tmp = val
+                            class default
+                                write(*,*) ">>> DL_PY2F ERROR: given value's type does not match the saved entry ", key
+                        endselect
+                    type is(real(kind=8))
+                        selecttype(tmp=>metaObj%scalar)
+                            type is(real(kind=8))
+                                tmp = val
+                        endselect
+                endselect
+            else
+                call setScalar(metaObj%next, key, val)
+            endif
+        else
+            print *, '>>> DL_PY2F ERROR: keyword "', key, '" not found in dictionary.'
+        endif
+
+    endsubroutine setScalar
+    recursive subroutine setCCharArray(metaObj, key, array)
+
+        class(dictType)       , intent(inout) :: metaObj
+        character(len=*)      , intent(in)    :: key
+        character(kind=c_char), intent(in)    :: array(:)
+
+        integer                               :: i
+
+        if(associated(metaObj%key)) then
+            if(metaObj%key.eq.key) then
+                selecttype(tmp=>metaObj%scalar)
+                    type is(character(kind=c_char, len=*))
+                        do i = 1, size(array)
+                            tmp(i:i) = array(i)
+                        enddo
+                endselect
+            else
+                call setCCharArray(metaObj%next, key, array)
+            endif
+        else
+            print *, '>>> DL_PY2F ERROR: keyword "', key, '" not found in dictionary.'
+        endif
+
+    endsubroutine setCCharArray
     recursive subroutine setOneDimDbl(metaObj, key, array)
 
         class(dictType) , intent(inout) :: metaObj
@@ -1102,19 +1181,6 @@ module DL_PY2F
         endselect
 
     endsubroutine getDouble
-! not in use
-    subroutine getOneDimChar(metaObj, key, array)
-
-        class(dictType) , intent(in)  :: metaObj
-        character(len=*), intent(in)  :: key
-        character(len=8), intent(out) :: array(:)
-
-        array = ""
-
-! FIXME: gfortran doesn't compile!
-!        array = metaObj%returnOneDimChar(key)
-
-    endsubroutine getOneDimChar
     subroutine getOneDimInt(metaObj, key, array)
 
         class(dictType) , intent(in)  :: metaObj
@@ -1175,6 +1241,22 @@ module DL_PY2F
         array = metaObj%returnTwoDimDbl(key)
 
     endsubroutine getTwoDimDbl
+    subroutine getCCharArray(metaObj, key, array)
+
+        class(dictType)                , intent(in)  :: metaObj
+        character(len=*)               , intent(in)  :: key
+        character(kind=c_char)         , intent(out) :: array(:)
+
+        character(len=:)      , pointer              :: cbuff => null()
+        integer                                      :: i
+
+        call metaObj%getChar(key, cbuff)
+
+        do i = 1, len(trim(cbuff))
+            array(i) = cbuff(i:i)
+        enddo
+        
+    endsubroutine getCCharArray
     subroutine getChar(metaObj, key, val)
 
         class(dictType)          , intent(in)  :: metaObj
