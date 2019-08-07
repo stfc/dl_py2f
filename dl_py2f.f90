@@ -148,7 +148,7 @@ module DL_PY2F
         procedure, private :: setScalar
         ! pointers
         procedure, public  :: ptr
-        ! tools
+        ! private tools
         procedure, private :: returnScalar
         procedure, private :: returnPyPtr
         procedure, private :: returnCFuncPtr
@@ -158,8 +158,9 @@ module DL_PY2F
         procedure, private :: returnOneDimDbl
         procedure, private :: returnTwoDimDbl
         procedure, private :: returnSize
-        procedure, private :: returnShape
+        ! enquiries
         procedure, public  :: keys
+        procedure, public  :: enquireShape
     endtype dictType
 
     integer, parameter :: debug = 0
@@ -701,7 +702,7 @@ module DL_PY2F
     endsubroutine assignTwoDimDbl
 
 ! END OF SETTERS
-! TOOLS
+! ENQUIRIES
 
     recursive subroutine keys(metaObj, initialised)
 
@@ -722,6 +723,10 @@ module DL_PY2F
         endif
 
     endsubroutine keys
+
+! END OF ENQUIRIES
+! TOOLS
+
     ! gfortran forces to declare result variable
     recursive function returnScalar(metaObj, key) result(val)
 
@@ -824,24 +829,25 @@ module DL_PY2F
         endif
 
     endfunction returnSize
-    recursive function returnShape(metaObj, key) result(shp)
+    recursive function enquireShape(metaObj, key) result(shp)
 
         class(dictType) , intent(in) :: metaObj
         character(len=*), intent(in) :: key
         integer                      :: shp(2)
 
         if(associated(metaObj%key)) then
-            if(metaObj%key.eq.key) then
+            call flush(6)
+            if(metaObj%key.eq.trim(key)) then
                 shp(1) = metaObj%sizem
                 shp(2) = metaObj%sizen
             else
-                shp = returnShape(metaObj%next, key)
+                shp = enquireShape(metaObj%next, key)
             endif
         else
             print *, '>>> DL_PY2F ERROR: keyword \"', key, '\"not found in dictionary.'
         endif
 
-    endfunction returnShape
+    endfunction enquireShape
     recursive function returnOneDimChar(metaObj, key) result(onedimchar)
 
         class(dictType) , intent(in) :: metaObj
@@ -887,7 +893,7 @@ module DL_PY2F
             if(metaObj%key.eq.key) then
                 allocate(twodimint(metaObj%sizem, metaObj%sizen), source=metaObj%twodimint)
             else
-                shp = returnShape(metaObj%next, key)
+                shp = enquireShape(metaObj%next, key)
                 allocate(twodimint(shp(1), shp(2)), source=returnTwoDimInt(metaObj%next, key))
             endif
         else
@@ -906,7 +912,7 @@ module DL_PY2F
             if(metaObj%key.eq.key) then
                 allocate(twodimdbl(metaObj%sizem, metaObj%sizen), source=metaObj%twodimdbl)
             else
-                shp = returnShape(metaObj%next, key)
+                shp = enquireShape(metaObj%next, key)
                 allocate(twodimdbl(shp(1), shp(2)), source=returnTwoDimDbl(metaObj%next, key))
             endif
         else
