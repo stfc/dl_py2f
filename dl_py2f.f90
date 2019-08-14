@@ -1253,7 +1253,8 @@ module DL_PY2F
         character(len=*)               , intent(in)  :: key
         character(kind=c_char)         , intent(out) :: array(:)
 
-        character(len=:)      , pointer              :: cbuff => null()
+        ! YL 14/08/2019: strange gfortran bug that it doesn't compile if cbuff is initialised as cbuff => null()
+        character(len=:)      , pointer              :: cbuff
         integer                                      :: i
 
         call metaObj%getChar(key, cbuff)
