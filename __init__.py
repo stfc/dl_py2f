@@ -94,7 +94,7 @@ def py2f(obj, debug=0, byref=False):
     '''Convert a Python object to <ctypes.Structure> (recursively)'''
 
     from ctypes import c_long, c_double, c_bool, c_char, c_wchar_p, c_char_p, c_void_p, addressof, pointer, POINTER, Structure
-    from numpy  import asarray, ctypeslib
+    from numpy  import asarray, ctypeslib, ma
     from types  import ModuleType
 
     MAXLEN = 256
@@ -120,11 +120,17 @@ def py2f(obj, debug=0, byref=False):
 
     def _appendInitAtoF(_initialiser, _obj, _key, _default_type):
 
+        # YL 28/01/2020: allow numpy.ma.core.MaskedArray wrapper
+        if isinstance(_obj, ma.core.MaskedArray):
+            databuff = _obj.torecords()['_data'][_key]
+        else:
+            databuff = getattr(_obj, _key)
+
         # initialiser: A. type names as string byte by applying .encode()
         try:
-            _initialiser.append((__getType(getattr(_obj, _key)).__name__ + " "*ATTRLEN)[:ATTRLEN].encode('ascii'))
+            _initialiser.append((__getType(databuff).__name__ + " "*ATTRLEN)[:ATTRLEN].encode('ascii'))
         except:
-            _initialiser.append((__getType(getattr(_obj, _key)).__class__.__name__ + " "*ATTRLEN)[:ATTRLEN].encode('ascii'))
+            _initialiser.append((__getType(databuff).__class__.__name__ + " "*ATTRLEN)[:ATTRLEN].encode('ascii'))
 
 
         # initialiser: B. attribute names
@@ -138,7 +144,7 @@ def py2f(obj, debug=0, byref=False):
         # initialiser: D. size of array or 0 for scalar
         # initialiser: E. shape of array (0 for scalar)
         if _default_type is list:
-            abuff = asarray(getattr(_obj, _key))
+            abuff = asarray(databuff)
             _initialiser += [ (abuff.dtype.name+' '*ATTRLEN)[:ATTRLEN].encode('ascii'),
                              c_long(abuff.size),
                              c_long(abuff.shape[0]) ]
@@ -146,7 +152,10 @@ def py2f(obj, debug=0, byref=False):
             _initialiser += [ (' '*ATTRLEN)[:ATTRLEN].encode('ascii') ] + [ c_long(0) ]*2
 
         # initialiser: F. if the attribute belongs to the _master array
-        _initialiser.append(c_bool(_default_type is list and _key in getattr(_obj, '_fields', [])))
+        if isinstance(_obj, ma.core.MaskedArray):
+            _initialiser.append(c_bool(_default_type is list and _key in _obj.torecords()['_data'].dtype.fields))
+        else:
+            _initialiser.append(c_bool(_default_type is list and _key in getattr(_obj, '_fields', [])))
 
     def __list2ndp(obj, key, foo):
         '''<list> to <numpy.ctypeslib.ndpointer>'''
@@ -372,7 +381,7 @@ def py2f(obj, debug=0, byref=False):
 
     # number of attributes
     fields.insert(0, ('nattrs', c_long))
-    initialiser.insert(0, c_long(len(_attrs)))
+    initialiser.insert(0, c_long(int((len(fields)-1)/7)))
 
     # object name
     fields.insert(1, ('_class', c_char_p))
