@@ -165,6 +165,9 @@ module DL_PY2F
 
     integer, parameter :: debug = 0
 
+    ! YL 20/09/2020: place the array buffers at the module level to deallocate later
+    integer(kind=8), pointer :: onedimint(:)
+
     contains
 
     function ptr2dict(metaPtr) result(dict)
@@ -852,7 +855,8 @@ module DL_PY2F
 
         class(dictType) , intent(in) :: metaObj
         character(len=*), intent(in) :: key
-        character(len=8), pointer    :: onedimchar(:)
+        ! YL 20/09/2020: changed from pointer to allocatable so that the array gets automatically deallocated when going out of scope
+        character(len=8), allocatable :: onedimchar(:)
 
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
@@ -867,9 +871,11 @@ module DL_PY2F
     endfunction returnOneDimChar
     recursive function returnOneDimInt(metaObj, key) result(onedimint)
 
-        class(dictType) , intent(in) :: metaObj
-        character(len=*), intent(in) :: key
-        integer(kind=8) , pointer    :: onedimint(:)
+        class(dictType) , intent(in)  :: metaObj
+        character(len=*), intent(in)  :: key
+        ! YL 20/09/2020: changed from pointer to allocatable so that the array gets automatically deallocated when going out of scope
+        integer(kind=8) , allocatable :: onedimint(:)
+
 
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
@@ -884,10 +890,11 @@ module DL_PY2F
     endfunction returnOneDimInt
     recursive function returnTwoDimInt(metaObj, key) result(twodimint)
 
-        class(dictType) , intent(in) :: metaObj
-        character(len=*), intent(in) :: key
-        integer(kind=8) , pointer    :: twodimint(:,:)
-        integer                      :: shp(2)
+        class(dictType) , intent(in)  :: metaObj
+        character(len=*), intent(in)  :: key
+        ! YL 20/09/2020: changed from pointer to allocatable so that the array gets automatically deallocated when going out of scope
+        integer(kind=8) , allocatable :: twodimint(:,:)
+        integer                       :: shp(2)
 
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
@@ -903,10 +910,11 @@ module DL_PY2F
     endfunction returnTwoDimInt
     recursive function returnTwoDimDbl(metaObj, key) result(twodimdbl)
 
-        class(dictType) , intent(in) :: metaObj
-        character(len=*), intent(in) :: key
-        real(kind=8)    , pointer    :: twodimdbl(:,:)
-        integer                      :: shp(2)
+        class(dictType) , intent(in)  :: metaObj
+        character(len=*), intent(in)  :: key
+        ! YL 20/09/2020: changed from pointer to allocatable so that the array gets automatically deallocated when going out of scope
+        real(kind=8)    , allocatable :: twodimdbl(:,:)
+        integer                       :: shp(2)
 
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
@@ -923,10 +931,10 @@ module DL_PY2F
 ! for now impossible to implement unlimited polymorphic arrays (see below) 
     recursive function returnOneDimDbl(metaObj, key) result(onedimdbl)
 
-        class(dictType) , intent(in) :: metaObj
-        character(len=*), intent(in) :: key
-!        class(*)        , pointer    :: array(:)
-        real(kind=8)    , pointer    :: onedimdbl(:)
+        class(dictType) , intent(in)  :: metaObj
+        character(len=*), intent(in)  :: key
+        ! YL 20/09/2020: changed from pointer to allocatable so that the array gets automatically deallocated when going out of scope
+        real(kind=8)    , allocatable :: onedimdbl(:)
 
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
