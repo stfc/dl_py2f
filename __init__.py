@@ -96,6 +96,7 @@ def py2f(obj, debug=0, byref=False):
     from ctypes import c_long, c_double, c_bool, c_char, c_wchar_p, c_char_p, c_void_p, addressof, pointer, POINTER, Structure
     from numpy  import asarray, ctypeslib, ma
     from types  import ModuleType
+    from sys    import stdout
 
     MAXLEN = 256
     ATTRLEN = 16
@@ -178,6 +179,7 @@ def py2f(obj, debug=0, byref=False):
                             'str64'  :'U8',
                             'str256' :'U8',
                             'record' : foo.dtype,
+                            'void'   : foo.dtype,
                           }
 
             # NumPy ndarray
@@ -203,10 +205,31 @@ def py2f(obj, debug=0, byref=False):
                     _appendInitAtoF(initialiser, foo, field, list)
                     _addNPArray(selectcases[_ctype.fields[field][0].name], field, _arr[field])
 
+            # YL TODO 30/09/2020: currently this is only a place holder to let the code run but the Fortran
+            #                     side isn't working at all! (we'll need another complicated parser to comprehend
+            #                     this datatype but we may never need it in any use case)
+            def _addFlexible(_ctype, _key, _val):
+                '''Flexible datatype (name: 'voidxxx')'''
+
+                npptr = ctypeslib.ndpointer(_ctype)
+
+                # only copy shape when obj is fully ready, otherwise ndpointer is destroyed
+                if _val.size > 0:
+                    npptr._shape_ = _val.shape
+
+                # do NOT use ndarray.astype(_ctype) which does not work
+                fbuff.append((_key, npptr))
+                initialiser.append(asarray(_val, dtype=_ctype).ctypes.data)
+
+
             try:
                 _addNPArray(selectcases[foo.dtype.name], key, getattr(obj, key))
             except KeyError:
-                _addRecArray(selectcases[foo.dtype.name[:6]], getattr(obj, key))
+                if foo.dtype.name[:6] == 'record':
+                    _addRecArray(selectcases[foo.dtype.name[:6]], getattr(obj, key))
+                # to let entities of flexible datatype pass
+                elif foo.dtype.name[:4] == 'void':
+                    _addFlexible(selectcases[foo.dtype.name[:4]], key, getattr(obj, key))
 
         # <tuple>/<list> of integer, will be converted to ndarray
         else:
@@ -360,8 +383,11 @@ def py2f(obj, debug=0, byref=False):
                                        fbuff)                                     # fields: G. attributes
                     for item in sublist ]
 
-    if len(fields) != len(initialiser):
-        print(" >>> DL_PY2F WARNING: fields (len: {}) and initialiser (len: {}) mismatch:".format(len(fields),len(initialiser)))
+    if len(fields) != len(initialiser) or debug > 4:
+        if len(fields) != len(initialiser):
+            print(" >>> DL_PY2F WARNING: fields (len: {}) and initialiser (len: {}) mismatch:".format(len(fields),len(initialiser)))
+        else:
+            print(" >>> DL_PY2F DEBUG: data structure of PY2F object")
         print(" "*4+"-"*48)
         print("    {:20}  |  {}".format('field', 'initialiser'))
         for i in range(max(len(fields), len(initialiser))):
@@ -378,6 +404,8 @@ def py2f(obj, debug=0, byref=False):
             #    print("### {<20s}  |  {<20s}".format(f[i].strip(), initialiser[i]))
             #except:
             #    print("### {}".format(initialiser[i]))
+
+    stdout.flush()
 
     # number of attributes
     fields.insert(0, ('nattrs', c_long))
