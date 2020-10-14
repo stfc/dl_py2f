@@ -82,7 +82,7 @@ def __getType(obj):
         return FunctionType
 
     # application <objects>
-    elif hasattr(obj, __dictname) and type(obj).__module__ is not 'builtins':
+    elif hasattr(obj, __dictname) and type(obj).__module__ != 'builtins':
         return object
 
     # anything else
