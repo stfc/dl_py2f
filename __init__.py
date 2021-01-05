@@ -93,7 +93,7 @@ def __getType(obj):
 def py2f(obj, debug=0, byref=False):
     '''Convert a Python object to <ctypes.Structure> (recursively)'''
 
-    from ctypes import c_long, c_double, c_bool, c_char, c_wchar_p, c_char_p, c_void_p, addressof, pointer, POINTER, Structure
+    from ctypes import CFUNCTYPE, c_long, c_double, c_bool, c_char, c_wchar_p, c_char_p, c_void_p, addressof, pointer, POINTER, Structure
     from numpy  import asarray, ctypeslib, ma
     from types  import ModuleType
     from sys    import stdout
