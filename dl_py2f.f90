@@ -65,22 +65,25 @@ module DL_PY2F
     endtype PyType
     ! a general-purpose dictionary-like class
     type dictType
-        type(dictType)  , pointer :: next     => null()
-        character(len=:), pointer :: key      => null()
         character(len=16)         :: type     = ""
-        class(*)        , pointer :: scalar   => null()
 ! for now impossible to implement unlimited polymorphic arrays (see below) 
-        class(*)        , pointer :: array(:) => null()
-        type(PyType)    , pointer :: PyPtr    => null()
         integer                   :: sizem    =  0
         integer                   :: sizen    =  0
-        character(len=8), pointer :: onedimchar(:) => null()
-        integer(kind=8) , pointer :: onedimint(:)  => null(), twodimint(:,:)  => null()
-        real(kind=8)    , pointer :: onedimdbl(:)  => null(), twodimdbl(:,:)  => null()
-        real(kind=8)    , pointer :: onedimcdbl(:) => null(), twodimcdbl(:,:) => null()
+        character(len=:), pointer :: key             => null()
+        class(*)        , pointer :: scalar          => null()
+        class(*)        , pointer :: array(:)        => null()
+        type(PyType)    , pointer :: PyPtr           => null()
+        character(len=8), pointer :: onedimchar(:)   => null()
+        integer(kind=8) , pointer :: onedimint(:)    => null()
+        integer(kind=8) , pointer :: twodimint(:,:)  => null()
+        real(kind=8)    , pointer :: onedimdbl(:)    => null()
+        real(kind=8)    , pointer :: twodimdbl(:,:)  => null()
+        real(kind=8)    , pointer :: onedimcdbl(:)   => null()
+        real(kind=8)    , pointer :: twodimcdbl(:,:) => null()
+        type(dictType)  , pointer :: next            => null()
         contains
         generic, public :: assign => assignScalar,     &
-                                     assignNull,       &
+!                                     assignNull,       &
                                      assignOneDimChar, &
                                      assignOneDimDbl,  &
                                      assignTwoDimDbl,  &
@@ -117,7 +120,7 @@ module DL_PY2F
         procedure, public :: finalise   => private_finalise
         ! assigners
         procedure, private :: assignScalar
-        procedure, private :: assignNull
+!        procedure, private :: assignNull
         procedure, private :: assignOneDimChar
         procedure, private :: assignOneDimInt
         procedure, private :: assignTwoDimInt
@@ -449,25 +452,124 @@ module DL_PY2F
 
         ! recurse until we reach the end of the linked table
         if(associated(metaObj%key).and.associated(metaObj%next)) then
+
             call private_finalise(metaObj%next)
+
             deallocate(metaObj%next)
+
+!            if(debug.gt.4) then
+!                write(*,'(//A,1X,A)', advance="no"), ' >>> DL_PY2F: deallocating for entry', '"'//metaObj%key//'"... '
+!            endif
+            if(associated(metaObj%key)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " key"
+                deallocate(metaObj%key)
+            endif
+            if(associated(metaObj%scalar)) then
+                selecttype(tmp=>metaObj%scalar)
+                    class default
+!                        if(debug.gt.4) write(*, "(1x,A)", advance="no") " scalar"
+                        metaObj%scalar => null()
+                endselect
+            endif
+            ! YL 19/01/2021: the following memory space is allocated by Python,
+            !                so that can only be nullified
+            if(associated(metaObj%array)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " array"
+                metaObj%array => null()
+            endif
+            if(associated(metaObj%PyPtr)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " PyPtr"
+                metaObj%PyPtr => null()
+            endif
+            if(associated(metaObj%onedimchar)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " onedimchar"
+                metaObj%onedimchar => null()
+            endif
+            if(associated(metaObj%onedimint)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " onedimint"
+                metaObj%onedimint  => null()
+            endif
+            if(associated(metaObj%twodimint)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " twodimint"
+                metaObj%twodimint  => null()
+            endif
+            if(associated(metaObj%onedimdbl)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " onedimdbl"
+                metaObj%onedimdbl  => null()
+            endif
+            if(associated(metaObj%twodimdbl)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " twodimdbl"
+                metaObj%twodimdbl  => null()
+            endif
+            if(associated(metaObj%onedimcdbl)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " onedimcdbl"
+                metaObj%onedimcdbl => null()
+            endif
+            if(associated(metaObj%twodimcdbl)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " twodimcdbl"
+                metaObj%twodimcdbl => null()
+            endif
+
         ! end of linked table
         elseif(associated(metaObj%key).and..not.associated(metaObj%next)) then
-            if(associated(metaObj%key)       ) deallocate(metaObj%key)
-            if(associated(metaObj%scalar)    ) deallocate(metaObj%scalar)
-            if(associated(metaObj%array)     ) deallocate(metaObj%array)
-            if(associated(metaObj%PyPtr)     ) deallocate(metaObj%PyPtr)
-            if(associated(metaObj%onedimchar)) deallocate(metaObj%onedimchar)
-            ! we can't deallocate these pointers because they are referenced to Python/NumPy arrays
-            if(associated(metaObj%onedimint) ) metaObj%onedimint  => null()
-            if(associated(metaObj%twodimint) ) metaObj%twodimint  => null()
-            if(associated(metaObj%onedimdbl) ) metaObj%onedimdbl  => null()
-            if(associated(metaObj%twodimdbl) ) metaObj%twodimdbl  => null()
-            if(associated(metaObj%onedimcdbl)) metaObj%onedimcdbl => null()
-            if(associated(metaObj%twodimcdbl)) metaObj%twodimcdbl => null()
+
+!            if(debug.gt.4) then
+!                write(*,'(//A,1X,A)', advance="no"), ' >>> DL_PY2F: deallocating for entry', '"'//metaObj%key//'"... '
+!            endif
+            if(associated(metaObj%key)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " key"
+                deallocate(metaObj%key)
+            endif
+            if(associated(metaObj%scalar)) then
+                selecttype(tmp=>metaObj%scalar)
+                    class default
+!                        if(debug.gt.4) write(*, "(1x,A)", advance="no") " scalar"
+                        metaObj%scalar => null()
+                endselect
+            endif
+            ! YL 19/01/2021: the following memory space is allocated by Python,
+            !                so that can only be nullified
+            if(associated(metaObj%array)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " array"
+                metaObj%array => null()
+            endif
+            if(associated(metaObj%PyPtr)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " PyPtr"
+                metaObj%PyPtr => null()
+            endif
+            if(associated(metaObj%onedimchar)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " onedimchar"
+                metaObj%onedimchar => null()
+            endif
+            if(associated(metaObj%onedimint)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " onedimint"
+                metaObj%onedimint  => null()
+            endif
+            if(associated(metaObj%twodimint)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " twodimint"
+                metaObj%twodimint  => null()
+            endif
+            if(associated(metaObj%onedimdbl)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " onedimdbl"
+                metaObj%onedimdbl  => null()
+            endif
+            if(associated(metaObj%twodimdbl)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " twodimdbl"
+                metaObj%twodimdbl  => null()
+            endif
+            if(associated(metaObj%onedimcdbl)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " onedimcdbl"
+                metaObj%onedimcdbl => null()
+            endif
+            if(associated(metaObj%twodimcdbl)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " twodimcdbl"
+                metaObj%twodimcdbl => null()
+            endif
+
         endif
 
         if(associated(dummyPtr)) deallocate(dummyPtr)
+        call flush(6)
 
     endsubroutine private_finalise
 
@@ -496,35 +598,37 @@ module DL_PY2F
             if(debug.gt.4) then
                 selecttype(tmp=>metaObj%scalar)
                     type is(character(kind=c_char, len=*))
-                        write(*,*) " >>> DL_PY2F assignScalar: assigning character(kind=c_char, len=*)..."
-                        write(*,*) "key = ", key, ", loc(metaObj%scalar) =", loc(tmp)
+                        write(*,*) ">>> DL_PY2F assignScalar: assigning character(kind=c_char, len=*)..."
+                        write(*,*) "                          key = ", key
+                        write(*,*) "                          loc(metaObj%scalar) =", loc(tmp)
                 endselect
             endif
         endif
 
     endsubroutine assignScalar
-    recursive subroutine assignNull(metaObj, key, source)
-
-        class(dictType) ,          intent(inout) :: metaObj
-        character(len=*),          intent(in)    :: key
-        integer         , pointer, intent(in)    :: source
-
-        if(associated(metaObj%key)) then
-            if(metaObj%key.eq.key) then
-                deallocate(metaObj%scalar)
-                metaObj%scalar => source
-            else
-                if(.not.associated(metaObj%next)) then
-                    allocate(metaObj%next)
-                endif
-                call assignNull(metaObj%next, key, source)
-            endif
-        else
-            allocate(metaObj%key, source=key)
-            metaObj%scalar => source
-        endif
-
-    endsubroutine assignNull
+! YL 19/01/2021: this is not distinguishable from assignScalar
+!    recursive subroutine assignNull(metaObj, key, source)
+!
+!        class(dictType) ,          intent(inout) :: metaObj
+!        character(len=*),          intent(in)    :: key
+!        integer         , pointer, intent(in)    :: source
+!
+!        if(associated(metaObj%key)) then
+!            if(metaObj%key.eq.key) then
+!                deallocate(metaObj%scalar)
+!                metaObj%scalar => source
+!            else
+!                if(.not.associated(metaObj%next)) then
+!                    allocate(metaObj%next)
+!                endif
+!                call assignNull(metaObj%next, key, source)
+!            endif
+!        else
+!            allocate(metaObj%key, source=key)
+!            metaObj%scalar => source
+!        endif
+!
+!    endsubroutine assignNull
 ! not in use
     recursive subroutine assignPyPtr(metaObj, key, source)
 
