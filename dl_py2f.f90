@@ -31,6 +31,9 @@ module DL_PY2F
     private
     public  :: ptr2dict, dictType, PyType
 
+    class(*), pointer :: scalarPtr => null()
+    integer , pointer :: nullPtr => null()
+
     type, bind(c) :: CStructType
         ! YL 09/10/2018: components %type, %name, or %dtype of length > 1 no longer allowed by gfortran 8 or later
         character(len=1, kind=c_char) :: type(16)
@@ -72,12 +75,13 @@ module DL_PY2F
         type(PyType)    , pointer :: PyPtr    => null()
         integer                   :: sizem    =  0
         integer                   :: sizen    =  0
-        character(len=8), pointer :: onedimchar(:)
-        integer(kind=8) , pointer :: onedimint(:) , twodimint(:,:)
-        real(kind=8)    , pointer :: onedimdbl(:) , twodimdbl(:,:)
-        real(kind=8)    , pointer :: onedimcdbl(:), twodimcdbl(:,:)
+        character(len=8), pointer :: onedimchar(:) => null()
+        integer(kind=8) , pointer :: onedimint(:)  => null(), twodimint(:,:)  => null()
+        real(kind=8)    , pointer :: onedimdbl(:)  => null(), twodimdbl(:,:)  => null()
+        real(kind=8)    , pointer :: onedimcdbl(:) => null(), twodimcdbl(:,:) => null()
         contains
         generic, public :: assign => assignScalar,     &
+                                     assignNull,       &
                                      assignOneDimChar, &
                                      assignOneDimDbl,  &
                                      assignTwoDimDbl,  &
@@ -98,7 +102,7 @@ module DL_PY2F
                                      getLogical,    &
                                      getCLogical,   &
                                      getPyPtr,      &
-                                     getCPtr,       &
+!                                     getCPtr,       &
                                      getCFuncPtr
         generic, public :: set    => setOneDimDbl,  &
                                      setTwoDimDbl,  &
@@ -109,9 +113,12 @@ module DL_PY2F
                                      setCCharArray, &
                                      setScalar
         ! initialiser
-        procedure, public  :: init
+        procedure, public :: initialise => private_initialise
+        procedure, public :: init       => private_initialise
+        procedure, public :: finalise   => private_finalise
         ! assigners
         procedure, private :: assignScalar
+        procedure, private :: assignNull
         procedure, private :: assignOneDimChar
         procedure, private :: assignOneDimInt
         procedure, private :: assignTwoDimInt
@@ -135,7 +142,7 @@ module DL_PY2F
         procedure, private :: getLogical
         procedure, private :: getCLogical
         procedure, private :: getPyPtr
-        procedure, private :: getCPtr
+!        procedure, private :: getCPtr
         procedure, private :: getCFuncPtr
         ! setters
         procedure, private :: setOneDimDbl
@@ -147,7 +154,7 @@ module DL_PY2F
         procedure, private :: setCCharArray
         procedure, private :: setScalar
         ! pointers
-        procedure, public  :: ptr
+!        procedure, public  :: ptr
         ! private tools
         procedure, private :: returnScalar
         procedure, private :: returnPyPtr
@@ -166,7 +173,7 @@ module DL_PY2F
     integer, parameter :: debug = 0
 
     ! YL 20/09/2020: place the array buffers at the module level to deallocate later
-    integer(kind=8), pointer :: onedimint(:)
+!    integer(kind=8), pointer :: onedimint(:)
 
     contains
 
@@ -188,7 +195,7 @@ module DL_PY2F
 
 ! INITIALISER
 
-    subroutine init(metaObj, PyPtr, keepRef)
+    subroutine private_initialise(metaObj, PyPtr, keepRef)
 
         class(dictType)            , intent(out)           :: metaObj
         type(PyType)      , pointer, intent(in)            :: PyPtr
@@ -204,7 +211,6 @@ module DL_PY2F
         logical(c_bool)   , pointer                        :: bbuff
         real(c_double)    , pointer                        :: cdblbuff
         real(c_double)    , pointer                        :: dblarraybuff(:,:) , onedimdblbuff(:) , twodimdblbuff(:,:)
-        real(c_double)    , pointer                        :: twodimdblbuff2(:,:), twodimdblbuff3(:,:)
         character(len=LENSTR)                              :: namebuff, typebuff, dtypebuff
         character(len=8)  , pointer                        :: chararraybuff(:,:)
         character(len=8)  , pointer                        :: onedimcharbuff(:), twodimcharbuff(:,:)
@@ -222,7 +228,7 @@ module DL_PY2F
         call c_f_pointer(c_loc(PyPtr%cdata), cdata, [PyPtr%nattrs])
 
         ! loop over components of Python object and set values to dictionary
-        do i = 1, PyPtr%nattrs
+        do i = 1, int(PyPtr%nattrs)
 
             ! YL 09/10/2018: as per gfortran 8, components %type, %name, or %dtype cannot be of length > 1
             ! (Error: Component ‘dtype’ of BIND(C) type at (1) must have length one)
@@ -237,7 +243,9 @@ module DL_PY2F
             selectcase(trim(typebuff))
 
                 case('NoneType')
-                    call metaobj%assign(trim(namebuff), nonetype)
+                    ! YL 19/01/2021: we assign to a null pointer otherwise it's not deallocatable
+!                    call metaobj%assign(trim(namebuff), nonetype)
+                    call metaobj%assign(trim(namebuff), nullPtr)
 
                 case('function')
                     call c_f_pointer(cdata(i)%attr, cfuncbuff)
@@ -268,10 +276,10 @@ module DL_PY2F
                     ! ncols: number of array's columns (NB: ONLY _master!)
                     ! sizem: size m of the (/m, n/) array
                     ! sizen: size n of the (/m, n/) array
-                    ncols = PyPtr%width
-                    sizem = cdata(i)%sizem
+                    ncols = int(PyPtr%width)
+                    sizem = int(cdata(i)%sizem)
                     if(cdata(i)%size.gt.0) then
-                        sizen = cdata(i)%size/cdata(i)%sizem
+                        sizen = int(cdata(i)%size/cdata(i)%sizem)
                     elseif(cdata(i)%size.eq.0) then
                         sizen = 0
                     endif
@@ -414,7 +422,35 @@ module DL_PY2F
 
         enddo
 
-    endsubroutine init
+!        if(associated(onedimcharbuff)) deallocate(onedimcharbuff)
+!        if(associated(twodimcharbuff)) deallocate(twodimcharbuff)
+
+    endsubroutine private_initialise
+    recursive subroutine private_finalise(metaObj)
+
+        class(dictType), intent(inout) :: metaObj
+
+        ! recurse until we reach the end of the linked table
+        if(associated(metaObj%key).and.associated(metaObj%next)) then
+            call private_finalise(metaObj%next)
+            deallocate(metaObj%next)
+        ! end of linked table
+        elseif(associated(metaObj%key).and..not.associated(metaObj%next)) then
+            if(associated(metaObj%key)       ) deallocate(metaObj%key)
+            if(associated(metaObj%scalar)    ) deallocate(metaObj%scalar)
+            if(associated(metaObj%array)     ) deallocate(metaObj%array)
+            if(associated(metaObj%PyPtr)     ) deallocate(metaObj%PyPtr)
+            if(associated(metaObj%onedimchar)) deallocate(metaObj%onedimchar)
+            ! we can't deallocate these pointers because they are referenced to Python/NumPy arrays
+            if(associated(metaObj%onedimint) ) metaObj%onedimint  => null()
+            if(associated(metaObj%twodimint) ) metaObj%twodimint  => null()
+            if(associated(metaObj%onedimdbl) ) metaObj%onedimdbl  => null()
+            if(associated(metaObj%twodimdbl) ) metaObj%twodimdbl  => null()
+            if(associated(metaObj%onedimcdbl)) metaObj%onedimcdbl => null()
+            if(associated(metaObj%twodimcdbl)) metaObj%twodimcdbl => null()
+        endif
+
+    endsubroutine private_finalise
 
 ! END OF INITIALISER
 ! ASSIGNERS
@@ -441,13 +477,35 @@ module DL_PY2F
             if(debug.gt.4) then
                 selecttype(tmp=>metaObj%scalar)
                     type is(character(kind=c_char, len=*))
-                        write(*,*) " ### DL_PY2F assignScalar: assigning character(kind=c_char, len=*)..."
+                        write(*,*) " >>> DL_PY2F assignScalar: assigning character(kind=c_char, len=*)..."
                         write(*,*) "key = ", key, ", loc(metaObj%scalar) =", loc(tmp)
                 endselect
             endif
         endif
 
     endsubroutine assignScalar
+    recursive subroutine assignNull(metaObj, key, source)
+
+        class(dictType) ,          intent(inout) :: metaObj
+        character(len=*),          intent(in)    :: key
+        integer         , pointer, intent(in)    :: source
+
+        if(associated(metaObj%key)) then
+            if(metaObj%key.eq.key) then
+                deallocate(metaObj%scalar)
+                metaObj%scalar => source
+            else
+                if(.not.associated(metaObj%next)) then
+                    allocate(metaObj%next)
+                endif
+                call assignNull(metaObj%next, key, source)
+            endif
+        else
+            allocate(metaObj%key, source=key)
+            metaObj%scalar => source
+        endif
+
+    endsubroutine assignNull
 ! not in use
     recursive subroutine assignPyPtr(metaObj, key, source)
 
@@ -964,25 +1022,25 @@ module DL_PY2F
                     type is(integer(kind=4))
                         selecttype(tmp=>metaObj%scalar)
                             type is(integer(kind=4))
-                                tmp = val
+                                tmp = int(val, kind=4)
                             type is(integer(kind=8))
-                                tmp = val
+                                tmp = int(val, kind=8)
                             class default
                                 write(*,*) ">>> DL_PY2F ERROR: given value's type does not match the saved entry ", key
                         endselect
                     type is(integer(kind=8))
                         selecttype(tmp=>metaObj%scalar)
                             type is(integer(kind=4))
-                                tmp = val
+                                tmp = int(val, kind=4)
                             type is(integer(kind=8))
-                                tmp = val
+                                tmp = int(val, kind=8)
                             class default
                                 write(*,*) ">>> DL_PY2F ERROR: given value's type does not match the saved entry ", key
                         endselect
                     type is(real(kind=8))
                         selecttype(tmp=>metaObj%scalar)
                             type is(real(kind=8))
-                                tmp = val
+                                tmp = int(val, kind=8)
                         endselect
                 endselect
             else
@@ -1173,11 +1231,11 @@ module DL_PY2F
         real            , intent(out) :: val
 
         selecttype(tmp=>metaObj%returnScalar(key))
-            type is (real)
+            type is(real)
                 val = tmp
             ! real type conversion (c_long and c_int are equivalent in 'selecttype')
-            type is (real(kind=8))
-                val = dble(tmp)
+            type is(real(kind=8))
+                val = real(tmp, kind=4)
         endselect
 
     endsubroutine getReal
@@ -1189,7 +1247,7 @@ module DL_PY2F
 
         selecttype(tmp=>metaObj%returnScalar(key))
             type is (real)
-                val = dble(tmp)
+                val = real(tmp, kind=8)
             type is (real(kind=8))
                 val = tmp
         endselect
@@ -1325,19 +1383,19 @@ module DL_PY2F
         endselect
 
     endsubroutine getChar
-    subroutine getCPtr(metaObj, key, val)
-
-        class(dictType)          , intent(in)  :: metaObj
-        character(len=*)         , intent(in)  :: key
-        type(c_ptr)     , pointer, intent(out) :: val
-
-!        selecttype(tmp=>metaObj%returnScalar(key))
-!!            type is (type(c_ptr))
-!            class default
-!                val => tmp
-!        endselect
-
-    endsubroutine getCPtr
+!    subroutine getCPtr(metaObj, key, val)
+!
+!        class(dictType)          , intent(in)  :: metaObj
+!        character(len=*)         , intent(in)  :: key
+!        type(c_ptr)     , pointer, intent(out) :: val
+!
+!!        selecttype(tmp=>metaObj%returnScalar(key))
+!!!            type is (type(c_ptr))
+!!            class default
+!!                val => tmp
+!!        endselect
+!
+!    endsubroutine getCPtr
     subroutine getCFuncPtr(metaObj, key, val)
 
         class(dictType)          , intent(in)  :: metaObj
@@ -1390,7 +1448,7 @@ module DL_PY2F
 
         ! some versions of GNU compiler segfaults if the Python object is None (c_ptr_null)
         if(associated(val)) then
-            ncols = val%width
+            ncols = int(val%width)
         endif
 
     endsubroutine getPyPtr
@@ -1398,23 +1456,17 @@ module DL_PY2F
 ! END OF GETTERS
 ! POINTERS
 
-    function ptr(metaObj, key) result(val)
-
-        class(dictType)          , intent(in)  :: metaObj
-        character(len=*)         , intent(in)  :: key
-        class(*)        , pointer              :: val
-
-!        val => metaObj%returnOneDimDbl(key)
-
-    endfunction ptr
+!    function ptr(metaObj, key) result(val)
+!
+!        class(dictType)          , intent(in)  :: metaObj
+!        character(len=*)         , intent(in)  :: key
+!        class(*)        , pointer              :: val
+!
+!!        val => metaObj%returnOneDimDbl(key)
+!
+!    endfunction ptr
 
 ! END OF POINTERS
-!
-    recursive subroutine clean(metaObj)
-
-        class(dictType) , intent(inout) :: metaObj
-
-    endsubroutine clean
 
 endmodule DL_PY2F
 
