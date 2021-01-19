@@ -32,7 +32,6 @@ module DL_PY2F
     public  :: ptr2dict, dictType, PyType
 
     class(*), pointer :: scalarPtr => null()
-    integer , pointer :: nullPtr => null()
 
     type, bind(c) :: CStructType
         ! YL 09/10/2018: components %type, %name, or %dtype of length > 1 no longer allowed by gfortran 8 or later
@@ -171,6 +170,7 @@ module DL_PY2F
     endtype dictType
 
     integer, parameter :: debug = 0
+    integer, pointer   :: dummyPtr => null()
 
     ! YL 20/09/2020: place the array buffers at the module level to deallocate later
 !    integer(kind=8), pointer :: onedimint(:)
@@ -201,24 +201,27 @@ module DL_PY2F
         type(PyType)      , pointer, intent(in)            :: PyPtr
         logical                    , intent(in) , optional :: keepRef
 
-        integer           , parameter                      :: LENSTR = 16
         type(CStructType) , pointer                        :: cdata(:)
-        type(PyType)      , pointer                        :: pyptrbuff
-        integer(c_long)   , pointer                        :: cintbuff
-        type(c_funptr)    , pointer                        :: cfuncbuff
-        character(len=8)  , parameter                      :: nonetype = "NoneType"
-        integer(c_long)   , pointer                        :: intarraybuff(:,:) , onedimintbuff(:) , twodimintbuff(:,:)
-        logical(c_bool)   , pointer                        :: bbuff
-        real(c_double)    , pointer                        :: cdblbuff
-        real(c_double)    , pointer                        :: dblarraybuff(:,:) , onedimdblbuff(:) , twodimdblbuff(:,:)
-        character(len=LENSTR)                              :: namebuff, typebuff, dtypebuff
-        character(len=8)  , pointer                        :: chararraybuff(:,:)
-        character(len=8)  , pointer                        :: onedimcharbuff(:), twodimcharbuff(:,:)
-        ! should NOT have deferred length!
-        character(len=255), pointer                        :: cbuff
 
         integer                                            :: i, j, ncols, sizem, sizen
         logical                                            :: keepReference
+
+        integer           , parameter :: LENSTR = 16
+        character(len=8)  , parameter :: nonetype = "NoneType"
+        type(PyType)      , pointer   :: pyptrbuff => null()
+        integer(c_long)   , pointer   :: cintbuff  => null()
+        type(c_funptr)    , pointer   :: cfuncbuff => null()
+        integer(c_long)   , pointer   :: intarraybuff(:,:) => null(), onedimintbuff(:) => null(), twodimintbuff(:,:) => null()
+        logical(c_bool)   , pointer   :: bbuff     => null()
+        real(c_double)    , pointer   :: cdblbuff  => null()
+        real(c_double)    , pointer   :: dblarraybuff(:,:) => null() , onedimdblbuff(:) => null() , twodimdblbuff(:,:) => null()
+        character(len=LENSTR)         :: namebuff, typebuff, dtypebuff
+        character(len=8)  , pointer   :: chararraybuff(:,:) => null()
+        character(len=8)  , pointer   :: onedimcharbuff(:) => null(), twodimcharbuff(:,:) => null()
+        ! should NOT have deferred length!
+        character(len=255), pointer   :: cbuff => null()
+
+        allocate(dummyPtr)
 
         if(.not.present(keepRef)) then
             keepReference = .true.
@@ -245,7 +248,7 @@ module DL_PY2F
                 case('NoneType')
                     ! YL 19/01/2021: we assign to a null pointer otherwise it's not deallocatable
 !                    call metaobj%assign(trim(namebuff), nonetype)
-                    call metaobj%assign(trim(namebuff), nullPtr)
+                    call metaobj%assign(trim(namebuff), dummyPtr)
 
                 case('function')
                     call c_f_pointer(cdata(i)%attr, cfuncbuff)
@@ -422,8 +425,22 @@ module DL_PY2F
 
         enddo
 
+! YL 19/01/2021: deallocate() segfaults
+!        if(associated(pyptrbuff)     ) deallocate(pyptrbuff)
+!        if(associated(cintbuff)      ) deallocate(cintbuff)
+!        if(associated(cfuncbuff)     ) deallocate(cfuncbuff)
+!        if(associated(intarraybuff)  ) deallocate(intarraybuff)
+!        if(associated(onedimintbuff) ) deallocate(onedimintbuff)
+!        if(associated(twodimintbuff) ) deallocate(twodimintbuff)
+!        if(associated(bbuff)         ) deallocate(bbuff)
+!        if(associated(cdblbuff)      ) deallocate(cdblbuff)
+!        if(associated(dblarraybuff)  ) deallocate(dblarraybuff)
+!        if(associated(onedimdblbuff) ) deallocate(onedimdblbuff)
+!        if(associated(twodimdblbuff) ) deallocate(twodimdblbuff)
+!        if(associated(chararraybuff) ) deallocate(chararraybuff)
 !        if(associated(onedimcharbuff)) deallocate(onedimcharbuff)
 !        if(associated(twodimcharbuff)) deallocate(twodimcharbuff)
+!        if(associated(cbuff)         ) deallocate(cbuff)
 
     endsubroutine private_initialise
     recursive subroutine private_finalise(metaObj)
@@ -449,6 +466,8 @@ module DL_PY2F
             if(associated(metaObj%onedimcdbl)) metaObj%onedimcdbl => null()
             if(associated(metaObj%twodimcdbl)) metaObj%twodimcdbl => null()
         endif
+
+        if(associated(dummyPtr)) deallocate(dummyPtr)
 
     endsubroutine private_finalise
 
