@@ -172,8 +172,8 @@ module DL_PY2F
         procedure, public  :: enquireShape
     endtype dictType
 
-    integer, parameter :: debug = 0
-    integer, pointer   :: dummyPtr => null()
+    integer    , parameter :: debug = 0
+    type(c_ptr), parameter :: dummyPtr = c_null_ptr
 
     ! YL 20/09/2020: place the array buffers at the module level to deallocate later
 !    integer(kind=8), pointer :: onedimint(:)
@@ -224,8 +224,6 @@ module DL_PY2F
         ! should NOT have deferred length!
         character(len=255), pointer   :: cbuff => null()
 
-        allocate(dummyPtr)
-
         if(.not.present(keepRef)) then
             keepReference = .true.
         endif
@@ -249,9 +247,11 @@ module DL_PY2F
             selectcase(trim(typebuff))
 
                 case('NoneType')
-                    ! YL 19/01/2021: we assign to a null pointer otherwise it's not deallocatable
-!                    call metaobj%assign(trim(namebuff), nonetype)
-                    call metaobj%assign(trim(namebuff), dummyPtr)
+                    ! YL 19/01/2021: assign to meet two cases
+                    ! - meta%get('entry', pyptr) ... associated(ptr).eq..false. when a Python None is assigned
+                    ! - meta%get('entry', intVar|realVar) doesn't crash when a Python None is assigned
+                    call metaobj%assign(trim(namebuff), nonetype)
+!                    call metaobj%assign(trim(namebuff), dummyPtr)
 
                 case('function')
                     call c_f_pointer(cdata(i)%attr, cfuncbuff)
@@ -420,9 +420,10 @@ module DL_PY2F
                     endselect
 
                 case default
-                    write(*, '(/1X,A,1X,3A,1X,A/)') ">>> DL_PY2F WARNING: type" , &
+                    write(*, '(/1X,A,1X,3A,1X,A/)') ">>> DL_PY2F WARNING: type", &
                                                    '"', trim(typebuff), '"', &
-                                                   "could not be assigned"
+                                                   "could not be assigned for entity", &
+                                                   '"', trim(namebuff), '"'
 
             endselect
 
@@ -568,7 +569,6 @@ module DL_PY2F
 
         endif
 
-        if(associated(dummyPtr)) deallocate(dummyPtr)
         call flush(6)
 
     endsubroutine private_finalise
@@ -595,13 +595,17 @@ module DL_PY2F
         else
             allocate(metaObj%key, source=key)
             metaObj%scalar => source
-            if(debug.gt.4) then
+            if(debug.gt.5) then
+                write(*,*) " DL_PY2F DEBUG: assignScalar"
                 selecttype(tmp=>metaObj%scalar)
                     type is(character(kind=c_char, len=*))
+                        write(*,*) " key = ", key, ", loc(metaObj%scalar) =", loc(tmp)
+                    class default
                         write(*,*) ">>> DL_PY2F assignScalar: assigning character(kind=c_char, len=*)..."
                         write(*,*) "                          key = ", key
                         write(*,*) "                          loc(metaObj%scalar) =", loc(tmp)
                 endselect
+                write(*,*) ""
             endif
         endif
 
@@ -923,12 +927,20 @@ module DL_PY2F
                 ! YL: since gfortran/gcc 7 `val => metaObj%scalar` does not work!
 !                val => metaObj%scalar
                 allocate(val, source=metaObj%scalar)
+                if(debug.gt.5) then
+                    write(*,*) " DL_PY2F DEBUG: returnScalar"
+                    selecttype(tmp=>metaObj%scalar)
+                        class default
+                            write(*,*) " key = ", key, ", loc(metaObj%scalar) =", loc(tmp)
+                    endselect
+                    write(*,*) ""
+                endif
             else
                 ! YL: since gfortran/gcc 7 `val => returnScalar(metaObj%next, key)` does not work!
 !                val => returnScalar(metaObj%next, key)
                 allocate(val, source=returnScalar(metaObj%next, key))
 !                selecttype(tmp=>val)
-!                    type is (character(*))
+!                    type is(character(*))
 !                        if(trim(key)=='crystal_type') then
 !                            print *, "### returnScalar: tmp =", tmp
 !                        endif
@@ -979,20 +991,32 @@ module DL_PY2F
 !                    val => null()
 !                endif
                 selecttype(tmp=>metaObj%scalar)
-                    type is (character(len=*))
+                    ! YL 20/01/2021: it's proven only this works well with Intel, GNU, and Cray after many attempts
+                    type is(character(len=*))
                         if(tmp.eq."NoneType") then
                             val => null()
                         else
                             val => metaObj%scalar
                         endif
+                    ! YL 20/01/2021: this works OK with GNU but not allowed by Intel
+!                    type is(c_ptr)
+!                        val => null()
+                    ! YL 20/01/2021: obsolete
                     class default
-                        val => metaObj%scalar
+                        ! Python reference
+                        if(associated(metaObj%scalar)) then
+                            val => metaObj%scalar
+                        ! Python None
+                        else
+                            val => null()
+                        endif
                 endselect
             else
                 val => returnPyPtr(metaObj%next, key)
             endif
         else
             print *, '\n>>> DL_PY2F ERROR: keyword \"', key, '\"not found in dictionary.\n'
+            call flush(6)
         endif
 
     endfunction returnPyPtr
@@ -1311,11 +1335,16 @@ module DL_PY2F
         class(dictType) , intent(in)  :: metaObj
         character(len=*), intent(in)  :: key
         integer(kind=4) , intent(out) :: val
+  
+        type(dictType)  , pointer     :: metaObjPtr
 
-        ! DAGEROUS! do NOT use local (temporary) pointer to pass value
-        selecttype(tmp=>metaObj%returnScalar(key))
+        ! Cray compiler thinks metaObj uninitialised and segfaults! so we have to allocate a temporary pointer
+        allocate(metaObjPtr, source=metaObj)
+
+        ! DANGEROUS! do NOT use local (temporary) pointer to pass value
+        selecttype(tmp=>metaObjPtr%returnScalar(key))
             ! (integer and integer(c_int) are equivalent in 'selecttype')
-            type is (integer(kind=4))
+            type is(integer(kind=4))
                 ! for future development with pointers:
                 !     Intel compiler requires tmp to possess target/pointer attribute,
                 !     then we will have to declare tmp and cannot use "selecttype
@@ -1323,14 +1352,16 @@ module DL_PY2F
                 !     so we may try val => metaObj%returnScalar(key) instead which should be fast enough
                 val = tmp
             ! int type conversion (integer(kind=8) and integer(c_long) are equivalent in 'selecttype')
-            type is (integer(kind=8))
+            type is(integer(kind=8))
                 val = int(tmp)
             ! logical -> int conversion
-            type is (logical)
+            type is(logical)
                 val = merge(1, 0, tmp)
-            type is (logical(c_bool))
+            type is(logical(c_bool))
                 val = merge(1, 0, tmp)
         endselect
+
+        deallocate(metaObjPtr)
 
     endsubroutine getInt
     subroutine getIntCLong(metaObj, key, val)
@@ -1338,28 +1369,40 @@ module DL_PY2F
         class(dictType) , intent(in)  :: metaObj
         character(len=*), intent(in)  :: key
         integer(kind=8) , intent(out) :: val
+        type(dictType)  , pointer     :: metaObjPtr
+
+        ! Cray compiler thinks metaObj uninitialised and segfaults! so we have to allocate a temporary pointer
+        allocate(metaObjPtr, source=metaObj)
         
-        selecttype(tmp=>metaObj%returnScalar(key))
-            type is (integer(kind=4))
+        selecttype(tmp=>metaObjPtr%returnScalar(key))
+            type is(integer(kind=4))
                 val = tmp
-            type is (integer(kind=8))
+            type is(integer(kind=8))
                 val = tmp
         endselect
+
+        deallocate(metaObjPtr)
 
     endsubroutine getIntCLong
     subroutine getReal(metaObj, key, val)
 
         class(dictType) , intent(in)  :: metaObj
         character(len=*), intent(in)  :: key
-        real            , intent(out) :: val
+        real(kind=4)    , intent(out) :: val
+        type(dictType)  , pointer     :: metaObjPtr
 
-        selecttype(tmp=>metaObj%returnScalar(key))
-            type is(real)
+        ! Cray compiler thinks metaObj uninitialised and segfaults! so we have to allocate a temporary pointer
+        allocate(metaObjPtr, source=metaObj)
+
+        selecttype(tmp=>metaObjPtr%returnScalar(key))
+            type is(real(kind=4))
                 val = tmp
             ! real type conversion (c_long and c_int are equivalent in 'selecttype')
             type is(real(kind=8))
                 val = real(tmp, kind=4)
         endselect
+
+        deallocate(metaObjPtr)
 
     endsubroutine getReal
     subroutine getDouble(metaObj, key, val)
@@ -1368,12 +1411,19 @@ module DL_PY2F
         character(len=*), intent(in)  :: key
         real(kind=8)    , intent(out) :: val
 
-        selecttype(tmp=>metaObj%returnScalar(key))
-            type is (real)
+        type(dictType)  , pointer     :: metaObjPtr
+
+        ! Cray compiler thinks metaObj uninitialised and segfaults! so we have to allocate a temporary pointer
+        allocate(metaObjPtr, source=metaObj)
+
+        selecttype(tmp=>metaObjPtr%returnScalar(key))
+            type is(real(kind=4))
                 val = real(tmp, kind=8)
-            type is (real(kind=8))
+            type is(real(kind=8))
                 val = tmp
         endselect
+
+        deallocate(metaObjPtr)
 
     endsubroutine getDouble
     subroutine getOneDimInt(metaObj, key, array)
@@ -1382,7 +1432,14 @@ module DL_PY2F
         character(len=*), intent(in)  :: key
         integer(kind=4) , intent(out) :: array(:)
 
-        array = metaObj%returnOneDimInt(key)
+        type(dictType)  , pointer     :: metaObjPtr
+
+        ! Cray compiler thinks metaObj uninitialised and segfaults! so we have to allocate a temporary pointer
+        allocate(metaObjPtr, source=metaObj)
+
+        array = metaObjPtr%returnOneDimInt(key)
+
+        deallocate(metaObjPtr)
 
     endsubroutine getOneDimInt
     subroutine getTwoDimInt(metaObj, key, array)
@@ -1391,7 +1448,14 @@ module DL_PY2F
         character(len=*), intent(in)  :: key
         integer(kind=4) , intent(out) :: array(:,:)
 
-        array = metaObj%returnTwoDimInt(key)
+        type(dictType)  , pointer     :: metaObjPtr
+
+        ! Cray compiler thinks metaObj uninitialised and segfaults! so we have to allocate a temporary pointer
+        allocate(metaObjPtr, source=metaObj)
+
+        array = metaObjPtr%returnTwoDimInt(key)
+
+        deallocate(metaObjPtr)
 
     endsubroutine getTwoDimInt
     subroutine getOneDimLong(metaObj, key, array)
@@ -1400,7 +1464,14 @@ module DL_PY2F
         character(len=*), intent(in)  :: key
         integer(kind=8) , intent(out) :: array(:)
 
-        array = metaObj%returnOneDimInt(key)
+        type(dictType)  , pointer     :: metaObjPtr
+
+        ! Cray compiler thinks metaObj uninitialised and segfaults! so we have to allocate a temporary pointer
+        allocate(metaObjPtr, source=metaObj)
+
+        array = metaObjPtr%returnOneDimInt(key)
+
+        deallocate(metaObjPtr)
 
     endsubroutine getOneDimLong
     subroutine getTwoDimLong(metaObj, key, array)
@@ -1409,7 +1480,14 @@ module DL_PY2F
         character(len=*), intent(in)  :: key
         integer(kind=8) , intent(out) :: array(:,:)
 
-        array = metaObj%returnTwoDimInt(key)
+        type(dictType)  , pointer     :: metaObjPtr
+
+        ! Cray compiler thinks metaObj uninitialised and segfaults! so we have to allocate a temporary pointer
+        allocate(metaObjPtr, source=metaObj)
+
+        array = metaObjPtr%returnTwoDimInt(key)
+
+        deallocate(metaObjPtr)
 
     endsubroutine getTwoDimLong
 ! doens't work for ifort, either
@@ -1424,7 +1502,14 @@ module DL_PY2F
         character(len=*), intent(in)  :: key
         real(kind=8)    , intent(out) :: array(:)
 
-        array = metaObj%returnOneDimDbl(key)
+        type(dictType)  , pointer     :: metaObjPtr
+
+        ! Cray compiler thinks metaObj uninitialised and segfaults! so we have to allocate a temporary pointer
+        allocate(metaObjPtr, source=metaObj)
+
+        array = metaObjPtr%returnOneDimDbl(key)
+
+        deallocate(metaObjPtr)
 
     endsubroutine getOneDimDbl
     subroutine getTwoDimDbl(metaObj, key, array)
@@ -1433,7 +1518,14 @@ module DL_PY2F
         character(len=*), intent(in)  :: key
         real(kind=8)    , intent(out) :: array(:,:)
 
-        array = metaObj%returnTwoDimDbl(key)
+        type(dictType)  , pointer     :: metaObjPtr
+
+        ! Cray compiler thinks metaObj uninitialised and segfaults! so we have to allocate a temporary pointer
+        allocate(metaObjPtr, source=metaObj)
+
+        array = metaObjPtr%returnTwoDimDbl(key)
+
+        deallocate(metaObjPtr)
 
     endsubroutine getTwoDimDbl
     subroutine getCCharArray(metaObj, key, array)
@@ -1445,13 +1537,19 @@ module DL_PY2F
         ! YL 14/08/2019: strange gfortran bug that it doesn't compile if cbuff is initialised as cbuff => null()
         character(len=:)      , pointer              :: cbuff
         integer                                      :: i
+        type(dictType)  , pointer     :: metaObjPtr
 
-        call metaObj%getChar(key, cbuff)
+        ! Cray compiler thinks metaObj uninitialised and segfaults! so we have to allocate a temporary pointer
+        allocate(metaObjPtr, source=metaObj)
+
+        call metaObjPtr%getChar(key, cbuff)
 
         do i = 1, len(trim(cbuff))
             array(i) = cbuff(i:i)
         enddo
         
+        deallocate(metaObjPtr)
+
     endsubroutine getCCharArray
     subroutine getChar(metaObj, key, val)
 
@@ -1472,6 +1570,10 @@ module DL_PY2F
             character(len=255) :: char
         endtype charType
         type(charType)  , pointer              :: charbuff
+        type(dictType)  , pointer     :: metaObjPtr
+
+        ! Cray compiler thinks metaObj uninitialised and segfaults! so we have to allocate a temporary pointer
+        allocate(metaObjPtr, source=metaObj)
 
         gnu   => blanc
         intel => blanc
@@ -1487,23 +1589,25 @@ module DL_PY2F
         !                it's said to be fixed in gfortran 9
 !        allocate(intel, source=metaObj%returnScalar(key))
 !        selecttype(tmp=>intel)
-!            type is (character(*))
+!            type is(character(*))
 !                if(trim(tmp).ne."") then
 !                    val => tmp
 !                endif
 !        endselect
 
         ! this is a workaround for Intel since gfortran 7/8 doesn't compile the above method
-        charbuff => metaObj%returnScalar(key)
+        charbuff => metaObjPtr%returnScalar(key)
         val => charbuff%char
 
         ! this is the GNU way
-        selecttype(gnu=>metaObj%returnScalar(key))
-            type is (character(*))
+        selecttype(gnu=>metaObjPtr%returnScalar(key))
+            type is(character(*))
                 if(trim(gnu).ne."") then
                     val => gnu
                 endif
         endselect
+
+        deallocate(metaObjPtr)
 
     endsubroutine getChar
 !    subroutine getCPtr(metaObj, key, val)
@@ -1513,7 +1617,7 @@ module DL_PY2F
 !        type(c_ptr)     , pointer, intent(out) :: val
 !
 !!        selecttype(tmp=>metaObj%returnScalar(key))
-!!!            type is (type(c_ptr))
+!!!            type is(type(c_ptr))
 !!            class default
 !!                val => tmp
 !!        endselect
@@ -1525,14 +1629,20 @@ module DL_PY2F
         character(len=*)         , intent(in)  :: key
         ! GNU segfaults at runtime if val is a pointer; while with Intel compiler val can be a pointer (val => metaObj%...)
         type(c_funptr)           , intent(out) :: val
+        type(dictType)  , pointer     :: metaObjPtr
+
+        ! Cray compiler thinks metaObj uninitialised and segfaults! so we have to allocate a temporary pointer
+        allocate(metaObjPtr, source=metaObj)
 
 !        allocate(val, source=metaObj%returnCFuncPtr(key))
-        val = metaObj%returnCFuncPtr(key)
+        val = metaObjPtr%returnCFuncPtr(key)
 !        selecttype(tmp=>metaObj%returnCFuncPtr(key))
 !            class is(type(c_funptr))
 !            class default
 !                val => tmp
 !        endselect
+
+        deallocate(metaObjPtr)
 
     endsubroutine getCFuncPtr
     subroutine getLogical(metaObj, key, val)
@@ -1540,11 +1650,17 @@ module DL_PY2F
         class(dictType) , intent(in)  :: metaObj
         character(len=*), intent(in)  :: key
         logical         , intent(out) :: val
+        type(dictType)  , pointer     :: metaObjPtr
 
-        selecttype(tmp=>metaObj%returnScalar(key))
+        ! Cray compiler thinks metaObj uninitialised and segfaults! so we have to allocate a temporary pointer
+        allocate(metaObjPtr, source=metaObj)
+
+        selecttype(tmp=>metaObjPtr%returnScalar(key))
             type is(logical(c_bool))
                 val = merge(.true., .false., tmp)
         endselect
+
+        deallocate(metaObjPtr)
 
     endsubroutine getLogical
     subroutine getCLogical(metaObj, key, val)
@@ -1552,11 +1668,17 @@ module DL_PY2F
         class(dictType) , intent(in)  :: metaObj
         character(len=*), intent(in)  :: key
         logical(c_bool) , intent(out) :: val
+        type(dictType)  , pointer     :: metaObjPtr
 
-        selecttype(tmp=>metaObj%returnScalar(key))
+        ! Cray compiler thinks metaObj uninitialised and segfaults! so we have to allocate a temporary pointer
+        allocate(metaObjPtr, source=metaObj)
+
+        selecttype(tmp=>metaObjPtr%returnScalar(key))
             type is(logical(c_bool))
                 val = merge(.true., .false., tmp)
         endselect
+
+        deallocate(metaObjPtr)
 
     endsubroutine getCLogical
     subroutine getPyPtr(metaObj, key, val)
@@ -1565,14 +1687,27 @@ module DL_PY2F
         character(len=*)         , intent(in)  :: key
         type(PyType)    , pointer, intent(out) :: val
 
+        type(dictType)  , pointer              :: metaObjPtr
         integer ncols
 
-        val => metaObj%returnPyPtr(key)
+        ! Cray compiler thinks metaObj uninitialised and segfaults! so we have to allocate a temporary pointer
+        allocate(metaObjPtr, source=metaObj)
+!        selecttype(tmp=>metaObj)
+!            type is(dictType)
+!                print *, "### getPyPtr: type is dictType, loc tmp =", loc(tmp)
+!            class is(dictType)
+!                print *, "### getPyPtr: class is dictType, loc tmp =", loc(tmp)
+!            class default
+!                print *, "### getPyPtr: class is default, loc tmp =", loc(tmp)
+!        endselect
+        val => metaObjPtr%returnPyPtr(key)
 
         ! some versions of GNU compiler segfaults if the Python object is None (c_ptr_null)
         if(associated(val)) then
             ncols = int(val%width)
         endif
+
+        deallocate(metaObjPtr)
 
     endsubroutine getPyPtr
 
