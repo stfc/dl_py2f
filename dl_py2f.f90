@@ -940,7 +940,7 @@ module DL_PY2F
 !                val => returnScalar(metaObj%next, key)
                 allocate(val, source=returnScalar(metaObj%next, key))
 !                selecttype(tmp=>val)
-!                    type is (character(*))
+!                    type is(character(*))
 !                        if(trim(key)=='crystal_type') then
 !                            print *, "### returnScalar: tmp =", tmp
 !                        endif
@@ -991,12 +991,16 @@ module DL_PY2F
 !                    val => null()
 !                endif
                 selecttype(tmp=>metaObj%scalar)
-                    type is (character(len=*))
+                    typeis(character(len=*))
+                        ! YL 20/01/2021: obsolete
                         if(tmp.eq."NoneType") then
                             val => null()
                         else
                             val => metaObj%scalar
                         endif
+                    ! YL 20/01/2021: new implementation to treat Python None
+                    class is(c_ptr)
+                        val => null()
                     class default
                         val => metaObj%scalar
                 endselect
@@ -1333,7 +1337,7 @@ module DL_PY2F
         ! DANGEROUS! do NOT use local (temporary) pointer to pass value
         selecttype(tmp=>metaObjPtr%returnScalar(key))
             ! (integer and integer(c_int) are equivalent in 'selecttype')
-            type is (integer(kind=4))
+            type is(integer(kind=4))
                 ! for future development with pointers:
                 !     Intel compiler requires tmp to possess target/pointer attribute,
                 !     then we will have to declare tmp and cannot use "selecttype
@@ -1341,12 +1345,12 @@ module DL_PY2F
                 !     so we may try val => metaObj%returnScalar(key) instead which should be fast enough
                 val = tmp
             ! int type conversion (integer(kind=8) and integer(c_long) are equivalent in 'selecttype')
-            type is (integer(kind=8))
+            type is(integer(kind=8))
                 val = int(tmp)
             ! logical -> int conversion
-            type is (logical)
+            type is(logical)
                 val = merge(1, 0, tmp)
-            type is (logical(c_bool))
+            type is(logical(c_bool))
                 val = merge(1, 0, tmp)
         endselect
 
@@ -1364,9 +1368,9 @@ module DL_PY2F
         allocate(metaObjPtr, source=metaObj)
         
         selecttype(tmp=>metaObjPtr%returnScalar(key))
-            type is (integer(kind=4))
+            type is(integer(kind=4))
                 val = tmp
-            type is (integer(kind=8))
+            type is(integer(kind=8))
                 val = tmp
         endselect
 
@@ -1384,7 +1388,7 @@ module DL_PY2F
         allocate(metaObjPtr, source=metaObj)
 
         selecttype(tmp=>metaObjPtr%returnScalar(key))
-            type is (real(kind=4))
+            type is(real(kind=4))
                 val = tmp
             ! real type conversion (c_long and c_int are equivalent in 'selecttype')
             type is(real(kind=8))
@@ -1578,7 +1582,7 @@ module DL_PY2F
         !                it's said to be fixed in gfortran 9
 !        allocate(intel, source=metaObj%returnScalar(key))
 !        selecttype(tmp=>intel)
-!            type is (character(*))
+!            type is(character(*))
 !                if(trim(tmp).ne."") then
 !                    val => tmp
 !                endif
@@ -1590,7 +1594,7 @@ module DL_PY2F
 
         ! this is the GNU way
         selecttype(gnu=>metaObjPtr%returnScalar(key))
-            type is (character(*))
+            type is(character(*))
                 if(trim(gnu).ne."") then
                     val => gnu
                 endif
@@ -1606,7 +1610,7 @@ module DL_PY2F
 !        type(c_ptr)     , pointer, intent(out) :: val
 !
 !!        selecttype(tmp=>metaObj%returnScalar(key))
-!!!            type is (type(c_ptr))
+!!!            type is(type(c_ptr))
 !!            class default
 !!                val => tmp
 !!        endselect

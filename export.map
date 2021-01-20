@@ -1,4 +1,5 @@
-all {
+# intel
+intel {
     global: dl_py2f_mp_private_initialise*;
             dl_py2f_mp_private_finalise*;
             dl_py2f_mp_assign*;
@@ -9,6 +10,17 @@ all {
             dl_py2f_mp_enquireshape*;
             dl_py2f_mp_ptr2dict*;
     local :  *;
+};
+
+# gnu
+gnu {
+    global: __dl_py2f_MOD_get*;
+            __dl_py2f_MOD_set*;
+            __dl_py2f_MOD___vtab*;
+            __dl_py2f_MOD_ptr2dict*;
+            __dl_py2f_MOD_private_initialise;
+            __dl_py2f_MOD_private_finalise;
+            __dl_py2f_MOD_keys;
 };
 
 # cray
