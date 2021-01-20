@@ -247,7 +247,7 @@ module DL_PY2F
             selectcase(trim(typebuff))
 
                 case('NoneType')
-                    ! YL 19/01/2021: assign to a null pointer to meet two cases
+                    ! YL 19/01/2021: assign to meet two cases
                     ! - meta%get('entry', pyptr) ... associated(ptr).eq..false. when a Python None is assigned
                     ! - meta%get('entry', intVar|realVar) doesn't crash when a Python None is assigned
                     call metaobj%assign(trim(namebuff), nonetype)
@@ -991,8 +991,8 @@ module DL_PY2F
 !                    val => null()
 !                endif
                 selecttype(tmp=>metaObj%scalar)
+                    ! YL 20/01/2021: it's proven only this works well with Intel, GNU, and Cray after many attempts
                     type is(character(len=*))
-                        ! YL 20/01/2021: obsolete
                         if(tmp.eq."NoneType") then
                             val => null()
                         else
@@ -1001,6 +1001,7 @@ module DL_PY2F
                     ! YL 20/01/2021: this works OK with GNU but not allowed by Intel
 !                    type is(c_ptr)
 !                        val => null()
+                    ! YL 20/01/2021: obsolete
                     class default
                         ! Python reference
                         if(associated(metaObj%scalar)) then
