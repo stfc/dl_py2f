@@ -1,8 +1,18 @@
 all {
-    local:  *;
+    global: dl_py2f_mp_private_initialise*;
+            dl_py2f_mp_private_finalise*;
+            dl_py2f_mp_assign*;
+            dl_py2f_mp_get*;
+            dl_py2f_mp_set*;
+            dl_py2f_mp_keys*;
+            dl_py2f_mp_return*;
+            dl_py2f_mp_enquireshape*;
+            dl_py2f_mp_ptr2dict*;
+    local :  *;
 };
 
-cray {
+# cray
+cce {
     global: 
             dl_py2f_;
             init$dl_py2f_;
