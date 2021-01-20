@@ -250,8 +250,8 @@ module DL_PY2F
                     ! YL 19/01/2021: assign to a null pointer to meet two cases
                     ! - meta%get('entry', pyptr) ... associated(ptr).eq..false. when a Python None is assigned
                     ! - meta%get('entry', intVar|realVar) doesn't crash when a Python None is assigned
-!                    call metaobj%assign(trim(namebuff), nonetype)
-                    call metaobj%assign(trim(namebuff), dummyPtr)
+                    call metaobj%assign(trim(namebuff), nonetype)
+!                    call metaobj%assign(trim(namebuff), dummyPtr)
 
                 case('function')
                     call c_f_pointer(cdata(i)%attr, cfuncbuff)
