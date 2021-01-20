@@ -991,18 +991,24 @@ module DL_PY2F
 !                    val => null()
 !                endif
                 selecttype(tmp=>metaObj%scalar)
-                    typeis(character(len=*))
+                    type is(character(len=*))
                         ! YL 20/01/2021: obsolete
                         if(tmp.eq."NoneType") then
                             val => null()
                         else
                             val => metaObj%scalar
                         endif
-                    ! YL 20/01/2021: new implementation to treat Python None
-                    class is(c_ptr)
-                        val => null()
+                    ! YL 20/01/2021: this works OK with GNU but not allowed by Intel
+!                    type is(c_ptr)
+!                        val => null()
                     class default
-                        val => metaObj%scalar
+                        ! Python reference
+                        if(associated(metaObj%scalar)) then
+                            val => metaObj%scalar
+                        ! Python None
+                        else
+                            val => null()
+                        endif
                 endselect
             else
                 val => returnPyPtr(metaObj%next, key)
