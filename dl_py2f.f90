@@ -172,8 +172,8 @@ module DL_PY2F
         procedure, public  :: enquireShape
     endtype dictType
 
-    integer, parameter :: debug = 0
-    integer, pointer   :: dummyPtr => null()
+    integer    , parameter :: debug = 0
+    type(c_ptr), parameter :: dummyPtr = c_null_ptr
 
     ! YL 20/09/2020: place the array buffers at the module level to deallocate later
 !    integer(kind=8), pointer :: onedimint(:)
@@ -224,8 +224,6 @@ module DL_PY2F
         ! should NOT have deferred length!
         character(len=255), pointer   :: cbuff => null()
 
-        allocate(dummyPtr)
-
         if(.not.present(keepRef)) then
             keepReference = .true.
         endif
@@ -249,7 +247,9 @@ module DL_PY2F
             selectcase(trim(typebuff))
 
                 case('NoneType')
-                    ! YL 19/01/2021: we assign to a null pointer otherwise it's not deallocatable
+                    ! YL 19/01/2021: assign to a null pointer to meet two cases
+                    ! - meta%get('entry', pyptr) ... associated(ptr).eq..false. when a Python None is assigned
+                    ! - meta%get('entry', intVar|realVar) doesn't crash when a Python None is assigned
 !                    call metaobj%assign(trim(namebuff), nonetype)
                     call metaobj%assign(trim(namebuff), dummyPtr)
 
@@ -568,7 +568,6 @@ module DL_PY2F
 
         endif
 
-        if(associated(dummyPtr)) deallocate(dummyPtr)
         call flush(6)
 
     endsubroutine private_finalise
