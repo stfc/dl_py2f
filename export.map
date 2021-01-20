@@ -1,0 +1,39 @@
+all {
+    local:  *;
+};
+
+cray {
+    global: 
+            dl_py2f_;
+            init$dl_py2f_;
+            keys$dl_py2f_;
+            ptr2dict$dl_py2f_;
+            enquireshape$dl_py2f_;
+            setonedimdbl$dl_py2f_;
+            settwodimdbl$dl_py2f_;
+            settwodimdbl*;
+            setonedimint$dl_py2f_;
+            settwodimint$dl_py2f_;
+            setonedimlong$dl_py2f_; 
+            settwodimlong$dl_py2f_; 
+            setcchararray$dl_py2f_; 
+            setscalar$dl_py2f_; 
+            getint$dl_py2f_; 
+            getintclong$dl_py2f_; 
+            getreal$dl_py2f_;    
+            getdouble$dl_py2f_; 
+            getonedimint$dl_py2f_; 
+            getonedimlong$dl_py2f_; 
+            getonedimdbl$dl_py2f_; 
+            gettwodimint$dl_py2f_; 
+            gettwodimlong$dl_py2f_; 
+            gettwodimdbl$dl_py2f_; 
+            getchar$dl_py2f_; 
+            getcchararray$dl_py2f_; 
+            getlogical$dl_py2f_; 
+            getclogical$dl_py2f_; 
+            getpyptr$dl_py2f_; 
+            getcptr$dl_py2f_; 
+            getcfuncptr$dl_py2f_; 
+    local:  *;
+};
