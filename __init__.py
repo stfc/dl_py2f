@@ -98,6 +98,10 @@ def py2f(obj, debug=0, byref=False):
     from types  import ModuleType
     from sys    import stdout
 
+    if debug > 2:
+        print("\n DL_PY2F: obj type = {}\n".format(type(obj)))
+        stdout.flush()
+
     MAXLEN = 256
     ATTRLEN = 16
 
@@ -444,6 +448,7 @@ def py2f(obj, debug=0, byref=False):
             ''''''
 
             inst = Structure.__new__(cls)
+            stdout.flush()
             return inst
 
 

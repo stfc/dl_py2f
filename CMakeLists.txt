@@ -27,8 +27,20 @@ include_directories(${DL_PY2F_BUILD_DIR}/modules/dl_py2f)
 # compile
 add_library(dl_py2f SHARED dl_py2f.f90)
 
+# YL 25/11/2020: added export.map to meet special name mangling of Cray compilers
+if(${CHEMSH_ARCH} STREQUAL "cray")
+    if(DEBUG)
+        set_target_properties(dl_py2f PROPERTIES COMPILE_FLAGS "-dynamic -O0 -g -v")
+    else()
+        set_target_properties(dl_py2f PROPERTIES COMPILE_FLAGS "-dynamic -O0")
+    endif()
+endif()
+set_target_properties(dl_py2f PROPERTIES LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_LIST_DIR}/export.map")
+
 # rules for `make clean`
 set_property(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
              APPEND
              PROPERTY ADDITIONAL_MAKE_CLEAN_FILES Makefile CMakeCache.txt cmake_install.cmake __pycache__ ${DL_PY2F_BUILD_DIR}/modules/dl_py2f
             )
+
+
