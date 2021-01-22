@@ -21,6 +21,7 @@ gnu {
             __dl_py2f_MOD_private_initialise;
             __dl_py2f_MOD_private_finalise;
             __dl_py2f_MOD_keys;
+            __dl_py2f_MOD_enquireshape;
 };
 
 # cray
@@ -57,5 +58,6 @@ cce {
             getpyptr$dl_py2f_; 
             getcptr$dl_py2f_; 
             getcfuncptr$dl_py2f_; 
+            private_finalise$dl_py2f_;
     local:  *;
 };
