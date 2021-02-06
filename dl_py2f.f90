@@ -938,7 +938,14 @@ module DL_PY2F
             else
                 ! YL: since gfortran/gcc 7 `val => returnScalar(metaObj%next, key)` does not work!
 !                val => returnScalar(metaObj%next, key)
-                allocate(val, source=returnScalar(metaObj%next, key))
+                ! YL 06/02/2020: added printing of specific information
+                if(.not.associated(metaObj%next)) then
+                    print *, '>>> DL_PY2F ERROR: keyword "', key, '" not found in dictionary.'
+                    print *
+                    call exit(999)
+                else
+                    allocate(val, source=returnScalar(metaObj%next, key))
+                endif
 !                selecttype(tmp=>val)
 !                    type is(character(*))
 !                        if(trim(key)=='crystal_type') then
@@ -963,7 +970,13 @@ module DL_PY2F
 !                allocate(val, source=metaObj%scalar)
                 val => metaObj%scalar
             else
-                val => returnCFuncPtr(metaObj%next, key)
+                if(.not.associated(metaObj%next)) then
+                    print *, '>>> DL_PY2F ERROR: keyword "', key, '" not found in dictionary.'
+                    print *
+                    call exit(999)
+                else
+                    val => returnCFuncPtr(metaObj%next, key)
+                endif
 !                val = c_loc(returnCFuncPtr(metaObj%next, key))
             endif
         else
