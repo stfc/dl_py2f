@@ -4,7 +4,7 @@ __author__     = [ 'You Lu', 'Thomas W. Keal' ]
 __copyright__  = 'Copyright (C) 2018 The authors of Py-ChemShell'
 __credits__    = [ 'You Lu', 'Thomas W. Keal' ]
 __license__    = 'LGPLv3'
-__version__    = '19.0 (beta)'
+__version__    = '21.0 (beta)'
 __maintainer__ = __author__[0]
 __email__      = 'you.lu@stfc.ac.uk'
 __status__     = ''
@@ -241,7 +241,8 @@ def py2f(obj, debug=0, byref=False):
                 initialiser.append(asarray([i for i in getattr(obj, key)], dtype=c_long).ctypes.data)
                 fbuff.append((key, ctypeslib.ndpointer(c_long)))
             except:
-                print(" >>> WARNING: DL_PY2F cannot convert non-integer list/tuple `%s` of"%key, obj, "to NumPy ndarray")
+                if debug > 2:
+                    print(" >>> DL_PY2F WARNING: cannot convert non-integer list/tuple `%s` of"%key, obj, "to NumPy ndarray")
                 initialiser.append(None)
                 fbuff.append((key, c_void_p))
 
@@ -302,7 +303,8 @@ def py2f(obj, debug=0, byref=False):
     def __dict2None(obj, key, foo):
         '''<dict> to c Null (<None>)'''
 
-        print(" >>> DL_PY2F WARNING: unsupport <class dict> entry \""+key+"\" will be treated as None.")
+        if debug > 2:
+            print(" >>> DL_PY2F WARNING: unsupport <class dict> entry \""+key+"\" will be treated as None.")
 
         fbuff.append((key, c_void_p))
         initialiser.append(None)
