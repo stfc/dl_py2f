@@ -43,7 +43,7 @@ module DL_PY2F
         logical(c_bool)               :: isfield
         type(c_ptr)                   :: attr
     endtype CStructType
-    ! Python object type
+    ! Python object type: the components must be in the same order as defined in __init__.py
     ! YL: bind(c) is necessary here since PyType objects are used
     !     as arguments of c-binding procedures called by Python code;
     !     however, bind(c) and 'contains' section can NOT coexist!
@@ -61,14 +61,17 @@ module DL_PY2F
         type(c_ptr)       :: class_
         integer(c_long)   :: address_
         integer(c_long)   :: width
+        ! YL NB 15/08/2021: on the Python side pointers are used because an error is encountered otherwise
+        !                   so that debug has to be decoded by c_f_pointer()
+        type(c_ptr)       :: debug
         type(CStructType) :: cdata
     endtype PyType
     ! a general-purpose dictionary-like class
     type dictType
-        character(len=16)         :: type     = ""
+        character(len=16)         :: type  = ""
 ! for now impossible to implement unlimited polymorphic arrays (see below) 
-        integer                   :: sizem    =  0
-        integer                   :: sizen    =  0
+        integer                   :: sizem =  0
+        integer                   :: sizen =  0
         character(len=:), pointer :: key             => null()
         class(*)        , pointer :: scalar          => null()
         class(*)        , pointer :: array(:)        => null()
@@ -223,6 +226,7 @@ module DL_PY2F
         character(len=8)  , pointer   :: onedimcharbuff(:) => null(), twodimcharbuff(:,:) => null()
         ! should NOT have deferred length!
         character(len=255), pointer   :: cbuff => null()
+        integer(c_long)   , pointer   :: debug_ptr
 
         if(.not.present(keepRef)) then
             keepReference = .true.
@@ -420,10 +424,14 @@ module DL_PY2F
                     endselect
 
                 case default
-                    write(*, '(/1X,A,1X,3A,1X,A/)') ">>> DL_PY2F WARNING: type", &
-                                                   '"', trim(typebuff), '"', &
-                                                   "could not be assigned for entity", &
-                                                   '"', trim(namebuff), '"'
+                    ! YL 15/08/2021: PyPtr%debug is type(c_ptr), see above
+                    call c_f_pointer(PyPtr%debug, debug_ptr)
+                    if(debug_ptr.gt.2) then
+                        write(*, '(/1X,A,1X,3A,1X,A/)') ">>> DL_PY2F WARNING: type",        &
+                                                        '"', trim(typebuff), '"',           &
+                                                        "could not be assigned for entity", &
+                                                        '"', trim(namebuff), '"'
+                    endif
 
             endselect
 

@@ -422,7 +422,7 @@ def py2f(obj, debug=0, byref=False):
     initialiser.insert(1, c_char_p((obj.__module__ + '.' + obj.__class__.__name__ + " "*MAXLEN)[:MAXLEN].encode('ascii')))
 
     # object address
-    fields.insert(2, ("_address", c_long))
+    fields.insert(2, ('_address', c_long))
     initialiser.insert(2, addressof(obj))
 
     # total width of arrays
@@ -433,6 +433,15 @@ def py2f(obj, debug=0, byref=False):
         initialiser.insert(3, c_long(0))
 
     # debugging
+    # YL 15/08/2021: also inserted a debug level to the FORTRAN object
+    #         FIXME: strangely it throws out an error if c_long and c_long(debug) are inserted
+    #                so that 
+#    fields.insert(4, ('debug', c_long))
+#    initialiser.insert(4, c_long(debug))
+    fields.insert(4, ('debug', POINTER(c_long)))
+    initialiser.insert(4, pointer(c_long(debug)))
+    stdout.flush()
+
     if debug >= 5:
         print("\n >>> DL_PY2F DEBUG: Components of wrapped Python object", obj)
         print("\n     {:5}    {:32}    {:24} {}".format('index', 'field name', 'field type', 'value'))
@@ -458,7 +467,13 @@ def py2f(obj, debug=0, byref=False):
         return CStruct(*initialiser)
     else:
         from ctypes import byref as ctypes_byref
-        return ctypes_byref(CStruct(*initialiser))
+        from sys    import stdout
+        try:
+            return ctypes_byref(CStruct(*initialiser))
+        except:
+            print(" >>> DL_PY2F ERROR: obj =", obj)
+            stdout.flush()
+            raise
 
 
 
