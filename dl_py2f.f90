@@ -1578,7 +1578,7 @@ module DL_PY2F
         character(len=*)         , intent(in)  :: key
         character(len=:), pointer, intent(out) :: val
 
-        class(*)        , pointer              :: gnu, intel
+!        class(*)        , pointer              :: gnu, intel
         character       , target               :: blanc = ""
 
 !        character(len=*), pointer, bind(c)              :: tmp
@@ -1596,8 +1596,8 @@ module DL_PY2F
         ! Cray compiler thinks metaObj uninitialised and segfaults! so we have to allocate a temporary pointer
         allocate(metaObjPtr, source=metaObj)
 
-        gnu   => blanc
-        intel => blanc
+!        gnu   => blanc
+!        intel => blanc
 
         ! we are sure metaObj%returnScalar(key) is correct, however
         ! have to use this step to temporarily hold the result in pointer tmp (see below)
@@ -1623,6 +1623,7 @@ module DL_PY2F
         ! this is the GNU way
         selecttype(gnu=>metaObjPtr%returnScalar(key))
             type is(character(*))
+                ! YL 19/10/2021: this will cause a runtime error when compiled with -check all or -check pointer (Intel bug?)
                 if(trim(gnu).ne."") then
                     val => gnu
                 endif
