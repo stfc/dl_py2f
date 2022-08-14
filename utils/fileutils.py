@@ -18,10 +18,10 @@
 
 __author__ = 'You Lu <you.lu@ukri.stfc.org>'
 
-def file2text(filename, case='input', error_return='', preceding_newline=False, trailing_newline=False):
+def file2text(filename, case='input', error_return='', preceding_newline=False, trailing_newline=False, prefix=''):
     '''Read contents of a text file into a <str> variable'''
 
-    from os import getcwd, path
+    from os import path
 
     selectcases = {
                     'lower':str.lower,
@@ -29,11 +29,11 @@ def file2text(filename, case='input', error_return='', preceding_newline=False, 
                     'input':str
                   }
 
-    # TASKFARMED: if the workspace belongs to a workgroup (WG), search the specified file also in parent directory
     # YL 23/11/2017: `filename` should not be blank otherwise "../" is wrongly returned
     filename0 = filename + ''
-    if "_wg_" in path.basename(getcwd()) and not path.isfile(filename) and filename:
-        filename  = path.join('..', filename)
+
+    # YL 13/08/2022: path prefix
+    filename = path.join(prefix, filename)
 
     try:
         with open(filename, 'r') as fp:
