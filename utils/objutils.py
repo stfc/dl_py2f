@@ -45,7 +45,7 @@ def __getEntry(arg, default):
 #         a. initDictAttrs
 #         b. initSeqAttrs
 def init(obj=None, inherit=(), init=(), priorities=(), inheritfrom=None):
-    '''Add attributes to a ChemShell <obj> or <func> and initialise with values provided in, for example, obj._attrs'''
+    '''Add attributes to a ChemShell <obj> or <func> and initialise with values provided in, for example, obj._kwargs'''
 
     def __init(proc):
         '''An inner wrapper to support arguments of @objutils.init()'''
@@ -73,7 +73,7 @@ def init(obj=None, inherit=(), init=(), priorities=(), inheritfrom=None):
                 else:
                     return inheritfrom
 
-            # update attributes according to the object's parent classe(s): either sequence (_init, _priorities, etc.) or <dict> (_attrs, etc.)
+            # update attributes according to the object's parent classe(s): either sequence (_init, _priorities, etc.) or <dict> (_kwargs, etc.)
             inheritAttrs(obj,
                          __getEntry(inherit, obj._inherit),
                          inheritfrom=__getInheritfrom())
@@ -94,7 +94,7 @@ def init(obj=None, inherit=(), init=(), priorities=(), inheritfrom=None):
 
 
 def inheritAttrs(obj, inherit, inheritfrom=None):
-    '''Complement the dicts ('_attrs' and '_internals') with that of the parent class'''
+    '''Complement the dicts ('_kwargs' and '_internals') with that of the parent class'''
 
     from . import iterutils
 
@@ -103,7 +103,7 @@ def inheritAttrs(obj, inherit, inheritfrom=None):
                     inherit,
                     inheritfrom=inheritfrom)
 
-    # update dict items in, for example, '_toinits' (i.e., '_internals', '_attrs', etc.)
+    # update dict items in, for example, '_toinits' (i.e., '_internals', '_kwargs', etc.)
     inheritDictAttrs(obj,
                      obj._init,
                      inheritfrom=inheritfrom)
@@ -115,7 +115,7 @@ def initAttrs(obj, init, priorities):
     # this is the step to initialise obj according to sequence defaults (e.g., '_fields')
     initSeqAttrs(obj, init)
 
-    # this is the step to initialise obj according to dict defaults (e.g., '_attrs')
+    # this is the step to initialise obj according to dict defaults (e.g., '_kwargs')
     initDictAttrs(obj, init, priorities=obj._priorities )
 
 
@@ -139,7 +139,7 @@ def inheritSeqAttrs(obj, attrs, inheritfrom=None):
             try: 
                 setattr(obj, attr, iterutils.getFlattened((getattr(baseCls,attr),)+(getattr(obj,attr),)))
                 # when attr is '_inherit' update attrs using obj._inherit
-                # for example, `_inherit` of <class Fragment> only contains '_fields', but it should first inherit '_attrs' and so from the parent <class Objects>
+                # for example, `_inherit` of <class Fragment> only contains '_fields', but it should first inherit '_kwargs' and so from the parent <class Objects>
 #                attrs = obj._inherit
             except:
                 pass
@@ -224,7 +224,7 @@ def getMergedItems(obj, dicts, order=None):
     from . import dictutils
 
     items = []
-    # attr is a dict containing initialising data (e.g., '_attrs')
+    # attr is a dict containing initialising data (e.g., '_kwargs')
     for attr in dicts:
         # probe if dict-type
         try:
@@ -525,7 +525,7 @@ def obj2dict(obj):
                     object    : obj2dict
                   }
 
-    for key, val in obj._attrs.items():
+    for key, val in obj._kwargs.items():
         dictbuff.update({key:selectcases[getType(getattr(obj,key), ndarrayislist=False)](getattr(obj, key))})
 
     return dictbuff

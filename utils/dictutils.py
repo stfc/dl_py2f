@@ -135,7 +135,7 @@ def dict2obj(d, obj):
 
     from . import objutils
 
-    for key in obj._attrs.keys():
+    for key in obj._kwargs.keys():
 
         setattr(obj, key, d[key])
 
