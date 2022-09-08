@@ -179,6 +179,7 @@ def py2f(obj, debug=0, byref=False):
                             'object' : c_long,
                             'bytes64':'U8',
                             'bytes32':'U8',
+                            'bytes128':'U8',
                             'str32'  :'U8',
                             'str64'  :'U8',
                             'str256' :'U8',
