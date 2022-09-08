@@ -32,16 +32,16 @@ __status__     = ''
 # from ctypes import Structure
 # from numpy  import full, zeros
 # class Fragment(Structure)
-#    _attrs = {
-#               'bqs'     : BQs(),
-#               'coords'  : zeros(shape=(1,3),     dtype=float64),
-#               'connmode':'covalent',
-#               'frozen'  : zeros(shape=(1,) ,     dtype=int64),
-#               'grid'    : None,
-#               'names'   : full((1)         , '', dtype='S8'),
-#               'natoms'  : 0,
-#             }
-__dictname = '_attrs'
+#    _kwargs = {
+#                'bqs'     : BQs(),
+#                'coords'  : zeros(shape=(1,3),     dtype=float64),
+#                'connmode':'covalent',
+#                'frozen'  : zeros(shape=(1,) ,     dtype=int64),
+#                'grid'    : None,
+#                'names'   : full((1)         , '', dtype='S8'),
+#                'natoms'  : 0,
+#              }
+__dictname = '_kwargs'
 
 def __getType(obj):
     '''Return type'''
@@ -107,7 +107,7 @@ def py2f(obj, debug=0, byref=False):
 
     # sort the attributes to fix the order
     dictbuff = getattr(obj, __dictname)
-    _attrs = sorted(dictbuff.items())
+    _kwargs = sorted(dictbuff.items())
 
     # add an attribute name to each attribute by concatenating " "*MAXLEN to the original name
     fbuff       = []
@@ -352,7 +352,7 @@ def py2f(obj, debug=0, byref=False):
 
 
 
-    for key, default_val in _attrs:
+    for key, default_val in _kwargs:
 
         # do NOT pass "internal" attributes
         if key.startswith('_'):
