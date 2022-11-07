@@ -94,7 +94,7 @@ def py2f(obj, debug=0, byref=False):
     '''Convert a Python object to <ctypes.Structure> (recursively)'''
 
     from ctypes import CFUNCTYPE, c_long, c_double, c_bool, c_char, c_wchar_p, c_char_p, c_void_p, addressof, pointer, POINTER, Structure
-    from numpy  import asarray, ctypeslib, ma
+    from numpy  import asarray, ctypeslib, ma, str_
     from types  import ModuleType
     from sys    import stdout
 
@@ -241,6 +241,14 @@ def py2f(obj, debug=0, byref=False):
             try:
                 initialiser.append(asarray([i for i in getattr(obj, key)], dtype=c_long).ctypes.data)
                 fbuff.append((key, ctypeslib.ndpointer(c_long)))
+            except ValueError:
+                # YL 02/11/2022: support tuple/list of strings
+                if all([type(i) in [str,str_] for i in getattr(obj, key)]):
+                    fbuff.append((key, c_char_p))
+                    # amend the data type from tuple to str
+                    initialiser[-6] = ('str'+' '*ATTRLEN)[:ATTRLEN].encode('ascii')
+                    # pass in as a concatenated string separated by ';'
+                    initialiser.append(c_char_p((';'.join(foo) + " "*MAXLEN)[:MAXLEN].encode('ascii')))
             except:
                 if debug > 2:
                     print(" >>> DL_PY2F WARNING: cannot convert non-integer list/tuple `%s` of"%key, obj, "to NumPy ndarray")
@@ -447,6 +455,8 @@ def py2f(obj, debug=0, byref=False):
         print("\n >>> DL_PY2F DEBUG: Components of wrapped Python object", obj)
         print("\n     {:5}    {:32}    {:24} {}".format('index', 'field name', 'field type', 'value'))
         for i, v in enumerate(initialiser):
+            if not (i-5)%7:
+                print()
             print("     {:5d}    {:32.32}    {:24.24} {}".format(i, '\"'+fields[i][0]+'\"', fields[i][1].__name__, v))
 
 
