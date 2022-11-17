@@ -146,7 +146,7 @@ def archiveFile(filename, all=False, dir='.', copy=False, suffix='.OLD'):
             archiveFile(f, all=all, dir=dir, suffix=suffix)
 
     # singular filename of string
-    else:
+    elif type(filename) == str:
         # new filename
         if not path.isdir(dir):
             archiveDir(dir)
