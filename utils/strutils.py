@@ -21,24 +21,28 @@ __author__ = 'You Lu <you.lu@ukri.stfc.org>'
 def str2num(s, delimiter=' '):
     '''Convert a string to int/float or numpy array'''
 
-#    s = s.replace(' ', '')
-#    print("### str =", s, s.isdigit(), s.isdecimal(), s.isnumeric())
-
+    # a scalar value
     try:
         try:
             return int(s)
         except ValueError:
             return float(s)
 
+    # array
     except ValueError:
 
-        from numpy import fromstring
+         from numpy    import fromstring
+         from warnings import catch_warnings, simplefilter
 
-        # AJL,Aug2017: Commenting this out but is there a way to control verbosity so this
-        # can be left in for debugging level of output?
-        #print("### fromstring =", s)
-        return fromstring(s, sep=delimiter)
-
+         # AJL,Aug2017: Commenting this out but is there a way to control verbosity so this
+         # can be left in for debugging level of output?
+         # YL 28/11/2022: as of Python 3.10.6 and Numpy 1.23.5, a DeprecationWarning is thrown out for non-digital text
+         with catch_warnings(record=True) as w:
+             simplefilter('error')
+             try:
+                 return fromstring(s, sep=delimiter)
+             except:
+                 return []
 
 
 def importAsModule(s):
