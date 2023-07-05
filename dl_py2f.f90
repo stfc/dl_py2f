@@ -250,7 +250,8 @@ module DL_PY2F
 
             selectcase(trim(typebuff))
 
-                case('NoneType')
+                ! YL 05/07/2023: previously "dict" type was not properly handled
+                case('NoneType', 'dict')
                     ! YL 19/01/2021: assign to meet two cases
                     ! - meta%get('entry', pyptr) ... associated(ptr).eq..false. when a Python None is assigned
                     ! - meta%get('entry', intVar|realVar) doesn't crash when a Python None is assigned
