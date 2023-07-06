@@ -173,6 +173,7 @@ module DL_PY2F
         ! enquiries
         procedure, public  :: keys
         procedure, public  :: enquireShape
+        procedure, public  :: enquireKey
     endtype dictType
 
     integer    , parameter :: debug = 0
@@ -920,6 +921,34 @@ module DL_PY2F
         endif
 
     endsubroutine keys
+    ! YL 06/07/2023: we need such a function that returns .false. but doesn't throw out an error or stop the program
+    recursive function enquireKey(metaObj, key) result(val)
+
+        class(dictType) , intent(in) :: metaObj
+        character(len=*), intent(in) :: key
+        logical                      :: val
+
+        if(associated(metaObj%key)) then
+            if(metaObj%key.eq.trim(key)) then
+                val = .true.
+                return
+            else
+                ! end of search
+                if(.not.associated(metaObj%next)) then
+                    val = .false.
+                    return
+                else
+                    ! go on trying
+                    val = enquireKey(metaObj%next, key)
+                endif
+            endif
+        ! end of search
+        else
+            val = .false.
+            return
+        endif
+
+    endfunction enquireKey
 
 ! END OF ENQUIRIES
 ! TOOLS

@@ -8,6 +8,7 @@ intel {
             dl_py2f_mp_keys*;
             dl_py2f_mp_return*;
             dl_py2f_mp_enquireshape*;
+            dl_py2f_mp_enquirekey*;
             dl_py2f_mp_ptr2dict*;
     local :  *;
 };
@@ -22,6 +23,7 @@ gnu {
             __dl_py2f_MOD_private_finalise;
             __dl_py2f_MOD_keys;
             __dl_py2f_MOD_enquireshape;
+            __dl_py2f_MOD_enquirekey;
 };
 
 # cray
@@ -32,6 +34,7 @@ cce {
             keys$dl_py2f_;
             ptr2dict$dl_py2f_;
             enquireshape$dl_py2f_;
+            enquirekey$dl_py2f_;
             setonedimdbl$dl_py2f_;
             settwodimdbl$dl_py2f_;
             settwodimdbl*;
