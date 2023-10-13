@@ -191,3 +191,16 @@ def inOrEq(s, ref):
 
     return result
 
+
+def isStr(s):
+    '''Return True if the given entity is str-like type'''
+
+    from numpy import str_, string_
+
+    if type(s) in [ str, str_, string_ ]:
+        return True
+    else:
+        return False
+
+
+
