@@ -103,7 +103,7 @@ def py2f(obj, debug=0, byref=False):
         stdout.flush()
 
     MAXLEN = 256
-    ATTRLEN = 16
+    ATTRLEN = 32
 
     # sort the attributes to fix the order
     dictbuff = getattr(obj, __dictname)
