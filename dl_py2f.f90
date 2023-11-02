@@ -31,13 +31,15 @@ module DL_PY2F
     private
     public  :: ptr2dict, dictType, PyType
 
+    integer , parameter :: LENSTR = 32
+
     class(*), pointer :: scalarPtr => null()
 
     type, bind(c) :: CStructType
         ! YL 09/10/2018: components %type, %name, or %dtype of length > 1 no longer allowed by gfortran 8 or later
-        character(len=1, kind=c_char) :: type(16)
-        character(len=1, kind=c_char) :: name(16)
-        character(len=1, kind=c_char) :: dtype(16)
+        character(len=1, kind=c_char) :: type(LENSTR)
+        character(len=1, kind=c_char) :: name(LENSTR)
+        character(len=1, kind=c_char) :: dtype(LENSTR)
         integer(c_long)               :: size
         integer(c_long)               :: sizem
         logical(c_bool)               :: isfield
@@ -68,7 +70,7 @@ module DL_PY2F
     endtype PyType
     ! a general-purpose dictionary-like class
     type dictType
-        character(len=16)         :: type  = ""
+        character(len=LENSTR)     :: type  = ""
 ! for now impossible to implement unlimited polymorphic arrays (see below) 
         integer                   :: sizem =  0
         integer                   :: sizen =  0
@@ -213,7 +215,6 @@ module DL_PY2F
         integer                                            :: i, j, ncols, sizem, sizen
         logical                                            :: keepReference
 
-        integer           , parameter :: LENSTR = 16
         character(len=8)  , parameter :: nonetype = "NoneType"
         type(PyType)      , pointer   :: pyptrbuff => null()
         integer(c_long)   , pointer   :: cintbuff  => null()
@@ -243,7 +244,7 @@ module DL_PY2F
             ! (Error: Component ‘dtype’ of BIND(C) type at (1) must have length one)
             ! see: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=84885
             ! so let's use array of characters
-            do j = 1, 16
+            do j = 1, LENSTR
                 typebuff(j:j)  = cdata(i)%type(j)
                 namebuff(j:j)  = cdata(i)%name(j)
                 dtypebuff(j:j) = cdata(i)%dtype(j)
