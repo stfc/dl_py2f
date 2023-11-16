@@ -176,7 +176,6 @@ module DL_PY2F
         procedure, public  :: keys
         procedure, public  :: enquireKey
         procedure, public  :: enquireShape
-        procedure, public  :: enquireKey
     endtype dictType
 
     integer    , parameter :: debug = 0
@@ -1090,23 +1089,6 @@ module DL_PY2F
         endif
 
     endfunction returnSize
-    recursive function enquireKey(metaObj, key) result(avail)
-
-        class(dictType) , intent(in) :: metaObj
-        character(len=*), intent(in) :: key
-        logical                      :: avail
-
-        if(associated(metaObj%key)) then
-            if(metaObj%key.eq.trim(key)) then
-                avail = .true.
-            else
-                avail = enquireKey(metaObj%next, key)
-            endif
-        else
-            avail = .false.
-        endif
-
-    endfunction enquireKey
     recursive function enquireShape(metaObj, key) result(shp)
 
         class(dictType) , intent(in) :: metaObj
