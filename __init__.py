@@ -249,6 +249,10 @@ def py2f(obj, debug=0, byref=False):
                     initialiser[-6] = ('str'+' '*ATTRLEN)[:ATTRLEN].encode('ascii')
                     # pass in as a concatenated string separated by ';'
                     initialiser.append(c_char_p((';'.join(foo) + " "*MAXLEN)[:MAXLEN].encode('ascii')))
+                # YL 23/11/2023: fixed a bug here that the "else" case must be dealt with
+                else:
+                    initialiser.append(None)
+                    fbuff.append((key, c_void_p))
             except:
                 if debug > 2:
                     print(" >>> DL_PY2F WARNING: cannot convert non-integer list/tuple `%s` of"%key, obj, "to NumPy ndarray")
@@ -401,6 +405,7 @@ def py2f(obj, debug=0, byref=False):
     if len(fields) != len(initialiser) or debug > 4:
         if len(fields) != len(initialiser):
             print(" >>> DL_PY2F WARNING: fields (len: {}) and initialiser (len: {}) mismatch:".format(len(fields),len(initialiser)))
+            print("    Python object:", obj)
         else:
             print(" >>> DL_PY2F DEBUG: data structure of PY2F object")
         print(" "*4+"-"*48)
@@ -416,9 +421,6 @@ def py2f(obj, debug=0, byref=False):
                 except:
                     print("    {:20}  |    ".format(fields[i][0].strip()))
         print(" "*4+"-"*48)
-            #    print("### {<20s}  |  {<20s}".format(f[i].strip(), initialiser[i]))
-            #except:
-            #    print("### {}".format(initialiser[i]))
 
     stdout.flush()
 
