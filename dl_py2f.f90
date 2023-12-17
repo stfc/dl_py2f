@@ -425,6 +425,36 @@ module DL_PY2F
                         case default
 
                     endselect
+                    ! YL 16/12/2023: support for structured array and record array (TODO: the latter not yet tested)
+                    if(dtypebuff(1:4)=='void'.or.dtypebuff(1:6)=='record') then
+                        ! array is part of the _master array
+                        if(cdata(i)%isfield) then
+                            if(ncols.gt.0) then
+                                call c_f_pointer(cdata(i)%attr, dblarraybuff, (/ncols, sizem/))
+                            else
+                                call c_f_pointer(cdata(i)%attr, dblarraybuff, (/sizen, sizem/))
+                            endif
+                            if(sizen.eq.1) then
+                                onedimdblbuff => dblarraybuff(1,1:sizem)
+                                call metaObj%assign(trim(namebuff), onedimdblbuff, keepReference)
+                            elseif(sizen.gt.1) then
+                                twodimdblbuff => dblarraybuff(1:sizen,:)
+                                call metaObj%assign(trim(namebuff), twodimdblbuff, keepReference)
+                            endif
+                        ! array is not part of the _master array
+                        else
+                            ! receive the array using a (1, sizem*sizen) array
+                            call c_f_pointer(cdata(i)%attr, dblarraybuff, (/1, sizem*sizen/))
+                            if(sizen.eq.1) then
+                                onedimdblbuff => dblarraybuff(1,:)
+                                call metaObj%assign(trim(namebuff), onedimdblbuff, keepReference)
+                            elseif(sizen.gt.1) then
+                                ! cast to a 2D array
+                                call c_f_pointer(c_loc(dblarraybuff), twodimdblbuff, [sizen,sizem])
+                                call metaObj%assign(trim(namebuff), twodimdblbuff, keepReference)
+                            endif
+                        endif
+                    endif
 
                 case default
                     ! YL 15/08/2021: PyPtr%debug is type(c_ptr), see above

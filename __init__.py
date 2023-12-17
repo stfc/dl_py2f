@@ -150,8 +150,13 @@ def py2f(obj, debug=0, byref=False):
         # initialiser: E. shape of array (0 for scalar)
         if _default_type is list:
             abuff = asarray(databuff)
+            # YL 15/12/2023: added supported for structured array
+            if abuff.dtype.name.startswith('void'):
+                size = abuff.size*len(abuff.dtype.names)
+            else:
+                size = abuff.size
             _initialiser += [ (abuff.dtype.name+' '*ATTRLEN)[:ATTRLEN].encode('ascii'),
-                             c_long(abuff.size),
+                             c_long(size),
                              c_long(abuff.shape[0]) ]
         else:
             _initialiser += [ (' '*ATTRLEN)[:ATTRLEN].encode('ascii') ] + [ c_long(0) ]*2
@@ -220,7 +225,8 @@ def py2f(obj, debug=0, byref=False):
 
                 # only copy shape when obj is fully ready, otherwise ndpointer is destroyed
                 if _val.size > 0:
-                    npptr._shape_ = _val.shape
+                    # in NumPy a structured array is 1D but we need to number of fields to map to a 2D array in Fortran
+                    npptr._shape_ = (_val.shape[0],len(_val.dtype.names))
 
                 # do NOT use ndarray.astype(_ctype) which does not work
                 fbuff.append((_key, npptr))
