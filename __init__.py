@@ -150,8 +150,13 @@ def py2f(obj, debug=0, byref=False):
         # initialiser: E. shape of array (0 for scalar)
         if _default_type is list:
             abuff = asarray(databuff)
+            # YL 15/12/2023: added supported for structured array
+            if abuff.dtype.name.startswith('void'):
+                size = abuff.size*len(abuff.dtype.names)
+            else:
+                size = abuff.size
             _initialiser += [ (abuff.dtype.name+' '*ATTRLEN)[:ATTRLEN].encode('ascii'),
-                             c_long(abuff.size),
+                             c_long(size),
                              c_long(abuff.shape[0]) ]
         else:
             _initialiser += [ (' '*ATTRLEN)[:ATTRLEN].encode('ascii') ] + [ c_long(0) ]*2
@@ -220,7 +225,8 @@ def py2f(obj, debug=0, byref=False):
 
                 # only copy shape when obj is fully ready, otherwise ndpointer is destroyed
                 if _val.size > 0:
-                    npptr._shape_ = _val.shape
+                    # in NumPy a structured array is 1D but we need to number of fields to map to a 2D array in Fortran
+                    npptr._shape_ = (_val.shape[0],len(_val.dtype.names))
 
                 # do NOT use ndarray.astype(_ctype) which does not work
                 fbuff.append((_key, npptr))
@@ -249,6 +255,10 @@ def py2f(obj, debug=0, byref=False):
                     initialiser[-6] = ('str'+' '*ATTRLEN)[:ATTRLEN].encode('ascii')
                     # pass in as a concatenated string separated by ';'
                     initialiser.append(c_char_p((';'.join(foo) + " "*MAXLEN)[:MAXLEN].encode('ascii')))
+                # YL 23/11/2023: fixed a bug here that the "else" case must be dealt with
+                else:
+                    initialiser.append(None)
+                    fbuff.append((key, c_void_p))
             except:
                 if debug > 2:
                     print(" >>> DL_PY2F WARNING: cannot convert non-integer list/tuple `%s` of"%key, obj, "to NumPy ndarray")
@@ -401,6 +411,7 @@ def py2f(obj, debug=0, byref=False):
     if len(fields) != len(initialiser) or debug > 4:
         if len(fields) != len(initialiser):
             print(" >>> DL_PY2F WARNING: fields (len: {}) and initialiser (len: {}) mismatch:".format(len(fields),len(initialiser)))
+            print("    Python object:", obj)
         else:
             print(" >>> DL_PY2F DEBUG: data structure of PY2F object")
         print(" "*4+"-"*48)
@@ -416,9 +427,6 @@ def py2f(obj, debug=0, byref=False):
                 except:
                     print("    {:20}  |    ".format(fields[i][0].strip()))
         print(" "*4+"-"*48)
-            #    print("### {<20s}  |  {<20s}".format(f[i].strip(), initialiser[i]))
-            #except:
-            #    print("### {}".format(initialiser[i]))
 
     stdout.flush()
 
