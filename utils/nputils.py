@@ -398,7 +398,18 @@ def getIncrementsFromCounts(arr):
     return increments[sorter]
 
 
+# YL 07/12/2023
+def getGroupedIndices(arr):
+    '''Return a list of arrays that are indices of grouped unique elements of the given arr'''
 
+    from numpy import arange, argsort, cumsum, diff, split
+
+    sorter = argsort(arr)
+    arr_sorted = arr[sorter]
+    masks_leading = [True] + (arr_sorted[1:] != arr_sorted[:-1]).tolist()
+    increments = diff(arange(arr.shape[0])[masks_leading])
+
+    return split(sorter, cumsum(increments))
 
 
 
