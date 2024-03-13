@@ -380,6 +380,21 @@ def getDeepCopy(obj):
     return copied
 
 
+# TD 13/03/2024: added this function for catching the traceback which always evades exceptions of the following function getModuleList()
+def printTraceback(path):
+    ''' Catch module load errors from walk_packages '''
+
+    import os
+    import sys
+    import traceback
+
+    print('\n >>> Failed to load module', path, flush=True)
+    var = traceback.format_exc()
+    print(var, flush=True)
+    
+    os.exit(999)
+
+
 def getModuleList(obj):
     '''Get a list of all modules under the given object'''
 
@@ -390,20 +405,21 @@ def getModuleList(obj):
     # recursive method
     def _recur(_path, _prefix): 
 
-        for _loader, _name, _ispkg in walk_packages(_path, _prefix):
+        # TD 13/03/2024: added an onerror function (see above)
+        for _loader, _name, _ispkg in walk_packages(_path, _prefix, onerror=printTraceback):
             pass
         # this is a bug checker to warn developers as no information is printed when chemsh.x detects Python errors
         try:
-            for _loader, _name, _ispkg in walk_packages(_path, _prefix):
+            for _loader, _name, _ispkg in walk_packages(_path, _prefix, onerror=printTraceback):
                 pass
         except:
-            print(" >>> ERROR: there is a bug found in module %s"%_name)
-            print(" >>> Use command `python3` to run your script for detailed reasons (requiring environment variables PYTHONPATH and CHEMSH_ARCH)")
+            print(" >>> ERROR: There is a bug found in module %s"%_name, flush=True)
+            print(" >>> Use command `python3` to run your script for detailed reasons (requiring environment variables PYTHONPATH and CHEMSH_ARCH)", flush=True)
             # TODO: skip the faulty one and proceed with the rest healthy modules!
             return
 
         # walk packages
-        for _loader, _name, _ispkg in walk_packages(_path, _prefix):
+        for _loader, _name, _ispkg in walk_packages(_path, _prefix, onerror=printTraceback):
 
             # dig deeper in package
             # have to include pkg now as some modules were moved into __init__.py
