@@ -380,6 +380,16 @@ def getDeepCopy(obj):
     return copied
 
 
+def onerror(path):
+    ''' Catch module load errors from walk_packages '''
+    import sys
+    import traceback
+    print('Failed to load module', path, flush=True)
+    var = traceback.format_exc()
+    print(var, flush=True)
+    import os
+    os.exit(999)
+
 def getModuleList(obj):
     '''Get a list of all modules under the given object'''
 
@@ -390,20 +400,20 @@ def getModuleList(obj):
     # recursive method
     def _recur(_path, _prefix): 
 
-        for _loader, _name, _ispkg in walk_packages(_path, _prefix):
+        for _loader, _name, _ispkg in walk_packages(_path, _prefix, onerror=onerror):
             pass
         # this is a bug checker to warn developers as no information is printed when chemsh.x detects Python errors
         try:
-            for _loader, _name, _ispkg in walk_packages(_path, _prefix):
+            for _loader, _name, _ispkg in walk_packages(_path, _prefix, onerror=onerror):
                 pass
         except:
-            print(" >>> ERROR: there is a bug found in module %s"%_name)
-            print(" >>> Use command `python3` to run your script for detailed reasons (requiring environment variables PYTHONPATH and CHEMSH_ARCH)")
+            print(" >>> ERROR: there is a bug found in module %s"%_name, flush=True)
+            print(" >>> Use command `python3` to run your script for detailed reasons (requiring environment variables PYTHONPATH and CHEMSH_ARCH)", flush=True)
             # TODO: skip the faulty one and proceed with the rest healthy modules!
             return
 
         # walk packages
-        for _loader, _name, _ispkg in walk_packages(_path, _prefix):
+        for _loader, _name, _ispkg in walk_packages(_path, _prefix, onerror=onerror):
 
             # dig deeper in package
             # have to include pkg now as some modules were moved into __init__.py
