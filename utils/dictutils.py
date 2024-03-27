@@ -131,7 +131,7 @@ def getSortedKeys(dictObj, order=None):
 
 
 def dict2obj(d, obj):
-    '''Recursively rebuild a ChemShell object with provided dictionary'''
+    '''Recursively rebuild an object of your own project with provided dictionary'''
 
     from . import objutils
 
@@ -140,11 +140,9 @@ def dict2obj(d, obj):
         setattr(obj, key, d[key])
 
 
-
 # TODO: unfinished...
 def getDictEntry2(d, *args):
     ''''''
-
     
 
 def getMatchedKey(d, arg):

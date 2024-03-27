@@ -45,7 +45,7 @@ def __getEntry(arg, default):
 #         a. initDictAttrs
 #         b. initSeqAttrs
 def init(obj=None, inherit=(), init=(), priorities=(), inheritfrom=None):
-    '''Add attributes to a ChemShell <obj> or <func> and initialise with values provided in, for example, obj._kwargs'''
+    '''Add attributes to an <obj> or a <func> and initialise with values provided in, for example, obj._kwargs'''
 
     def __init(proc):
         '''An inner wrapper to support arguments of @objutils.init()'''
@@ -277,8 +277,8 @@ def checkType(obj, cls, info="", chksubcls=False):
         return obj
 
     else:
-        print(f"\n ChemShell >>> Type {cls} expected for keyword {info} but {type(obj)} was given. Exiting...\n")
-        raise ChemShTypeError
+        print(f"\n >>> DL_PY2F ERROR: Type {cls} expected for keyword {info} but {type(obj)} was given. Exiting...\n", flush=True)
+        raise TypeError
 
 assignByType = checkType
 
@@ -296,12 +296,11 @@ def getBaseType(obj):
          return obj.__class__
 
 
-def getType(obj, ndarrayislist=True):
+def getType(obj, list_modules=[], ndarrayislist=True):
     '''Return type'''
 
     from numpy  import ndarray, float64, float32, int64, int32
     from types  import ModuleType, FunctionType
-    from chemsh import CHEMSH_MODS
 
     # numpy.ndarray treated as list
     if isinstance(obj, ndarray) and ndarrayislist:
@@ -339,8 +338,8 @@ def getType(obj, ndarrayislist=True):
     elif isinstance(obj, FunctionType):
         return FunctionType
 
-    # ChemShell <objects>
-    elif type(obj).__module__ in CHEMSH_MODS:
+    # module of your own project is reckoned as `object`
+    elif type(obj).__module__ in list_modules:
         return object
 
 # YL: removed since not matched in any case
@@ -408,13 +407,13 @@ def getModuleList(obj):
         # TD 13/03/2024: added an onerror function (see above)
         for _loader, _name, _ispkg in walk_packages(_path, _prefix, onerror=printTraceback):
             pass
-        # this is a bug checker to warn developers as no information is printed when chemsh.x detects Python errors
+        # this is a bug checker to warn developers as no information is printed when C/Python API (compiled as binary) detects Python errors
         try:
             for _loader, _name, _ispkg in walk_packages(_path, _prefix, onerror=printTraceback):
                 pass
         except:
             print(" >>> ERROR: There is a bug found in module %s"%_name, flush=True)
-            print(" >>> Use command `python3` to run your script for detailed reasons (requiring environment variables PYTHONPATH and CHEMSH_ARCH)", flush=True)
+            print(" >>> Use command `python3` to run your script for detailed reasons (requiring environment variables such as $PYTHONPATH)", flush=True)
             # TODO: skip the faulty one and proceed with the rest healthy modules!
             return
 
@@ -446,11 +445,11 @@ def getUserAttrs(obj):
 
 
 # TODO: may not work! not in use so far
-def getAttrType(obj, attr):
+def getAttrType(obj, attr, list_modules=[]):
     '''Get attribute's type'''
 
     try:
-        return getType(getattr(obj, attr))
+        return getType(getattr(obj, attr, list_modules=list_modules))
 
     # if attribute does not exist, return NoneType
     except:
@@ -522,8 +521,8 @@ def type2dtype(obj, descr=False):
     return selectcases[type(obj)](obj)
 
 
-def obj2dict(obj):
-    '''Recursively save information of a ChemShell object to dictionary'''
+def obj2dict(obj, list_modules=[]):
+    '''Recursively save information of an object of your own project to Python dict'''
 
     from numpy import ndarray
     from .     import miscutils, nputils
@@ -542,7 +541,7 @@ def obj2dict(obj):
                   }
 
     for key, val in obj._kwargs.items():
-        dictbuff.update({key:selectcases[getType(getattr(obj,key), ndarrayislist=False)](getattr(obj, key))})
+        dictbuff.update({key:selectcases[getType(getattr(obj,key,list_modules=list_modules), ndarrayislist=False)](getattr(obj, key))})
 
     return dictbuff
 

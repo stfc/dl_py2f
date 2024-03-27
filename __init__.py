@@ -1,10 +1,10 @@
 '''DL_PY2F is a library for direct coupling of Python/NumPy and Fortran'''
 
 __author__     = [ 'You Lu', 'Thomas W. Keal' ]
-__copyright__  = 'Copyright (C) 2018 The authors of Py-ChemShell'
+__copyright__  = 'Copyright (C) 2024 The authors of DL_PY2F'
 __credits__    = [ 'You Lu', 'Thomas W. Keal' ]
 __license__    = 'LGPLv3'
-__version__    = '21.0 (beta)'
+__version__    = '24.0 (beta)'
 __maintainer__ = __author__[0]
 __email__      = 'you.lu@stfc.ac.uk'
 __status__     = ''
