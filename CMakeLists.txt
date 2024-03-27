@@ -1,21 +1,22 @@
-#  Copyright (C) 2017 The authors of Py-ChemShell
+#  Copyright (C) 2017 The authors of DL_PY2F
 #
-#  This file is part of Py-ChemShell.
+#  This file is part of DL_PY2F.
 #
-#  Py-ChemShell is free software: you can redistribute it and/or modify
+#  DL_PY2F is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU Lesser General Public License as
 #  published by the Free Software Foundation, either version 3 of the
 #  License, or (at your option) any later version.
 #
-#  Py-ChemShell is distributed in the hope that it will be useful,
+#  DL_PY2F is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU Lesser General Public License for more details.
 #
 #  You should have received a copy of the GNU Lesser General Public
-#  License along with Py-ChemShell.  If not, see
+#  License along with DL_PY2F.  If not, see
 #  <http://www.gnu.org/licenses/>.
 
+# you.lu@stfc.ac.uk
 
 # paths
 if("${DL_PY2F_BUILD_DIR}" STREQUAL "")
@@ -27,17 +28,19 @@ include_directories(${DL_PY2F_BUILD_DIR}/modules/dl_py2f)
 # compile
 add_library(dl_py2f SHARED dl_py2f.f90)
 
-# YL 25/11/2020: added export.map to meet special name mangling of Cray compilers
-if(${CHEMSH_ARCH} STREQUAL "cpe-gnu")
+# YL 27/03/2024: on some architectures we need this ${DL_PY2F_ARCH} which should be defined by the project's developer
+if(${DL_PY2F_ARCH} STREQUAL "cpe-gnu")
     # YL 10/04/2021: we must add -fcheck=no-bounds to prevent gfortran-10 checking the array bounds
     set_target_properties(dl_py2f PROPERTIES COMPILE_FLAGS "-fcheck=no-bounds")
-elseif(${CHEMSH_ARCH} STREQUAL "cray")
+elseif(${DL_PY2F_ARCH} STREQUAL "cray")
     if(DEBUG)
         set_target_properties(dl_py2f PROPERTIES COMPILE_FLAGS "-dynamic -O0 -g -v")
     else()
         set_target_properties(dl_py2f PROPERTIES COMPILE_FLAGS "-dynamic -O0")
     endif()
 endif()
+
+# YL 25/11/2020: added export.map to meet special name mangling of Cray compilers
 set_target_properties(dl_py2f PROPERTIES LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_LIST_DIR}/export.map")
 
 # rules for `make clean`

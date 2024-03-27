@@ -54,9 +54,8 @@ def importAsModule(s):
 #        module = __import__(s, fromlist=s)
         module = import_module(s)
     except OSError:
-        # TODO: use ChemShell standard error
-        print("\n ChemShell ERROR: Library", s, "is not correctly compiled/linked.\n")
-        quit(1)
+        print("\n DL_PY2F ERROR: Library", s, "is not correctly compiled/linked.\n")
+        quit(999)
 
     except ImportError:
         module = s
@@ -76,7 +75,7 @@ def getJoined(s, bar, newline=True):
 
 
 class Str(bytearray):
-    '''ChemShell mutable byte array'''
+    '''Mutable byte array'''
 
     # YL: do NOT use __new__(), otherwise encoding must be specified when creating an instance
     def __init__(self, val, *args):

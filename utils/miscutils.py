@@ -25,7 +25,7 @@ def addWeakRef(obj):
     '''Try to make all attribute objects remember their base object (recursively)'''
     from weakref import ref
     for attr in dir(obj):
-        # do not check utils.getType since the current method is loaded by chemsh/__init__.py and utils.getType also requires chemsh/__init__.py
+        # do not check utils.getType to avoid initialising modules which could not be ready yet
         if not attr.startswith('_') and not callable(getattr(obj, attr)):
             try:
                 setattr(getattr(obj, attr), '_b_weakref_', ref(obj))

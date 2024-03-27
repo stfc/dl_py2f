@@ -141,10 +141,8 @@ class RecArray(numpy.recarray):
 
             inst.init()
 
-#        else:
-#            print("\n\n >>> ChemShError: RecArray instantiation failed.\n\n")
-
         return inst
+
 
     def init(self):
         '''Initialise according to self.defaults'''
@@ -246,10 +244,6 @@ class RecArray(numpy.recarray):
     def getDtype(self, field):
         '''Return dtype.descr'''
         return getattr(self, field).dtype.descr
-
-
-class ChemShArray(numpy.ma.MaskedArray):
-    ''''''
 
 
 class SymArray(numpy.ndarray):
