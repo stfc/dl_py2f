@@ -19,5 +19,5 @@
 __author__ = 'You Lu <you.lu@ukri.stfc.org>'
 
 # YL 10/08/2022: these modules must be explictly imported otherwise some (nputils) will be unavailable when used
-from . import dictutils, fileutils, iterutils, miscutils, modutils, nputils, objutils, strutils
-__all__ = 'dictutils', 'fileutils', 'iterutils', 'miscutils', 'modutils', 'nputils', 'objutils', 'strutils'
+from . import ctypeutils, dictutils, fileutils, iterutils, miscutils, modutils, nputils, objutils, strutils
+__all__ = 'ctypeutils', 'dictutils', 'fileutils', 'iterutils', 'miscutils', 'modutils', 'nputils', 'objutils', 'strutils'

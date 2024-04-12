@@ -101,12 +101,13 @@ def getSharedLib(modname, location, mode=RTLD_GLOBAL, debug=0):
             return
 
 
-def getLinkedLib(modname, location, mode=RTLD_GLOBAL):
+def getLinkedLib(modname, location, mode=RTLD_GLOBAL, is_linked=False):
     '''Returns shared library (only linked-in by default)'''
 
     lib = getSharedLib(modname, location, mode=mode)
 
-    if isLinked(modname, location):
+    # YL 19/03/2024: added a switch is_linked to force to return the lib obj
+    if isLinked(modname, location) or is_linked:
         return lib
     else:
         return

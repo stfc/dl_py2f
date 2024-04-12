@@ -17,6 +17,11 @@
 #  <http://www.gnu.org/licenses/>.
 
 # you.lu@stfc.ac.uk
+project(DL_PY2F
+        VERSION       24.0
+        DESCRIPTION  "A generic library that seamlessly glues Python and Fortran"
+#        HOMEPAGE_URL "www.chemshell.org"
+        LANGUAGES     CXX Fortran)
 
 # paths
 if("${DL_PY2F_BUILD_DIR}" STREQUAL "")
@@ -26,7 +31,7 @@ set(CMAKE_Fortran_MODULE_DIRECTORY ${DL_PY2F_BUILD_DIR}/modules/dl_py2f)
 include_directories(${DL_PY2F_BUILD_DIR}/modules/dl_py2f)
 
 # compile
-add_library(dl_py2f SHARED dl_py2f.f90)
+add_library(dl_py2f SHARED dl_py2f.f90 dl_py2f.cpp)
 
 # YL 27/03/2024: on some architectures we need this ${DL_PY2F_ARCH} which should be defined by the project's developer
 if(${DL_PY2F_ARCH} STREQUAL "cpe-gnu")
@@ -40,8 +45,16 @@ elseif(${DL_PY2F_ARCH} STREQUAL "cray")
     endif()
 endif()
 
+# YL 18/03/2024: for C++
+if(CMAKE_C_COMPILER_ID STREQUAL GNU)
+#    add_compile_options($<$<COMPILE_LANG_AND_ID:CXX,GNU>:-fpermissive>)
+    list(APPEND CMAKE_CXX_FLAGS -fpermissive)
+endif()
+
 # YL 25/11/2020: added export.map to meet special name mangling of Cray compilers
 set_target_properties(dl_py2f PROPERTIES LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_LIST_DIR}/export.map")
+
+target_include_directories(dl_py2f PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
 # rules for `make clean`
 set_property(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}

@@ -497,5 +497,8 @@ def py2f(obj, debug=0, byref=False):
 
 
 
+import os, sys
+sys.path.append(os.path.dirname(__file__))
+from dl_f2py import DL_DL
 
-
+#dl = DL_DL('path')

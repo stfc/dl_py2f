@@ -134,7 +134,7 @@ def rename(filename, newname):
         replace(filename, newname)
 
 
-def archiveFile(filename, all=False, dir='.', copy=False, suffix='.OLD'):
+def archiveFile(filename, dir='.', copy=False, suffix='.OLD'):
     '''Rename a file to extension .OLD'''
 
     from os     import getcwd, listdir, path, sep
@@ -143,7 +143,7 @@ def archiveFile(filename, all=False, dir='.', copy=False, suffix='.OLD'):
     # support a list or tuple of filenames
     if type(filename) is tuple or type(filename) is list:
         for f in filename:
-            archiveFile(f, all=all, dir=dir, suffix=suffix)
+            archiveFile(f, dir=dir, suffix=suffix)
 
     # singular filename of string
     elif type(filename) == str:
