@@ -215,7 +215,8 @@ def mergeDicts(d1, d2):
             dbuff = d1.get(k, {})
             mergeDicts(dbuff, v)
             d1.update({k:dbuff})
-        elif type(v) is str:
+        # YL 01/05/2024: for now we ignore these types
+        elif type(v) in [ str, float, int, bool ]:
             pass
         # merge/update data: all valid data entries should be ndarrays only
         else:
