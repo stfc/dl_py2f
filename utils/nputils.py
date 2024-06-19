@@ -310,7 +310,7 @@ def bytes2str(arr):
 def getCountsA2InA1(a1, a2):
     '''Return an array (of same size as a2) of counts that a2 elements occur in a1 (a2 must not contain repeats!)'''
 
-    from numpy import arange, array, bincount, in1d, searchsorted, unique, zeros
+    from numpy import arange, array, bincount, isin, searchsorted, unique, zeros
 
     a1, a2 = array(a1), array(a2)
 
@@ -319,7 +319,7 @@ def getCountsA2InA1(a1, a2):
         print("\n WARNING: getCountsA2InA1() must not contain repeat! Returning zeros array...\n")
         return zeros((a2.size,), dtype=int)
 
-    masks_a1_in_a2 = in1d(a1, a2)
+    masks_a1_in_a2 = isin(a1, a2)
     a1_in_a2 = a1[masks_a1_in_a2]
 
     # assuming no repeat in a2!
@@ -336,7 +336,7 @@ def getCountsA2InA1(a1, a2):
 def getCountsA1InA2(a1, a2):
     '''Return an array (of same size as a1) of each a1 element's occuring frequency in a2 (a2 must not contain repeats!)'''
 
-    from numpy import arange, array, bincount, in1d, searchsorted, unique, zeros
+    from numpy import arange, array, bincount, isin, searchsorted, unique, zeros
 
     a1, a2 = array(a1), array(a2)
 
@@ -348,7 +348,7 @@ def getCountsA1InA2(a1, a2):
     # start with an empty array of counts
     counts = zeros((a1.size), dtype=int)
 
-    masks_a1_in_a2 = in1d(a1, a2)
+    masks_a1_in_a2 = isin(a1, a2)
     a1_in_a2 = a1[masks_a1_in_a2]
 
     # remove repeats in a1_in_a2
