@@ -29,10 +29,10 @@ include_directories(${DL_PY2F_BUILD_DIR}/modules/dl_py2f)
 add_library(dl_py2f SHARED dl_py2f.f90)
 
 # YL 27/03/2024: on some architectures we need this ${DL_PY2F_ARCH} which should be defined by the project's developer
-if(${DL_PY2F_ARCH} STREQUAL "cpe-gnu")
+if("${DL_PY2F_ARCH}" STREQUAL "cpe-gnu")
     # YL 10/04/2021: we must add -fcheck=no-bounds to prevent gfortran-10 checking the array bounds
     set_target_properties(dl_py2f PROPERTIES COMPILE_FLAGS "-fcheck=no-bounds")
-elseif(${DL_PY2F_ARCH} STREQUAL "cray")
+elseif("${DL_PY2F_ARCH}" STREQUAL "cray")
     if(DEBUG)
         set_target_properties(dl_py2f PROPERTIES COMPILE_FLAGS "-dynamic -O0 -g -v")
     else()
