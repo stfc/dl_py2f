@@ -134,7 +134,7 @@ def rename(filename, newname):
         replace(filename, newname)
 
 
-def archiveFile(filename, all=False, dir='.', copy=False, suffix='.OLD'):
+def archiveFile(filename, dir='.', copy=False, suffix='.OLD'):
     '''Rename a file to extension .OLD'''
 
     from os     import getcwd, listdir, path, sep
@@ -143,7 +143,7 @@ def archiveFile(filename, all=False, dir='.', copy=False, suffix='.OLD'):
     # support a list or tuple of filenames
     if type(filename) is tuple or type(filename) is list:
         for f in filename:
-            archiveFile(f, all=all, dir=dir, suffix=suffix)
+            archiveFile(f, dir=dir, suffix=suffix)
 
     # singular filename of string
     elif type(filename) == str:
@@ -157,11 +157,12 @@ def archiveFile(filename, all=False, dir='.', copy=False, suffix='.OLD'):
             rename(filename, dest)
 
 
-def archiveDir(dirname, suffix='.OLD'):
+def archiveDir(dirname, suffix='.OLD', mkdir=True):
     '''Create a directory for archives'''
 
     from shutil import rmtree
-    from os     import mkdir, replace
+    from os     import mkdir as md
+    from os     import replace
 
     # remove existing .OLD dir
     rmtree(dirname+suffix, ignore_errors=True)
@@ -173,7 +174,8 @@ def archiveDir(dirname, suffix='.OLD'):
         pass
 
     # create
-    mkdir(dirname)
+    if mkdir:
+        md(dirname)
 
 
 ## YL NB: not suitable for getting arrays of complex dtype
