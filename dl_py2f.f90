@@ -176,6 +176,7 @@ module DL_PY2F
         procedure, public  :: keys
         procedure, public  :: enquireKey
         procedure, public  :: enquireShape
+        procedure, public  :: enquireType
     endtype dictType
 
     integer    , parameter :: debug = 0
@@ -1138,6 +1139,30 @@ module DL_PY2F
         endif
 
     endfunction enquireShape
+    recursive function enquireType(metaObj, key) result(type)
+
+        class(dictType) , intent(in) :: metaObj
+        character(len=*), intent(in) :: key
+        character(len=16)            :: type
+
+        if(associated(metaObj%key)) then
+            call flush(6)
+            if(metaObj%key.eq.trim(key)) then
+                if(associated(metaObj%onedimchar)) type = 'character'
+                if(associated(metaObj%onedimint))  type = 'integer'
+                if(associated(metaObj%twodimint))  type = 'integer'
+                if(associated(metaObj%onedimdbl))  type = 'double'
+                if(associated(metaObj%twodimdbl))  type = 'double'
+                if(associated(metaObj%onedimcdbl)) type = 'c_double'
+                if(associated(metaObj%twodimcdbl)) type = 'c_double'
+            else
+                type = enquireType(metaObj%next, key)
+            endif
+        else
+            print *, '>>> DL_PY2F ERROR: keyword \"', key, '\"not found in dictionary.'
+        endif
+
+    endfunction enquireType
     recursive function returnOneDimChar(metaObj, key) result(onedimchar)
 
         class(dictType) , intent(in) :: metaObj

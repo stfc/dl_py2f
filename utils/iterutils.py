@@ -59,8 +59,14 @@ def getFlattened(iter, unique=True):
            getFlattened(list((arange(3), 98, [98,98,[100]], arange(4))), unique=False)
     '''
 
-    from numpy    import array, dtype, setdiff1d, VisibleDeprecationWarning
+    from numpy    import array, dtype, setdiff1d, __version__
     from warnings import filterwarnings
+    # TD 18/06/2024 : Numpy v2.0.0 version dependence
+    from numpy.lib import NumpyVersion
+    if NumpyVersion(__version__) >= '2.0.0b1':
+        from numpy.exceptions import VisibleDeprecationWarning
+    else:
+        from numpy import VisibleDeprecationWarning
 
     # YL 15/12/2021: dictionary cannot be processed
     if type(iter) in [dict]:
@@ -156,7 +162,7 @@ def getFlattenedOLD(iter, unique=True):
 def findMapped(iter, mapping, case_sensitive=True):
     '''Translate an array/list of str/byte using the mapping dict'''
 
-    from numpy import array, char, in1d
+    from numpy import array, char, isin
 
     iter = array(iter)
 
@@ -178,7 +184,7 @@ def findMapped(iter, mapping, case_sensitive=True):
         else:
             keys_original = array(list(mapping.keys()))
         keys   = array(list(mapping.keys()))
-        mapped = keys_original[in1d(keys,iter)]
+        mapped = keys_original[isin(keys,iter)]
 
     else:
         mapped = array([])
