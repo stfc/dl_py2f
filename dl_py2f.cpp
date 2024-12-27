@@ -66,7 +66,7 @@ class DL_F2PY {
         Elf_Symndx symidx;
         const char *type;
     
-// for debugging only
+// DEBUGGING ONLY
 //        printf("Dynamic Sections:\n");
 //        printf("|%-18s|%16s|\n", "Tag", "Ptr");
 //        int counter = 0;
@@ -79,9 +79,11 @@ class DL_F2PY {
 //                   dyn->d_un.d_val,
 //                   (const void *) (dyn->d_un.d_ptr));
 //        }
+// END DEBUGGING
     
         // see: elf/dl-lookup.c
         const ElfW(Addr) *bitmask = lm->l_gnu_bitmask;
+        // 27/12/2024: we currently do the same for the following if and else
         if (__glibc_likely (bitmask != NULL)) {
     
             // TODO in glibc it only does check_match() if this condition is met but here it's never met
@@ -114,9 +116,10 @@ class DL_F2PY {
                         sbuff += strtab + sym->st_name + sep;
 
 
-// DEBUG only
+// DEBUGGING ONLY
 //                        printf("%5d: %s\n", symidx, strtab + sym->st_name);
 //                        cout<<strtab+sym->st_name<<endl;
+// END DEBUGGING
                     }
                 // end of list of symbols
                 } else {
@@ -124,19 +127,40 @@ class DL_F2PY {
                 }
             }
     
-        // TODO old DT_HASH is deprecated
         } else {
     
-            unsigned long int *old_hash;
-    //        *old_hash = _dl_elf_hash(undef_name);
+// TODO old DT_HASH is deprecated
+//            unsigned long int *old_hash;
+//            *old_hash = _dl_elf_hash("YOUR_KEYWORD");
+//            for (symidx = lm->l_buckets[*old_hash%lm->l_nbuckets];
+//                 symidx != STN_UNDEF;
+//                 symidx = lm->l_chain[symidx]) {
+//                // TODO: do something here in case we need it one day
+//            }
     
             /* Use the old SysV-style hash table.  Search the appropriate
                hash bucket in this object's symbol table for a definition
                for the same symbol name.  */
-            for (symidx = lm->l_buckets[*old_hash%lm->l_nbuckets];
-                 symidx != STN_UNDEF;
-                 symidx = lm->l_chain[symidx]) {
-                // TODO: do something here in case we need it one day
+            for (symidx=1; &symtab[symidx] != NULL; symidx++) {
+                const ElfW(Sym) *const sym = &symtab[symidx];
+                type = (ELFW(ST_BIND) (sym->st_info) == STB_WEAK)       ? "STB_WEAK":
+                       (ELFW(ST_BIND) (sym->st_info) == STB_GLOBAL)     ? "STB_GLOBAL" :
+                       (ELFW(ST_BIND) (sym->st_info) == STB_GNU_UNIQUE) ? "STB_GNU_UNIQUE" : NULL;
+                if (type != NULL) {
+                    // it seems symbols are useless when sym->st_value is 0
+                    if (ELFW(ST_BIND) (sym->st_info) != STB_WEAK && sym->st_value != 0) {
+                        sbuff += strtab + sym->st_name + sep;
+
+
+// DEBUGGING ONLY
+//                        printf("%5d: %s\n", symidx, strtab + sym->st_name);
+//                        cout<<strtab+sym->st_name<<endl;
+// END DEBUGGING
+                    }
+                // end of list of symbols
+                } else {
+                    break;
+                }
             }
         }
     
@@ -162,12 +186,14 @@ class DL_F2PY {
         int ld_ret = dlinfo(handle, RTLD_DI_LINKMAP, &lm);
         if (ld_ret) {
             printf("Error[%s]: %s\n", tag, dlerror());
+            fflush(stdout);
             return NULL;
         }
     
 // DEBUG only
-//        printf("\nlm->l_name = %s\n", lm->l_name);
+        printf("\n >>> DL_PY2F: lm->l_name = %s\n", lm->l_name);
         const char *cbuff = dl_py2f_get_dl_symbols(lm);
+        fflush(stdout);
     
         // TODO we could use this loop to inspect all loaded shared libs
         do {
