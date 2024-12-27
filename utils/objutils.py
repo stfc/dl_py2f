@@ -391,7 +391,7 @@ def printTraceback(path):
     var = traceback.format_exc()
     print(var, flush=True)
     
-    os.exit(999)
+    sys.exit(999)
 
 
 def getModuleList(obj):

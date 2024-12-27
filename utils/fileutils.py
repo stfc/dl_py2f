@@ -157,11 +157,12 @@ def archiveFile(filename, dir='.', copy=False, suffix='.OLD'):
             rename(filename, dest)
 
 
-def archiveDir(dirname, suffix='.OLD'):
+def archiveDir(dirname, suffix='.OLD', mkdir=True):
     '''Create a directory for archives'''
 
     from shutil import rmtree
-    from os     import mkdir, replace
+    from os     import mkdir as md
+    from os     import replace
 
     # remove existing .OLD dir
     rmtree(dirname+suffix, ignore_errors=True)
@@ -173,7 +174,8 @@ def archiveDir(dirname, suffix='.OLD'):
         pass
 
     # create
-    mkdir(dirname)
+    if mkdir:
+        md(dirname)
 
 
 ## YL NB: not suitable for getting arrays of complex dtype
