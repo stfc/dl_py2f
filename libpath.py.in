@@ -1,0 +1,1 @@
+libpath = '@CMAKE_LIBRARY_OUTPUT_DIRECTORY@'

@@ -9,6 +9,8 @@ from ctypes import addressof, CDLL, memset, RTLD_GLOBAL, sizeof
 from ctypes import c_bool, c_char_p, c_double, c_float, c_int, c_long, c_void_p, POINTER
 from ctypes import c_byte, c_char, c_short, c_size_t, c_uint, c_ubyte, c_ulong, c_void_p, c_wchar
 from _ctypes import _SimpleCData
+import libpath
+import intel
     
 
 selectcases = { float    : c_double,
@@ -436,6 +438,7 @@ class DL_DL(CDLL):
 
     __modules = []
 
+
     def __new__(cls, fullpath_to_lib, mode=RTLD_GLOBAL, debug=False):
         ''''''
 
@@ -457,15 +460,30 @@ class DL_DL(CDLL):
         return inst
 
 
+    # 30/12/2024: we must override CDLL.__getattr__() which looks up only a shared library's symbols (though sometimes works without this overriding)
+    def __getattr__(self, name):
+        ''''''
+
+        try:
+            if name.startswith('__') and name.endswith('__'):
+                raise AttributeError(name)
+            func = self.__getitem__(name)
+            setattr(self, name, func)
+            return func
+
+        except:
+            return object.__getattribute__(self, name)
+
+
     @property
     def lib_dl_py2f(self):
         '''Return a <class CDLL> instance of DL_PY2F dynamic library'''
 
+# FIXME hardcoded for now
         try:
             return self._lib_dl_py2f
         except:
-# FIXME hardcoded for now
-            self._lib_dl_py2f = utils.modutils.getLinkedLib('dl_py2f', '/home/ylu/chemsh/master/build/gnu/lib', is_linked=True)
+            self._lib_dl_py2f = utils.modutils.getLinkedLib('dl_py2f', libpath.libpath, is_linked=True)
             return self._lib_dl_py2f
 
 
@@ -536,26 +554,34 @@ class DL_DL(CDLL):
         lbuff = []
         if '%' in symbol:
             lbuff = symbol.split('%')
-            print("### symbol =", lbuff, flush=True)
             symbol = lbuff[0]
+        print("\n\n### getValue: symbol =", symbol, flush=True)
 
         # get the full symbol name
         fullname_symbol = self.getSymbolOfModule(symbol, module)
 
         _instances_derived_types = self._instances_derived_types.get(module, {})
+        print("### _instances_derived_types =", _instances_derived_types)
         derived_type = _instances_derived_types.get(symbol, None)
+        print("### derived_type =", derived_type)
 
         # choose a proper ctype
         ctype = selectcases.get(ctype, ctype)
 
         # get the object as a ctype instance
         entity = ctype.in_dll(self, fullname_symbol)
+        print("### getValue: full symbol =", fullname_symbol, addressof(entity), flush=True)
+        print("### getValue: nvar =", c_int.from_address(addressof(entity)), flush=True)
+        for i in range(230):
+            print("### getValue: nvarrr =", i*4, c_int.from_address(addressof(entity)+i*4), flush=True)
         # YL 23/023/2024: alternatively, the value can be retrieved by `c_double.from_address(addr)` given addr from `loc(entity)` in Fortran
 
         # ctype is defaulted to c_int if not specified which is enough for getting the address of a derived-type instance
         if derived_type in self._derived_types.get(module, {}):
             entity = DL_DT(addressof(entity), self._derived_types[module][derived_type], self._derived_types[module], debug=debug)
+            print("### entity =", entity)
             for attr in lbuff[1:]:
+                print("### attr =", attr)
                 if '(' in attr and ')' in attr:
                     name = attr.split('(')[0].strip()
                     index = attr.split('(')[1].split(')')[0]
@@ -755,6 +781,14 @@ class DL_DL(CDLL):
         indices2entries = {}
         # a temporary container for updating self._instances_derived_types later
         _instances_derived_types = {}
+
+        try:
+            fp = gzip.open(modpath)
+            fp.read()
+        except:
+
+            intel.parseModIntel(modpath)
+            return
 
         # open the Fortran module file as gzipped plain text and pretty-print the content in a local file
         with gzip.open(modpath) as mod, open(f'_dl_py2f_{basename}.txt', 'w') as fp:
@@ -1328,8 +1362,10 @@ class DL_DL(CDLL):
                 if is_type:
                     declare += c
 
+        print("\n### modpath =", modpath)
         # complete deferred declarations
         for k, v in _instances_derived_types.items():
+            print("### k, v =", k, v)
             if is_internal:
                 continue
             if type(v) is int:
@@ -1503,6 +1539,8 @@ class DL_DL(CDLL):
          '''Return a list of all derived types which are already parsed in the current library'''
 
          return list(self._derived_types.keys())
+
+
 
 
 

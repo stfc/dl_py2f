@@ -30,6 +30,8 @@ endif()
 set(CMAKE_Fortran_MODULE_DIRECTORY ${DL_PY2F_BUILD_DIR}/modules/dl_py2f)
 include_directories(${DL_PY2F_BUILD_DIR}/modules/dl_py2f)
 
+configure_file(libpath.py.in libpath.py @ONLY)
+
 # compile
 add_library(dl_py2f SHARED dl_py2f.f90 dl_py2f.cpp)
 

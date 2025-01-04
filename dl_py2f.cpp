@@ -47,8 +47,8 @@ class DL_F2PY {
     const char *dl_py2f_get_dl_symbols(const dl_py2f_link_map *lm) {
     
         const ElfW(Addr)  load_addr = lm->l_addr;
-        const char       *strtab    = (const void *) D_PTR (lm, l_info[DT_STRTAB]);
-        const ElfW(Sym)  *symtab    = (const void *) D_PTR (lm, l_info[DT_SYMTAB]);
+        const char       *strtab    = (const char *) D_PTR(lm, l_info[DT_STRTAB]);
+        const ElfW(Sym)  *symtab    = (const ElfW(Sym) *) D_PTR(lm, l_info[DT_SYMTAB]);
     
         const char *undef_name = " ";
         const uint_fast32_t gnu_hash = dl_gnu_hash(undef_name);
@@ -190,10 +190,12 @@ class DL_F2PY {
             return NULL;
         }
     
-// DEBUG only
-        printf("\n >>> DL_PY2F: lm->l_name = %s\n", lm->l_name);
-        const char *cbuff = dl_py2f_get_dl_symbols(lm);
+// DEBUGGING ONLY
+//        printf("\n >>> DL_PY2F: lm->l_name = %s\n", lm->l_name);
         fflush(stdout);
+// END DEBUGGING
+
+        const char *cbuff = dl_py2f_get_dl_symbols(lm);
     
         // TODO we could use this loop to inspect all loaded shared libs
         do {

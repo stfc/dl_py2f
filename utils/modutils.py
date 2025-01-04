@@ -18,7 +18,8 @@
 
 __author__ = 'You Lu <you.lu@ukri.stfc.org>'
 
-from ctypes import RTLD_LOCAL, RTLD_GLOBAL
+from ctypes import CDLL, RTLD_LOCAL, RTLD_GLOBAL
+from os     import path
 
 # YL 07/01/2021: same function as the one in `CHEMSH_ROOT/setup`
 def importModule(modname, filepath, relative_dir='.', suppress_warning=True, submodules=None, **kwargs):
@@ -79,9 +80,6 @@ def isLinked(modname, location):
 
 def getSharedLib(modname, location, mode=RTLD_GLOBAL, debug=0):
     '''Returns shared library (only linked-in by default)'''
-
-    from ctypes import CDLL
-    from os     import path
 
     libname = getSharedLibname(modname)
 
