@@ -79,8 +79,8 @@ module DL_PY2F
         class(*)        , pointer :: array(:)        => null()
         type(PyType)    , pointer :: PyPtr           => null()
         character(len=8), pointer :: onedimchar(:)   => null()
-        integer(kind=8) , pointer :: onedimint(:)    => null()
-        integer(kind=8) , pointer :: twodimint(:,:)  => null()
+        integer(kind=8) , pointer :: onedimlng(:)    => null()
+        integer(kind=8) , pointer :: twodimlng(:,:)  => null()
         real(kind=8)    , pointer :: onedimdbl(:)    => null()
         real(kind=8)    , pointer :: twodimdbl(:,:)  => null()
         real(kind=8)    , pointer :: onedimcdbl(:)   => null()
@@ -183,7 +183,7 @@ module DL_PY2F
     type(c_ptr), parameter :: dummyPtr = c_null_ptr
 
     ! YL 20/09/2020: place the array buffers at the module level to deallocate later
-!    integer(kind=8), pointer :: onedimint(:)
+!    integer(kind=8), pointer :: onedimlng(:)
 
     contains
 
@@ -220,7 +220,7 @@ module DL_PY2F
         type(PyType)      , pointer   :: pyptrbuff => null()
         integer(c_long)   , pointer   :: cintbuff  => null()
         type(c_funptr)    , pointer   :: cfuncbuff => null()
-        integer(c_long)   , pointer   :: intarraybuff(:,:) => null(), onedimintbuff(:) => null(), twodimintbuff(:,:) => null()
+        integer(c_long)   , pointer   :: intarraybuff(:,:) => null(), onedimlngbuff(:) => null(), twodimlngbuff(:,:) => null()
         logical(c_bool)   , pointer   :: bbuff     => null()
         real(c_double)    , pointer   :: cdblbuff  => null()
         real(c_double)    , pointer   :: dblarraybuff(:,:) => null() , onedimdblbuff(:) => null() , twodimdblbuff(:,:) => null()
@@ -395,11 +395,11 @@ module DL_PY2F
                                 endif
             
                                 if(sizen.eq.1) then
-                                    onedimintbuff => intarraybuff(1,1:sizem)
-                                    call metaObj%assign(trim(namebuff), onedimintbuff, keepReference)
+                                    onedimlngbuff => intarraybuff(1,1:sizem)
+                                    call metaObj%assign(trim(namebuff), onedimlngbuff, keepReference)
                                 elseif(sizen.gt.1) then
-                                    twodimintbuff => intarraybuff(1:sizen,:)
-                                    call metaObj%assign(trim(namebuff), twodimintbuff, keepReference)
+                                    twodimlngbuff => intarraybuff(1:sizen,:)
+                                    call metaObj%assign(trim(namebuff), twodimlngbuff, keepReference)
                                 endif
 
                             ! array is not part of the _master array
@@ -410,14 +410,14 @@ module DL_PY2F
 
                                 if(sizen.eq.1) then
 
-                                    onedimintbuff => intarraybuff(1,:)
-                                    call metaObj%assign(trim(namebuff), onedimintbuff, keepReference)
+                                    onedimlngbuff => intarraybuff(1,:)
+                                    call metaObj%assign(trim(namebuff), onedimlngbuff, keepReference)
 
                                 elseif(sizen.gt.1) then
 
                                     ! cast to a 2D array
-                                    call c_f_pointer(c_loc(intarraybuff), twodimintbuff, [sizen,sizem])
-                                    call metaObj%assign(trim(namebuff), twodimintbuff, keepReference)
+                                    call c_f_pointer(c_loc(intarraybuff), twodimlngbuff, [sizen,sizem])
+                                    call metaObj%assign(trim(namebuff), twodimlngbuff, keepReference)
 
                                 endif
 
@@ -476,8 +476,8 @@ module DL_PY2F
 !        if(associated(cintbuff)      ) deallocate(cintbuff)
 !        if(associated(cfuncbuff)     ) deallocate(cfuncbuff)
 !        if(associated(intarraybuff)  ) deallocate(intarraybuff)
-!        if(associated(onedimintbuff) ) deallocate(onedimintbuff)
-!        if(associated(twodimintbuff) ) deallocate(twodimintbuff)
+!        if(associated(onedimlngbuff) ) deallocate(onedimlngbuff)
+!        if(associated(twodimlngbuff) ) deallocate(twodimlngbuff)
 !        if(associated(bbuff)         ) deallocate(bbuff)
 !        if(associated(cdblbuff)      ) deallocate(cdblbuff)
 !        if(associated(dblarraybuff)  ) deallocate(dblarraybuff)
@@ -528,13 +528,13 @@ module DL_PY2F
 !                if(debug.gt.4) write(*, "(1x,A)", advance="no") " onedimchar"
                 metaObj%onedimchar => null()
             endif
-            if(associated(metaObj%onedimint)) then
-!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " onedimint"
-                metaObj%onedimint  => null()
+            if(associated(metaObj%onedimlng)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " onedimlng"
+                metaObj%onedimlng  => null()
             endif
-            if(associated(metaObj%twodimint)) then
-!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " twodimint"
-                metaObj%twodimint  => null()
+            if(associated(metaObj%twodimlng)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " twodimlng"
+                metaObj%twodimlng  => null()
             endif
             if(associated(metaObj%onedimdbl)) then
 !                if(debug.gt.4) write(*, "(1x,A)", advance="no") " onedimdbl"
@@ -584,13 +584,13 @@ module DL_PY2F
 !                if(debug.gt.4) write(*, "(1x,A)", advance="no") " onedimchar"
                 metaObj%onedimchar => null()
             endif
-            if(associated(metaObj%onedimint)) then
-!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " onedimint"
-                metaObj%onedimint  => null()
+            if(associated(metaObj%onedimlng)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " onedimlng"
+                metaObj%onedimlng  => null()
             endif
-            if(associated(metaObj%twodimint)) then
-!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " twodimint"
-                metaObj%twodimint  => null()
+            if(associated(metaObj%twodimlng)) then
+!                if(debug.gt.4) write(*, "(1x,A)", advance="no") " twodimlng"
+                metaObj%twodimlng  => null()
             endif
             if(associated(metaObj%onedimdbl)) then
 !                if(debug.gt.4) write(*, "(1x,A)", advance="no") " onedimdbl"
@@ -761,13 +761,13 @@ module DL_PY2F
             ! rewrite the current obj if key exists here
             if(metaObj%key.eq.key) then
                 metaObj%sizem = size(source)
-                deallocate(metaObj%onedimint)
+                deallocate(metaObj%onedimlng)
                 ! will keep the reference pointing to the original Python object
                 if(keepReference) then
-                    metaObj%onedimint => source
+                    metaObj%onedimlng => source
                 ! will copy data and lose the reference to Python object
                 else
-                    allocate(metaObj%onedimint(metaObj%sizem), source=source)
+                    allocate(metaObj%onedimlng(metaObj%sizem), source=source)
                 endif
             ! move to next if this is not the key
             else
@@ -781,9 +781,9 @@ module DL_PY2F
             allocate(metaObj%key, source=key)
             metaObj%sizem = size(source)
             if(keepReference) then
-                metaObj%onedimint => source
+                metaObj%onedimlng => source
             else
-                allocate(metaObj%onedimint(metaObj%sizem), source=source)
+                allocate(metaObj%onedimlng(metaObj%sizem), source=source)
             endif
         endif
 
@@ -810,11 +810,11 @@ module DL_PY2F
             if(metaObj%key.eq.key) then
                 metaObj%sizem = shp(1)
                 metaObj%sizen = shp(2)
-                deallocate(metaObj%twodimint)
+                deallocate(metaObj%twodimlng)
                 if(keepReference) then
-                    metaObj%twodimint => source
+                    metaObj%twodimlng => source
                 else
-                    allocate(metaObj%twodimint(metaObj%sizem,metaObj%sizen), source=source)
+                    allocate(metaObj%twodimlng(metaObj%sizem,metaObj%sizen), source=source)
                 endif
             ! move to next if this is not the key
             else
@@ -829,9 +829,9 @@ module DL_PY2F
             metaObj%sizem = shp(1)
             metaObj%sizen = shp(2)
             if(keepReference) then
-                metaObj%twodimint => source
+                metaObj%twodimlng => source
             else
-                allocate(metaObj%twodimint(metaObj%sizem,metaObj%sizen), source=source)
+                allocate(metaObj%twodimlng(metaObj%sizem,metaObj%sizen), source=source)
             endif
         endif
 
@@ -1149,12 +1149,28 @@ module DL_PY2F
             call flush(6)
             if(metaObj%key.eq.trim(key)) then
                 if(associated(metaObj%onedimchar)) type = 'character'
-                if(associated(metaObj%onedimint))  type = 'integer'
-                if(associated(metaObj%twodimint))  type = 'integer'
+                ! MS 22/01/2025: renamed all "dimint" as "dimlng" because they are actually 64-bit
+                !                and 32-bit integers are yet to be supported (TODO)
+                if(associated(metaObj%onedimlng))  type = 'long'
+                if(associated(metaObj%twodimlng))  type = 'long'
                 if(associated(metaObj%onedimdbl))  type = 'double'
                 if(associated(metaObj%twodimdbl))  type = 'double'
                 if(associated(metaObj%onedimcdbl)) type = 'c_double'
                 if(associated(metaObj%twodimcdbl)) type = 'c_double'
+                ! MS 21/01/2025: added support for scalars
+                selecttype(tmp=>metaObj%scalar)
+                    type is(integer(kind=4))
+                        type = 'integer'
+                    type is(integer(kind=8))
+                        type = 'long'
+                    type is(real(kind=4))
+                        type = 'float'
+                    type is(real(kind=8))
+                        type = 'double'
+                    ! MS TODO: to support more types
+                    class default
+                        type = 'unknown'
+                endselect
             else
                 type = enquireType(metaObj%next, key)
             endif
@@ -1181,39 +1197,39 @@ module DL_PY2F
         endif
 
     endfunction returnOneDimChar
-    recursive function returnOneDimInt(metaObj, key) result(onedimint)
+    recursive function returnOneDimInt(metaObj, key) result(onedimlng)
 
         class(dictType) , intent(in)  :: metaObj
         character(len=*), intent(in)  :: key
         ! YL 20/09/2020: changed from pointer to allocatable so that the array gets automatically deallocated when going out of scope
-        integer(kind=8) , allocatable :: onedimint(:)
+        integer(kind=8) , allocatable :: onedimlng(:)
 
 
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
-                allocate(onedimint(metaObj%sizem), source=metaObj%onedimint)
+                allocate(onedimlng(metaObj%sizem), source=metaObj%onedimlng)
             else
-                allocate(onedimint(returnSize(metaObj%next, key)), source=returnOneDimInt(metaObj%next, key))
+                allocate(onedimlng(returnSize(metaObj%next, key)), source=returnOneDimInt(metaObj%next, key))
             endif
         else
             print *, '>>> DL_PY2F ERROR: keyword "', key, '" not found in dictionary.'
         endif
 
     endfunction returnOneDimInt
-    recursive function returnTwoDimInt(metaObj, key) result(twodimint)
+    recursive function returnTwoDimInt(metaObj, key) result(twodimlng)
 
         class(dictType) , intent(in)  :: metaObj
         character(len=*), intent(in)  :: key
         ! YL 20/09/2020: changed from pointer to allocatable so that the array gets automatically deallocated when going out of scope
-        integer(kind=8) , allocatable :: twodimint(:,:)
+        integer(kind=8) , allocatable :: twodimlng(:,:)
         integer                       :: shp(2)
 
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
-                allocate(twodimint(metaObj%sizem, metaObj%sizen), source=metaObj%twodimint)
+                allocate(twodimlng(metaObj%sizem, metaObj%sizen), source=metaObj%twodimlng)
             else
                 shp = enquireShape(metaObj%next, key)
-                allocate(twodimint(shp(1), shp(2)), source=returnTwoDimInt(metaObj%next, key))
+                allocate(twodimlng(shp(1), shp(2)), source=returnTwoDimInt(metaObj%next, key))
             endif
         else
             print *, '>>> DL_PY2F ERROR: keyword "', key, '" not found in dictionary.'
@@ -1371,7 +1387,7 @@ module DL_PY2F
 
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
-                metaObj%onedimint = array
+                metaObj%onedimlng = array
             else
                 call setOneDimInt(metaObj%next, key, array)
             endif
@@ -1388,7 +1404,7 @@ module DL_PY2F
 
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
-                metaObj%twodimint = array
+                metaObj%twodimlng = array
             else
                 call setTwoDimInt(metaObj%next, key, array)
             endif
@@ -1405,7 +1421,7 @@ module DL_PY2F
 
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
-                metaObj%onedimint = array
+                metaObj%onedimlng = array
             else
                 call setOneDimLong(metaObj%next, key, array)
             endif
@@ -1422,7 +1438,7 @@ module DL_PY2F
 
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
-                metaObj%twodimint = array
+                metaObj%twodimlng = array
             else
                 call setTwoDimLong(metaObj%next, key, array)
             endif
