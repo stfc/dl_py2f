@@ -1157,7 +1157,6 @@ module DL_PY2F
                 if(associated(metaObj%twodimdbl))  type = 'double'
                 if(associated(metaObj%onedimcdbl)) type = 'c_double'
                 if(associated(metaObj%twodimcdbl)) type = 'c_double'
-                print *, "### shape =", metaObj%sizem, metaObj%sizen
                 ! MS 21/01/2025: added support for scalars
                 if(metaObj%sizem.eq.0.and.metaObj%sizen.eq.0) then
                     selecttype(tmp=>metaObj%scalar)
