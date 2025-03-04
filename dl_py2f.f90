@@ -1158,19 +1158,21 @@ module DL_PY2F
                 if(associated(metaObj%onedimcdbl)) type = 'c_double'
                 if(associated(metaObj%twodimcdbl)) type = 'c_double'
                 ! MS 21/01/2025: added support for scalars
-                selecttype(tmp=>metaObj%scalar)
-                    type is(integer(kind=4))
-                        type = 'integer'
-                    type is(integer(kind=8))
-                        type = 'long'
-                    type is(real(kind=4))
-                        type = 'float'
-                    type is(real(kind=8))
-                        type = 'double'
-                    ! MS TODO: to support more types
-                    class default
-                        type = 'unknown'
-                endselect
+                if(metaObj%sizem.eq.0.and.metaObj%sizen.eq.0) then
+                    selecttype(tmp=>metaObj%scalar)
+                        type is(integer(kind=4))
+                            type = 'integer'
+                        type is(integer(kind=8))
+                            type = 'long'
+                        type is(real(kind=4))
+                            type = 'float'
+                        type is(real(kind=8))
+                            type = 'double'
+                        ! MS TODO: to support more types
+                        class default
+                            type = 'unknown'
+                    endselect
+                endif
             else
                 type = enquireType(metaObj%next, key)
             endif
