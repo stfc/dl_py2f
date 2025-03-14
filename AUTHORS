@@ -2,12 +2,13 @@ DL_PY2F authors:
 
 You Lu and Thomas W. Keal
 
-UKRI STFC Daresbury Laboratory
+STFC Scientific Computing
 Sci-Tech Daresbury
 WARRINGTON
 WA4 4AD
+United Kingdom
 
-you.lu@stfc.ukri.org
+you.lu@stfc.ac.uk
 
 Source code making use of the DL_PY2F library should contain a proper acknowledgement by reference to:
-Y. Lu and T. W. Keal, in preparation
+Y. Lu and T. W. Keal, submitted to Journal of Open Source Software (March 2025)
