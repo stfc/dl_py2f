@@ -26,6 +26,9 @@ gnu {
             __dl_py2f_MOD_enquireshape;
             __dl_py2f_MOD_enquiretype;
             __dl_py2f_MOD_enquirekey;
+            *dl_f2py*;
+            *getSymbols*;
+            *associated*;
 };
 
 # cray
