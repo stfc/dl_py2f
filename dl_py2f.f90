@@ -841,10 +841,6 @@ module DL_PY2F
         class(dictType) , intent(in)  :: metaObj
         character(len=*), intent(in)  :: key
         integer(kind=8) , allocatable :: twodimlng(:,:)
-    recursive function returnTwoDimInt(metaObj, key) result(twodimint)
-        class(dictType) , intent(in)  :: metaObj
-        character(len=*), intent(in)  :: key
-        integer(kind=8) , allocatable :: twodimint(:,:)
         integer                       :: shp(2)
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
