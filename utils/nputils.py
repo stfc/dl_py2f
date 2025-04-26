@@ -121,7 +121,6 @@ class RecArray(numpy.recarray):
                 self.expand(len(buff[:]))
                 for i in range(len(self[:])):
                     self[i] = buff[i,:] 
-    def row2str(self):
     def getDtype(self, field):
         return getattr(self, field).dtype.descr
 class SymArray(numpy.ndarray):
