@@ -298,11 +298,23 @@ class DL_DT(_SimpleCData):
                                     setter_args = f'self._DL_DT_{k}'
                                     setattr(self, '_DL_DT_'+k, value)
                             if return_ctype:
-                                sbuff = f
+                                sbuff = f'''
+def _fget(self):
+    {sbuff_getter}
+    return self._DL_DT_{k}
+'''
                             else:
-                                sbuff = f
+                                sbuff = f'''
+def _fget(self):
+    {sbuff_getter}
+    return self._DL_DT_{k}.value
+'''
                             exec(sbuff)
-                            sbuff = f
+                            sbuff = f'''
+def _fset(self, value):
+    {sbuff_setter}
+    setters.get(type(self._DL_DT_{k}), DL_DL.setInt)({setter_args}, value)
+'''
                             exec(sbuff)
                             setattr(self, '_get_DL_DT_'+k, locals()['_fget'])
                             setattr(self, '_set_DL_DT_'+k, locals()['_fset'])
@@ -882,7 +894,7 @@ class DL_DL(CDLL):
                     elif depth == 4:
                         sbuff4 = ''
                         lbuff3 = sbuff3.split()
-                        self.__printSbuff(sbuff3, sbuff=3, depth=4, entry='arr03_of_int')
+                        self.__printSbuff(sbuff3, sbuff=3, depth=4, entry='arr03_of_int', debug=debug)
                         if is_internal:
                             fp.write('\n            ⟨')
                             continue
@@ -918,7 +930,7 @@ class DL_DL(CDLL):
                     elif depth == 5:
                         sbuff5 = ''
                         lbuff4 = sbuff4.split()
-                        self.__printSbuff(sbuff4, sbuff=4, depth=5, entry='arr03_of_int')
+                        self.__printSbuff(sbuff4, sbuff=4, depth=5, entry='arr03_of_int', debug=debug)
                         if is_internal:
                             fp.write('\n                ⟪')
                             continue
@@ -944,7 +956,7 @@ class DL_DL(CDLL):
                     elif depth == 6:
                         sbuff6 = ''
                         lbuff5 = sbuff5.split()
-                        self.__printSbuff(sbuff5, sbuff=5, depth=6, entry='arr03_of_int')
+                        self.__printSbuff(sbuff5, sbuff=5, depth=6, entry='arr03_of_int', debug=debug)
                         if is_internal:
                             fp.write('\n                    <')
                             continue
@@ -994,7 +1006,7 @@ class DL_DL(CDLL):
                             continue
                         sbuff2 = ''
                         lbuff3 = sbuff3.split()
-                        self.__printSbuff(sbuff3, sbuff=3, depth=2, entry='arr03_of_int')
+                        self.__printSbuff(sbuff3, sbuff=3, depth=2, entry='arr03_of_int', debug=debug)
                         if 'PARAMETER' in lbuff3:
                             dict_entry.update({'_is_const':True})
                         if 'VARIABLE' in lbuff3:
@@ -1053,7 +1065,7 @@ class DL_DL(CDLL):
                     elif depth == 3:
                         sbuff3 = ''
                         lbuff4 = sbuff4.split()
-                        self.__printSbuff(sbuff4, sbuff=4, depth=3, entry='arr03_of_int')
+                        self.__printSbuff(sbuff4, sbuff=4, depth=3, entry='arr03_of_int', debug=debug)
                         if is_internal:
                             sbuff4 = ''
                             fp.write('\n            ⟩')
@@ -1214,7 +1226,7 @@ class DL_DL(CDLL):
                             continue
                         sbuff4 = ''
                         lbuff5 = sbuff5.split()
-                        self.__printSbuff(sbuff5, sbuff=5, depth=4, entry='arr03_of_int')
+                        self.__printSbuff(sbuff5, sbuff=5, depth=4, entry='arr03_of_int', debug=debug)
                         if len(lbuff5) == 6:
                             if lbuff5[0]+lbuff5[1] in selectcases:
                                 dt = selectcases[lbuff5[0]+lbuff5[1]]
@@ -1275,7 +1287,7 @@ class DL_DL(CDLL):
                             continue
                         sbuff5 = ''
                         lbuff6 = sbuff6.split()
-                        self.__printSbuff(sbuff6, sbuff=6, depth=5, entry='arr03_of_int')
+                        self.__printSbuff(sbuff6, sbuff=6, depth=5, entry='arr03_of_int', debug=debug)
                         if dict_entry.get('_is_const', False) and dict_entry.get('_ndims', 0):
                             dt = lbuff4
                             hexadecimal = sbuff6.split()[-1].strip("'")
@@ -1492,7 +1504,7 @@ class DL_DL(CDLL):
         dbuff.update({'_filename':modpath})
         object.__setattr__(self.modules, dbuff['_name'], dbuff)
         return dbuff
-    def __printSbuff(self, s, sbuff=-1, depth=-1, entry=''):
+    def __printSbuff(self, s, sbuff=-1, depth=-1, entry='', debug=False):
         ccode = '_bE'
         if depth == 0:
             ccode = f'{_W}'
@@ -1511,10 +1523,11 @@ class DL_DL(CDLL):
         elif depth == 7:
             ccode = f'{_M}'
         if entry == self.__entry or not entry:
-            if sbuff < depth:
-                print(f" >>> DEBUG: entering {sbuff} -> {depth}, sbuff{sbuff} = {ccode}{s}{CLR_}")
-            else:
-                print(f" >>> DEBUG: leaving {sbuff} -> {depth}, sbuff{sbuff} = {ccode}{s}{CLR_}")
+            if debug:
+                if sbuff < depth:
+                    print(f" >>> DEBUG: entering {sbuff} -> {depth}, sbuff{sbuff} = {ccode}{s}{CLR_}")
+                else:
+                    print(f" >>> DEBUG: leaving {sbuff} -> {depth}, sbuff{sbuff} = {ccode}{s}{CLR_}")
     @property
     def derived_types(self):
          return list(self._derived_types.keys())

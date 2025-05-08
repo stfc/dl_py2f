@@ -226,7 +226,6 @@ def getModuleList(obj):
             res.append(_name)
     _recur(obj.__path__, obj.__name__+'.')
     return set(res)
-def getUserAttrs(obj):
 def getAttrType(obj, attr, list_modules=[]):
     try:
         return getType(getattr(obj, attr, list_modules=list_modules))

@@ -69,7 +69,6 @@ def dict2obj(d, obj):
     from . import objutils
     for key in obj._kwargs.keys():
         setattr(obj, key, d[key])
-def getDictEntry2(d, *args):
 def getMatchedKey(d, arg):
     l = [ key for key in d.keys() if arg in key ]
     if len(l) == 1:
