@@ -52,7 +52,7 @@ https://github.com/stfc/dl_py2f
 
 ## Support
 
-Please raise an Issue on the [project's page](https://github.com/stfc/dl_py2f) if you have a question about the code.
+Please raise an Issue on the [project's page](https://github.com/stfc/dl_py2f) if you have a question or find an issue about the code.
 
 ## Contributing
 
