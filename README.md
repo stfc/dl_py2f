@@ -11,6 +11,10 @@ A great advantage of `DL_PY2F` for the application developers is that the attrib
 
 `DL_PY2F` is open source and released under [GNU Lesser General Public License v3.0](https://www.gnu.org/licenses/lgpl-3.0.en.html). It is available for download from the [repository](https://github.com/stfc/dl_py2f).
 
+## Authors
+
+`DL_PY2F` was created and implemented by You Lu at [STFC Scientific Computing](https://www.sc.stfc.ac.uk).
+
 ## Citing `DL_PY2F`
 
 Applications using `DL_PY2F` should cite:
