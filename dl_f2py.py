@@ -781,19 +781,19 @@ class DL_DL(CDLL):
                                         print(' '*(len_keys+7), end='')
                                     if type(_vvv) is int:
                                         if _kkk == '_offset':
-                                            print(f)
+                                            print(f'''{_bC}{"'"+_kkk+"'":17s}{CLR_}: {_bY_r}{_vvv}{CLR_}''')
                                         else:
-                                            print(f)
+                                            print(f'''{_C}{"'"+_kkk+"'":17s}{CLR_}: {_M}{_vvv}{CLR_}''')
                                     elif type(_vvv) is bool:
-                                        print(f)
+                                        print(f'''{_C}{"'"+_kkk+"'":17s}{CLR_}: {_G}{_vvv}{CLR_}''')
                                     elif type(_vvv) is str:
-                                        print(f)
+                                        print(f'''{_C}{"'"+_kkk+"'":17s}{CLR_}: {_bY}{_vvv}{CLR_}''')
                                     elif type(_vvv) is tuple:
-                                        print(f)
+                                        print(f'''{_C}{"'"+_kkk+"'":17s}{CLR_}: {_vvv}''')
                                     elif isinstance(_SimpleCData, type(_vvv)):
-                                        print(f)
+                                        print(f'''{_C}{"'"+_kkk+"'":17s}{CLR_}: {_bGbE}{_vvv}{CLR_}''')
                                     else:
-                                        print(f)
+                                        print(f'''{_C}{"'"+_kkk+"'":17s}{CLR_}: {_R}{_vvv}{CLR_}''')
                             else:
                                 print(f'{fmt_keys}'.format(_kk=_kk, _vv=_vv))
                 else:
