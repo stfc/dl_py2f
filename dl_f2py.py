@@ -839,6 +839,7 @@ class DL_DL(CDLL):
                         fp.write('\n{')
                     elif depth == 2:
                         sbuff2 = ''
+                        self.__entry = ''
                         try:
                             modname = sbuff1.replace('(','').replace(')','').strip().split()[1].strip("'")
                         except:
