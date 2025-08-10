@@ -46,11 +46,15 @@ The Python-to-Fortran interoperability has been comprehensively tested using bot
 :warning: The Fortran-to-Python method does **NOT** yet work with the Intel compilers as Intel's proprietary
           .mod file format is unpublished and unsupported.
 
-## Usage
+## Using and testing `DL_PY2F`
 
-Please read the paper and refer to the [example](https://github.com/stfc/dl_py2f) which demonstrates in details how to use `DL_PY2F` in a software project:
+`DL_PY2F` is an API-like library to be used by another software package. Here is a prototype package which is an example demonstrating in details how to compile and use `DL_PY2F`:
 
-https://github.com/stfc/dl_py2f
+https://github.com/stfc/dl_py2f-example
+
+The [example](https://github.com/stfc/dl_py2f-example) also works as a test bench for validating `DL_PY2F`. Please follow the instructions therein to compile and run it.
+
+For more information about the usage of `DL_PY2F` please also read the paper: [You Lu and Thomas W. Keal, *Journal of Open Source Software*, in preparation](https://joss.theoj.org/papers/).
 
 # Miscellaneous
 
