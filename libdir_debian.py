@@ -1,0 +1,1 @@
+libpath = '/lib/x86_64-linux-gnu'

@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.16)
+cmake_policy(SET CMP0048 NEW)
 project(DL_PY2F
         VERSION       25.0
         DESCRIPTION  "A generic library that seamlessly glues Python and Fortran"
@@ -19,9 +21,34 @@ endif()
 if(CMAKE_C_COMPILER_ID STREQUAL GNU)
     list(APPEND CMAKE_CXX_FLAGS -fpermissive)
 endif()
+set_target_properties(dl_py2f PROPERTIES PUBLIC_HEADER ${CMAKE_Fortran_MODULE_DIRECTORY}/dl_py2f.mod)
 set_target_properties(dl_py2f PROPERTIES LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_LIST_DIR}/export.map")
 target_include_directories(dl_py2f PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 set_property(DIRECTORY ${PROJECT_BINARY_DIR}
              APPEND
              PROPERTY ADDITIONAL_MAKE_CLEAN_FILES Makefile;CMakeCache.txt;cmake_install.cmake;__pycache__;${PROJECT_BINARY_DIR}/modules;${PROJECT_BINARY_DIR}/lib;CMakeFiles 
             )
+
+
+# YL 11/08/2025: rules for installation (Debian only)
+
+set(CMAKE_INSTALL_LIBDIR /lib/x86_64-linux-gnu)
+set(CMAKE_INSTALL_INCLUDEDIR /usr/include/x86_64-linux-gnu)
+
+install(TARGETS dl_py2f
+        LIBRARY
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            COMPONENT Libraries
+        PUBLIC_HEADER
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+            COMPONENT Headers)
+
+install(FILES dl_f2py.py __init__.py
+        DESTINATION /usr/lib/python3/dist-packages/dl_py2f)
+
+install(FILES libdir_debian.py
+        DESTINATION /usr/lib/python3/dist-packages/dl_py2f
+        RENAME libpath.py)
+
+install(DIRECTORY utils
+        DESTINATION /usr/lib/python3/dist-packages/dl_py2f)
