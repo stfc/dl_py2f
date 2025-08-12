@@ -54,6 +54,20 @@ https://github.com/stfc/dl_py2f-example
 
 The [example](https://github.com/stfc/dl_py2f-example) also works as a test bench for validating `DL_PY2F`. Please follow the instructions therein to compile and run it.
 
+Apart from the source code on the [github repository](https://github.com/stfc/dl_py2f), `DL_PY2F` has also been published and deployed in a [launchpad.net PPA](https://launchpad.net/~dl-py2f/+archive/ubuntu/ppa) and can be installed systemwide using `apt`:
+
+`sudo add-apt-repository ppa:dl-py2f/ppa`
+
+`sudo apt update`
+
+`sudo apt install dl-py2f`
+
+:warning: Since Debian PPA does not allow underscore `_`, the package name published on [launchpad.net](https://launchpad.net/~dl-py2f/+archive/ubuntu/ppa) is **`dl-py2f`** but not `dl_py2f`.
+
+:bulb: `sudo` access is required for installing system-wide packages using `apt`.
+
+The use of system installed `DL_PY2F` is also demonstrated in the [example](https://github.com/stfc/dl_py2f-example) package.
+
 For more information about the usage of `DL_PY2F` please also read the paper: [You Lu and Thomas W. Keal, *Journal of Open Source Software*, in preparation](https://joss.theoj.org/papers/).
 
 # Miscellaneous
