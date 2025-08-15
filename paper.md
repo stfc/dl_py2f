@@ -36,7 +36,7 @@ While the `DL_PY2F` library is vital for the `Py-ChemShell` program, it has the 
 `DL_PY2F` is intended for use with Python-based software packages where data are managed using Python/`NumPy` and need to be accessed for computations performed by Fortran code. A pre-compiled shared object (dynamic library) containing a Fortran 2003 interface to the existing Fortran application is loaded using Python's `ctypes.CDLL`, as follows:
 
     import ctypes, dl_py2f
-    libapp = ctypes.CDLL('/abc/edf/libapp.so')
+    libapp = ctypes.CDLL('/abc/def/libapp.so')
     appRef  = dl_py2f.py2f(appObj)
     ierror = libapp.interface_app(appRef)
 
@@ -108,8 +108,8 @@ A great advantage of `DL_PY2F` for the application developers is that the attrib
 While the Python-to-Fortran interoperability described above is recommended for new or redeveloped Python projects, other applications may benefit from interoperability using Python wrappers around their existing Fortran codes. For this `DL_PY2F` offers a second method based on analysis of the symbols in a pre-compiled shared object and parsing of the Fortran module files, which are assumed to be kept at compiletime. In this method Python's dot syntax may be used to access Fortran entities, for example, in a Python function invoked by the application at runtime:
 
     import dl_py2f
-    libapp = dl_py2f.DL_DL('/abc/edf/libapp.so')
-    libapp.moddir = '/abc/edf/modules'
+    libapp = dl_py2f.DL_DL('/abc/def/libapp.so')
+    libapp.moddir = '/abc/def/modules'
     libapp.modules.my_mod.b.coords[1,2]  =  1.2345
     libapp.modules.my_mod.b.a[2,:].ibuff =  2025
     libapp.modules.my_mod.b.cbuff        = 'dl_py2f'
@@ -147,4 +147,5 @@ The `DL_PY2F` library was created during the redevelopment of [ChemShell](https:
 ---
 nocite: '@*'
 ---
+
 
