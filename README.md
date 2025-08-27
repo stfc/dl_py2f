@@ -48,7 +48,7 @@ The Python-to-Fortran interoperability has been comprehensively tested using bot
 
 ## Using and testing `DL_PY2F`
 
-`DL_PY2F` is an API-like library to be used by another software package. Here is a prototype package which is an example demonstrating in details how to compile and use `DL_PY2F`:
+`DL_PY2F` is a mixed ABI/API library to be used by another software package. Here is a prototype package which is an example demonstrating in details how to compile and use `DL_PY2F`:
 
 https://github.com/stfc/dl_py2f-example
 
