@@ -37,8 +37,7 @@ While the `DL_PY2F` library is vital for the `Py-ChemShell` program, it has the 
 
     import ctypes, dl_py2f
     libapp = ctypes.CDLL('/abc/def/libapp.so')
-    appRef  = dl_py2f.py2f(appObj)
-    ierror = libapp.interface_app(appRef)
+    ierror = libapp.interface_app(dl_py2f.py2f(appObj))
 
 Here, `appObj` is an instance, typically created by the user at runtime, of the new package's Python class `App` which inherits from `ctypes.Structure`, for example:
 
@@ -56,16 +55,15 @@ The instance's member attributes are declared in a Python dictionary `App._kwarg
 On the Fortran side, the `interface_app` function receives the passed-in `appPtr` – a pointer to the Python object – and bookkeeps it in a `dictType` instance `PyApp`, which is a linked list with support for child instances (e.g., `PyChild` in the code example):
 
     module AppModule
-        use, intrinsic :: iso_c_binding
+        use iso_c_binding
         use DL_PY2F, only: PyType, ptr2dict
-        private
         abstract interface
             integer(c_long) function callback() bind(c)
                 use iso_c_binding
             endfunction callback
         endinterface
-        type(dictType)      , pointer, public :: PyApp
-        procedure(callback) , pointer, public :: PyCallback
+        type(dictType)     , pointer, public :: PyApp
+        procedure(callback), pointer, public :: PyCallback
         contains
         function interface_app(appPtr) bind(c) result(ireturn)
             implicit none
@@ -79,12 +77,12 @@ On the Fortran side, the `interface_app` function receives the passed-in `appPtr
             allocate(PyChild, source=ptr2dict(childPtr))
             allocate(coords(3,npoints))
             call PyApp%get('coords', coords)
-            call PyApp%get('callback', pyfuncPtr)         
+            call PyApp%get('callback', pyfuncPtr)
             call c_f_procpointer(pyfuncPtr, PyCallback)
-            ! run the original application
+            ! run the application
             call my_app(npoints, coords)
             call PyApp%set('coords', coords)
-            deallocate(PyApp, coords)
+            deallocate(PyApp, PyChild, coords)
         endfunction interface_app
     endmodule AppModule
 
@@ -110,20 +108,17 @@ While the Python-to-Fortran interoperability described above is recommended for 
     import dl_py2f
     libapp = dl_py2f.DL_DL('/abc/def/libapp.so')
     libapp.moddir = '/abc/def/modules'
-    libapp.modules.my_mod.b.coords[1,2]  =  1.2345
-    libapp.modules.my_mod.b.a[2,:].ibuff =  2025
-    libapp.modules.my_mod.b.cbuff        = 'dl_py2f'
+    libapp.modules.my_mod.b.coords[1,2]  = 1.2345
+    libapp.modules.my_mod.b.a[2,:].ibuff = 2025
 
 given that the original application's Fortran code contains:
 
     module my_mod
-        implicit none
         type type_a
             integer :: ibuff
         endtype type_a
         type type_b
             type(type_a)                   :: a(5,6)
-            character(len=15)              :: cbuff
             real(kind=8)     , allocatable :: coords(:,:)
         endtype type_b
         type(type_b) :: b
@@ -147,3 +142,4 @@ The `DL_PY2F` library was created during the redevelopment of [ChemShell](https:
 ---
 nocite: '@*'
 ---
+
