@@ -50,6 +50,8 @@ module DL_PY2F
         class(*)        , pointer :: array(:)        => null()
         type(PyType)    , pointer :: PyPtr           => null()
         character(len=8), pointer :: onedimchar(:)   => null()
+        integer(kind=4) , pointer :: onedimint(:)    => null()
+        integer(kind=4) , pointer :: twodimint(:,:)  => null()
         integer(kind=8) , pointer :: onedimlng(:)    => null()
         integer(kind=8) , pointer :: twodimlng(:,:)  => null()
         real(kind=8)    , pointer :: onedimdbl(:)    => null()
@@ -63,17 +65,19 @@ module DL_PY2F
                                      assignOneDimDbl,  &
                                      assignTwoDimDbl,  &
                                      assignOneDimInt,  &
-                                     assignTwoDimInt
+                                     assignTwoDimInt,  &
+                                     assignOneDimLng,  &
+                                     assignTwoDimLng
         generic, public :: get    => getInt,        &
                                      getIntCLong,   &
                                      getReal,       &
                                      getDouble,     &
-                                     getOneDimInt,  &
-                                     getOneDimLong, &
                                      getOneDimDbl,  &
-                                     getTwoDimInt,  &
-                                     getTwoDimLong, &
                                      getTwoDimDbl,  &
+                                     getOneDimInt,  &
+                                     getTwoDimInt,  &
+                                     getOneDimLng,  &
+                                     getTwoDimLng,  &
                                      getChar,       &
                                      getCCharArray, &
                                      getLogical,    &
@@ -84,8 +88,8 @@ module DL_PY2F
                                      setTwoDimDbl,  &
                                      setOneDimInt,  &
                                      setTwoDimInt,  &
-                                     setOneDimLong, &
-                                     setTwoDimLong, &
+                                     setOneDimLng,  &
+                                     setTwoDimLng,  &
                                      setCCharArray, &
                                      setScalar
         procedure, public :: initialise => private_initialise
@@ -93,21 +97,23 @@ module DL_PY2F
         procedure, public :: finalise   => private_finalise
         procedure, private :: assignScalar
         procedure, private :: assignOneDimChar
-        procedure, private :: assignOneDimInt
-        procedure, private :: assignTwoDimInt
         procedure, private :: assignOneDimDbl
         procedure, private :: assignTwoDimDbl
+        procedure, private :: assignOneDimInt
+        procedure, private :: assignTwoDimInt
+        procedure, private :: assignOneDimLng
+        procedure, private :: assignTwoDimLng
         procedure, private :: assignPyPtr
         procedure, private :: getIntCLong
         procedure, private :: getInt
         procedure, private :: getReal
         procedure, private :: getDouble
-        procedure, private :: getOneDimInt
-        procedure, private :: getOneDimLong
         procedure, private :: getOneDimDbl
-        procedure, private :: getTwoDimInt
-        procedure, private :: getTwoDimLong
         procedure, private :: getTwoDimDbl
+        procedure, private :: getOneDimInt
+        procedure, private :: getTwoDimInt
+        procedure, private :: getOneDimLng
+        procedure, private :: getTwoDimLng
         procedure, private :: getChar
         procedure, private :: getCCharArray
         procedure, private :: getLogical
@@ -118,18 +124,20 @@ module DL_PY2F
         procedure, private :: setTwoDimDbl
         procedure, private :: setOneDimInt
         procedure, private :: setTwoDimInt
-        procedure, private :: setOneDimLong
-        procedure, private :: setTwoDimLong
+        procedure, private :: setOneDimLng
+        procedure, private :: setTwoDimLng
         procedure, private :: setCCharArray
         procedure, private :: setScalar
         procedure, private :: returnScalar
         procedure, private :: returnPyPtr
         procedure, private :: returnCFuncPtr
-        procedure, private :: returnOneDimChar
-        procedure, private :: returnOneDimInt
-        procedure, private :: returnTwoDimInt
         procedure, private :: returnOneDimDbl
         procedure, private :: returnTwoDimDbl
+        procedure, private :: returnOneDimInt
+        procedure, private :: returnTwoDimInt
+        procedure, private :: returnOneDimLng
+        procedure, private :: returnTwoDimLng
+        procedure, private :: returnOneDimChar
         procedure, private :: returnSize
         procedure, public  :: keys
         procedure, public  :: enquireKey
@@ -158,15 +166,16 @@ module DL_PY2F
         type(PyType)      , pointer   :: pyptrbuff => null()
         integer(c_long)   , pointer   :: cintbuff  => null()
         type(c_funptr)    , pointer   :: cfuncbuff => null()
-        integer(c_long)   , pointer   :: intarraybuff(:,:) => null(), onedimlngbuff(:) => null(), twodimlngbuff(:,:) => null()
+        integer(c_int)    , pointer   :: intarraybuff(:,:) => null(), onedimintbuff(:) => null(), twodimintbuff(:,:) => null()
+        integer(c_long)   , pointer   :: lngarraybuff(:,:) => null(), onedimlngbuff(:) => null(), twodimlngbuff(:,:) => null()
         logical(c_bool)   , pointer   :: bbuff     => null()
         real(c_double)    , pointer   :: cdblbuff  => null()
         real(c_double)    , pointer   :: dblarraybuff(:,:) => null() , onedimdblbuff(:) => null() , twodimdblbuff(:,:) => null()
-        character(len=LENSTR)         :: namebuff, typebuff, dtypebuff
         character(len=8)  , pointer   :: chararraybuff(:,:) => null()
         character(len=8)  , pointer   :: onedimcharbuff(:) => null(), twodimcharbuff(:,:) => null()
         character(len=255), pointer   :: cbuff => null()
-        integer(c_long)   , pointer   :: debug_ptr
+        integer(c_long)   , pointer   :: debug_ptr => null()
+        character(len=LENSTR)         :: namebuff, typebuff, dtypebuff
         if(.not.present(keepRef)) then
             keepReference = .true.
         endif
@@ -254,7 +263,7 @@ module DL_PY2F
                                     call metaObj%assign(trim(namebuff), twodimdblbuff, keepReference)
                                 endif
                             endif
-                        case('int64')
+                        case('int32')
                             if(cdata(i)%isfield) then
                                 if(ncols.gt.0) then
                                     call c_f_pointer(cdata(i)%attr, intarraybuff, (/ncols, sizem/))
@@ -262,19 +271,43 @@ module DL_PY2F
                                     call c_f_pointer(cdata(i)%attr, intarraybuff, (/sizen, sizem/))
                                 endif
                                 if(sizen.eq.1) then
-                                    onedimlngbuff => intarraybuff(1,1:sizem)
-                                    call metaObj%assign(trim(namebuff), onedimlngbuff, keepReference)
+                                    onedimintbuff => intarraybuff(1,1:sizem)
+                                    call metaObj%assign(trim(namebuff), onedimintbuff, keepReference)
                                 elseif(sizen.gt.1) then
-                                    twodimlngbuff => intarraybuff(1:sizen,:)
-                                    call metaObj%assign(trim(namebuff), twodimlngbuff, keepReference)
+                                    twodimintbuff => intarraybuff(1:sizen,:)
+                                    call metaObj%assign(trim(namebuff), twodimintbuff, keepReference)
                                 endif
                             else
                                 call c_f_pointer(cdata(i)%attr, intarraybuff, (/1, sizem*sizen/))
                                 if(sizen.eq.1) then
-                                    onedimlngbuff => intarraybuff(1,:)
+                                    onedimintbuff => intarraybuff(1,:)
+                                    call metaObj%assign(trim(namebuff), onedimintbuff, keepReference)
+                                elseif(sizen.gt.1) then
+                                    call c_f_pointer(c_loc(intarraybuff), twodimintbuff, [sizen,sizem])
+                                    call metaObj%assign(trim(namebuff), twodimintbuff, keepReference)
+                                endif
+                            endif
+                        case('int64')
+                            if(cdata(i)%isfield) then
+                                if(ncols.gt.0) then
+                                    call c_f_pointer(cdata(i)%attr, lngarraybuff, (/ncols, sizem/))
+                                else
+                                    call c_f_pointer(cdata(i)%attr, lngarraybuff, (/sizen, sizem/))
+                                endif
+                                if(sizen.eq.1) then
+                                    onedimlngbuff => lngarraybuff(1,1:sizem)
                                     call metaObj%assign(trim(namebuff), onedimlngbuff, keepReference)
                                 elseif(sizen.gt.1) then
-                                    call c_f_pointer(c_loc(intarraybuff), twodimlngbuff, [sizen,sizem])
+                                    twodimlngbuff => lngarraybuff(1:sizen,:)
+                                    call metaObj%assign(trim(namebuff), twodimlngbuff, keepReference)
+                                endif
+                            else
+                                call c_f_pointer(cdata(i)%attr, lngarraybuff, (/1, sizem*sizen/))
+                                if(sizen.eq.1) then
+                                    onedimlngbuff => lngarraybuff(1,:)
+                                    call metaObj%assign(trim(namebuff), onedimlngbuff, keepReference)
+                                elseif(sizen.gt.1) then
+                                    call c_f_pointer(c_loc(lngarraybuff), twodimlngbuff, [sizen,sizem])
                                     call metaObj%assign(trim(namebuff), twodimlngbuff, keepReference)
                                 endif
                             endif
@@ -315,6 +348,25 @@ module DL_PY2F
                     endif
             endselect
         enddo
+        chararraybuff  => null()
+        intarraybuff   => null()
+        lngarraybuff   => null()
+        dblarraybuff   => null()
+        onedimintbuff  => null()
+        twodimintbuff  => null()
+        onedimlngbuff  => null()
+        twodimlngbuff  => null()
+        onedimdblbuff  => null()
+        twodimdblbuff  => null()
+        pyptrbuff      => null()
+        cintbuff       => null()
+        cfuncbuff      => null()
+        bbuff          => null()
+        cdblbuff       => null()
+        onedimcharbuff => null()
+        twodimcharbuff => null()
+        cbuff          => null()
+        debug_ptr      => null()
     endsubroutine private_initialise
     recursive subroutine private_finalise(metaObj)
         class(dictType), intent(inout) :: metaObj
@@ -324,76 +376,40 @@ module DL_PY2F
             if(associated(metaObj%key)) then
                 deallocate(metaObj%key)
             endif
-            if(associated(metaObj%scalar)) then
-                selecttype(tmp=>metaObj%scalar)
-                    class default
-                        metaObj%scalar => null()
-                endselect
-            endif
-            if(associated(metaObj%array)) then
-                metaObj%array => null()
-            endif
-            if(associated(metaObj%PyPtr)) then
-                metaObj%PyPtr => null()
-            endif
-            if(associated(metaObj%onedimchar)) then
-                metaObj%onedimchar => null()
-            endif
-            if(associated(metaObj%onedimlng)) then
-                metaObj%onedimlng  => null()
-            endif
-            if(associated(metaObj%twodimlng)) then
-                metaObj%twodimlng  => null()
-            endif
-            if(associated(metaObj%onedimdbl)) then
-                metaObj%onedimdbl  => null()
-            endif
-            if(associated(metaObj%twodimdbl)) then
-                metaObj%twodimdbl  => null()
-            endif
-            if(associated(metaObj%onedimcdbl)) then
-                metaObj%onedimcdbl => null()
-            endif
-            if(associated(metaObj%twodimcdbl)) then
-                metaObj%twodimcdbl => null()
-            endif
+            selecttype(tmp=>metaObj%scalar)
+                class default
+                    metaObj%scalar => null()
+            endselect
+            metaObj%array => null()
+            metaObj%PyPtr => null()
+            metaObj%onedimchar => null()
+            metaObj%onedimint  => null()
+            metaObj%twodimint  => null()
+            metaObj%onedimlng  => null()
+            metaObj%twodimlng  => null()
+            metaObj%onedimdbl  => null()
+            metaObj%twodimdbl  => null()
+            metaObj%onedimcdbl => null()
+            metaObj%twodimcdbl => null()
         elseif(associated(metaObj%key).and..not.associated(metaObj%next)) then
             if(associated(metaObj%key)) then
                 deallocate(metaObj%key)
             endif
-            if(associated(metaObj%scalar)) then
-                selecttype(tmp=>metaObj%scalar)
-                    class default
-                        metaObj%scalar => null()
-                endselect
-            endif
-            if(associated(metaObj%array)) then
-                metaObj%array => null()
-            endif
-            if(associated(metaObj%PyPtr)) then
-                metaObj%PyPtr => null()
-            endif
-            if(associated(metaObj%onedimchar)) then
-                metaObj%onedimchar => null()
-            endif
-            if(associated(metaObj%onedimlng)) then
-                metaObj%onedimlng  => null()
-            endif
-            if(associated(metaObj%twodimlng)) then
-                metaObj%twodimlng  => null()
-            endif
-            if(associated(metaObj%onedimdbl)) then
-                metaObj%onedimdbl  => null()
-            endif
-            if(associated(metaObj%twodimdbl)) then
-                metaObj%twodimdbl  => null()
-            endif
-            if(associated(metaObj%onedimcdbl)) then
-                metaObj%onedimcdbl => null()
-            endif
-            if(associated(metaObj%twodimcdbl)) then
-                metaObj%twodimcdbl => null()
-            endif
+            selecttype(tmp=>metaObj%scalar)
+                class default
+                    metaObj%scalar => null()
+            endselect
+            metaObj%array => null()
+            metaObj%PyPtr => null()
+            metaObj%onedimchar => null()
+            metaObj%onedimint  => null()
+            metaObj%twodimint  => null()
+            metaObj%onedimlng  => null()
+            metaObj%twodimlng  => null()
+            metaObj%onedimdbl  => null()
+            metaObj%twodimdbl  => null()
+            metaObj%onedimcdbl => null()
+            metaObj%twodimcdbl => null()
         endif
         call flush(6)
     endsubroutine private_finalise
@@ -452,7 +468,8 @@ module DL_PY2F
         character(len=*)         , intent(in)              :: key
         character(len=8), pointer, intent(in)              :: source(:)
         logical                  , intent(in)   , optional :: keepRef
-        logical                                            :: keepReference = .true.
+        logical                                            :: keepReference
+        keepReference = .true.
         if(present(keepRef)) then
             keepReference = keepRef
         endif
@@ -469,7 +486,7 @@ module DL_PY2F
                 if(.not.associated(metaObj%next)) then
                     allocate(metaObj%next)
                 endif
-                call assignOneDimChar(metaObj%next, key, source)
+                call assignOneDimChar(metaObj%next, key, source, keepReference)
             endif
         else
             allocate(metaObj%key, source=key)
@@ -484,9 +501,84 @@ module DL_PY2F
     recursive subroutine assignOneDimInt(metaObj, key, source, keepRef)
         class(dictType)          , intent(inout)           :: metaObj
         character(len=*)         , intent(in)              :: key
+        integer(kind=4) , pointer, intent(in)              :: source(:)
+        logical                  , intent(in)   , optional :: keepRef
+        logical                                            :: keepReference
+        keepReference = .true.
+        if(present(keepRef)) then
+            keepReference = keepRef
+        endif
+        if(associated(metaObj%key)) then
+            if(metaObj%key.eq.key) then
+                metaObj%sizem = size(source)
+                deallocate(metaObj%onedimint)
+                if(keepReference) then
+                    metaObj%onedimint => source
+                else
+                    allocate(metaObj%onedimint(metaObj%sizem), source=source)
+                endif
+            else
+                if(.not.associated(metaObj%next)) then
+                    allocate(metaObj%next)
+                endif
+                call assignOneDimInt(metaObj%next, key, source, keepReference)
+            endif
+        else
+            allocate(metaObj%key, source=key)
+            metaObj%sizem = size(source)
+            if(keepReference) then
+                metaObj%onedimint => source
+            else
+                allocate(metaObj%onedimint(metaObj%sizem), source=source)
+            endif
+        endif
+    endsubroutine assignOneDimInt
+    recursive subroutine assignTwoDimInt(metaObj, key, source, keepRef)
+        class(dictType)          , intent(inout)           :: metaObj
+        character(len=*)         , intent(in)              :: key
+        integer(kind=4) , pointer, intent(in)              :: source(:,:)
+        logical                  , intent(in)   , optional :: keepRef
+        integer                                            :: shp(2)
+        logical                                            :: keepReference
+        keepReference = .true.
+        if(present(keepRef)) then
+            keepReference = keepRef
+        endif
+        shp = (/shape(source)/)
+        if(associated(metaObj%key)) then
+            if(metaObj%key.eq.key) then
+                metaObj%sizem = shp(1)
+                metaObj%sizen = shp(2)
+                deallocate(metaObj%twodimint)
+                if(keepReference) then
+                    metaObj%twodimint => source
+                else
+                    allocate(metaObj%twodimint(metaObj%sizem,metaObj%sizen), source=source)
+                endif
+            else
+                if(.not.associated(metaObj%next)) then
+                    allocate(metaObj%next)
+                endif
+                call assignTwoDimInt(metaObj%next, key, source, keepReference)
+            endif
+        else
+            allocate(metaObj%key, source=key)
+            metaObj%sizem = shp(1)
+            metaObj%sizen = shp(2)
+            if(keepReference) then
+                metaObj%twodimint => source
+            else
+                allocate(metaObj%twodimint(metaObj%sizem,metaObj%sizen), source=source)
+            endif
+        endif
+    endsubroutine assignTwoDimInt
+    recursive subroutine assignOneDimLng(metaObj, key, source, keepRef)
+        class(dictType)          , intent(inout)           :: metaObj
+        character(len=*)         , intent(in)              :: key
         integer(kind=8) , pointer, intent(in)              :: source(:)
         logical                  , intent(in)   , optional :: keepRef
-        logical                                            :: keepReference = .true.
+        logical                                            :: keepReference
+        keepReference = .true.
         if(present(keepRef)) then
             keepReference = keepRef
         endif
@@ -503,7 +595,7 @@ module DL_PY2F
                 if(.not.associated(metaObj%next)) then
                     allocate(metaObj%next)
                 endif
-                call assignOneDimInt(metaObj%next, key, source)
+                call assignOneDimLng(metaObj%next, key, source, keepReference)
             endif
         else
             allocate(metaObj%key, source=key)
@@ -514,14 +606,15 @@ module DL_PY2F
                 allocate(metaObj%onedimlng(metaObj%sizem), source=source)
             endif
         endif
-    endsubroutine assignOneDimInt
-    recursive subroutine assignTwoDimInt(metaObj, key, source, keepRef)
+    endsubroutine assignOneDimLng
+    recursive subroutine assignTwoDimLng(metaObj, key, source, keepRef)
         class(dictType)          , intent(inout)           :: metaObj
         character(len=*)         , intent(in)              :: key
         integer(kind=8) , pointer, intent(in)              :: source(:,:)
         logical                  , intent(in)   , optional :: keepRef
         integer                                            :: shp(2)
-        logical                                            :: keepReference = .true.
+        logical                                            :: keepReference
+        keepReference = .true.
         if(present(keepRef)) then
             keepReference = keepRef
         endif
@@ -540,7 +633,7 @@ module DL_PY2F
                 if(.not.associated(metaObj%next)) then
                     allocate(metaObj%next)
                 endif
-                call assignTwoDimInt(metaObj%next, key, source)
+                call assignTwoDimLng(metaObj%next, key, source, keepReference)
             endif
         else
             allocate(metaObj%key, source=key)
@@ -552,13 +645,14 @@ module DL_PY2F
                 allocate(metaObj%twodimlng(metaObj%sizem,metaObj%sizen), source=source)
             endif
         endif
-    endsubroutine assignTwoDimInt
+    endsubroutine assignTwoDimLng
     recursive subroutine assignOneDimDbl(metaObj, key, source, keepRef)
         class(dictType)          , intent(inout)           :: metaObj
         character(len=*)         , intent(in)              :: key
         real(kind=8)    , pointer, intent(in)              :: source(:)
         logical                  , intent(in)   , optional :: keepRef
-        logical                                            :: keepReference = .true.
+        logical                                            :: keepReference
+        keepReference = .true.
         if(present(keepRef)) then
             keepReference = keepRef
         endif
@@ -575,7 +669,7 @@ module DL_PY2F
                 if(.not.associated(metaObj%next)) then
                     allocate(metaObj%next)
                 endif
-                call assignOneDimDbl(metaObj%next, key, source)
+                call assignOneDimDbl(metaObj%next, key, source, keepReference)
             endif
         else
             allocate(metaObj%key, source=key)
@@ -593,7 +687,8 @@ module DL_PY2F
         real(kind=8)    , pointer, intent(in)              :: source(:,:)
         logical                  , intent(in)   , optional :: keepRef
         integer                                            :: shp(2)
-        logical                                            :: keepReference = .true.
+        logical                                            :: keepReference
+        keepReference = .true.
         if(present(keepRef)) then
             keepReference = keepRef
         endif
@@ -612,7 +707,7 @@ module DL_PY2F
                 if(.not.associated(metaObj%next)) then
                     allocate(metaObj%next)
                 endif
-                call assignTwoDimDbl(metaObj%next, key, source)
+                call assignTwoDimDbl(metaObj%next, key, source, keepReference)
             endif
         else
             metaObj%sizem = shp(1)
@@ -823,66 +918,175 @@ module DL_PY2F
             print *, '>>> DL_PY2F ERROR: keyword "', key, '" not found in dictionary.'
         endif
     endfunction returnOneDimChar
-    recursive function returnOneDimInt(metaObj, key) result(onedimlng)
-        class(dictType) , intent(in)  :: metaObj
-        character(len=*), intent(in)  :: key
-        integer(kind=8) , allocatable :: onedimlng(:)
+    recursive function returnOneDimInt(metaObj, key, keepRef) result(onedimint)
+        class(dictType)          , intent(in)           :: metaObj
+        character(len=*)         , intent(in)           :: key
+        integer(kind=4) , pointer                       :: onedimint(:)
+        logical                  , intent(in), optional :: keepRef
+        logical                                         :: keepReference
+        keepReference = .true.
+        if(present(keepRef)) then
+            keepReference = keepRef
+        endif
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
-                allocate(onedimlng(metaObj%sizem), source=metaObj%onedimlng)
+                if(keepReference) then
+                    onedimint => metaObj%onedimint
+                else
+                    allocate(onedimint(metaObj%sizem), source=metaObj%onedimint)
+                endif
             else
-                allocate(onedimlng(returnSize(metaObj%next, key)), source=returnOneDimInt(metaObj%next, key))
+                if(keepReference) then
+                    onedimint => returnOneDimInt(metaObj%next, key, keepReference)
+                else
+                    allocate(onedimint(returnSize(metaObj%next, key)), source=returnOneDimInt(metaObj%next, key, keepReference))
+                endif
             endif
         else
             print *, '>>> DL_PY2F ERROR: keyword "', key, '" not found in dictionary.'
         endif
     endfunction returnOneDimInt
-    recursive function returnTwoDimInt(metaObj, key) result(twodimlng)
-        class(dictType) , intent(in)  :: metaObj
-        character(len=*), intent(in)  :: key
-        integer(kind=8) , allocatable :: twodimlng(:,:)
-        integer                       :: shp(2)
+    recursive function returnTwoDimInt(metaObj, key, keepRef) result(twodimint)
+        class(dictType)          , intent(in)           :: metaObj
+        character(len=*)         , intent(in)           :: key
+        integer(kind=4) , pointer                       :: twodimint(:,:)
+        logical                  , intent(in), optional :: keepRef
+        integer                                         :: shp(2)
+        logical                                         :: keepReference
+        if(present(keepRef)) then
+            keepReference = keepRef
+        endif
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
-                allocate(twodimlng(metaObj%sizem, metaObj%sizen), source=metaObj%twodimlng)
+                if(keepReference) then
+                    twodimint => metaObj%twodimint
+                else
+                    allocate(twodimint(metaObj%sizem, metaObj%sizen), source=metaObj%twodimint)
+                endif
             else
-                shp = enquireShape(metaObj%next, key)
-                allocate(twodimlng(shp(1), shp(2)), source=returnTwoDimInt(metaObj%next, key))
+                if(keepReference) then
+                    twodimint => returnTwoDimInt(metaObj%next, key, keepReference)
+                else
+                    shp = enquireShape(metaObj%next, key)
+                    allocate(twodimint(shp(1), shp(2)), source=returnTwoDimInt(metaObj%next, key, keepReference))
+                endif
             endif
         else
             print *, '>>> DL_PY2F ERROR: keyword "', key, '" not found in dictionary.'
         endif
     endfunction returnTwoDimInt
-    recursive function returnTwoDimDbl(metaObj, key) result(twodimdbl)
-        class(dictType) , intent(in)  :: metaObj
-        character(len=*), intent(in)  :: key
-        real(kind=8)    , allocatable :: twodimdbl(:,:)
-        integer                       :: shp(2)
+    recursive function returnOneDimLng(metaObj, key, keepRef) result(onedimlng)
+        class(dictType)          , intent(in)           :: metaObj
+        character(len=*)         , intent(in)           :: key
+        integer(kind=8) , pointer                       :: onedimlng(:)
+        logical                  , intent(in), optional :: keepRef
+        logical                                         :: keepReference
+        if(present(keepRef)) then
+            keepReference = keepRef
+        endif
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
-                allocate(twodimdbl(metaObj%sizem, metaObj%sizen), source=metaObj%twodimdbl)
+                if(keepReference) then
+                    onedimlng => metaObj%onedimlng
+                else
+                    allocate(onedimlng(metaObj%sizem), source=metaObj%onedimlng)
+                endif
             else
-                shp = enquireShape(metaObj%next, key)
-                allocate(twodimdbl(shp(1), shp(2)), source=returnTwoDimDbl(metaObj%next, key))
+                if(keepReference) then
+                    onedimlng => returnOneDimLng(metaObj%next, key, keepReference)
+                else
+                    allocate(onedimlng(returnSize(metaObj%next, key)), source=returnOneDimLng(metaObj%next, key, keepReference))
+                endif
             endif
         else
             print *, '>>> DL_PY2F ERROR: keyword "', key, '" not found in dictionary.'
         endif
-    endfunction returnTwoDimDbl
-    recursive function returnOneDimDbl(metaObj, key) result(onedimdbl)
-        class(dictType) , intent(in)  :: metaObj
-        character(len=*), intent(in)  :: key
-        real(kind=8)    , allocatable :: onedimdbl(:)
+    endfunction returnOneDimLng
+    recursive function returnTwoDimLng(metaObj, key, keepRef) result(twodimlng)
+        class(dictType)          , intent(in)           :: metaObj
+        character(len=*)         , intent(in)           :: key
+        integer(kind=8) , pointer                       :: twodimlng(:,:)
+        logical                  , intent(in), optional :: keepRef
+        integer                                         :: shp(2)
+        logical                                         :: keepReference
+        if(present(keepRef)) then
+            keepReference = keepRef
+        endif
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
-                allocate(onedimdbl(metaObj%sizem), source=metaObj%onedimdbl)
+                if(keepReference) then
+                    twodimlng => metaObj%twodimlng
+                else
+                    allocate(twodimlng(metaObj%sizem, metaObj%sizen), source=metaObj%twodimlng)
+                endif
             else
-                allocate(onedimdbl(returnSize(metaObj%next, key)), source=returnOneDimDbl(metaObj%next, key))
+                if(keepReference) then
+                    twodimlng => returnTwoDimLng(metaObj%next, key, keepReference)
+                else
+                    shp = enquireShape(metaObj%next, key)
+                    allocate(twodimlng(shp(1), shp(2)), source=returnTwoDimLng(metaObj%next, key, keepReference))
+                endif
+            endif
+        else
+            print *, '>>> DL_PY2F ERROR: keyword "', key, '" not found in dictionary.'
+        endif
+    endfunction returnTwoDimLng
+    recursive function returnOneDimDbl(metaObj, key, keepRef) result(onedimdbl)
+        class(dictType)          , intent(in)           :: metaObj
+        character(len=*)         , intent(in)           :: key
+        real(kind=8)    , pointer                       :: onedimdbl(:)
+        logical                  , intent(in), optional :: keepRef
+        logical                                         :: keepReference
+        if(present(keepRef)) then
+            keepReference = keepRef
+        endif
+        if(associated(metaObj%key)) then
+            if(metaObj%key.eq.key) then
+                if(keepReference) then
+                    onedimdbl => metaObj%onedimdbl
+                else
+                    allocate(onedimdbl(metaObj%sizem), source=metaObj%onedimdbl)
+                endif
+            else
+                if(keepReference) then
+                    onedimdbl => returnOneDimDbl(metaObj%next, key, keepReference)
+                else
+                    allocate(onedimdbl(returnSize(metaObj%next, key)), source=returnOneDimDbl(metaObj%next, key, keepReference))
+                endif
             endif
         else
             print *, '>>> DL_PY2F ERROR: keyword "', key, '" not found in dictionary.'
         endif
     endfunction returnOneDimDbl
+    recursive function returnTwoDimDbl(metaObj, key, keepRef) result(twodimdbl)
+        class(dictType)          , intent(in)           :: metaObj
+        character(len=*)         , intent(in)           :: key
+        real(kind=8)    , pointer                       :: twodimdbl(:,:)
+        logical                  , intent(in), optional :: keepRef
+        integer                                         :: shp(2)
+        logical                                         :: keepReference
+        if(present(keepRef)) then
+            keepReference = keepRef
+        endif
+        if(associated(metaObj%key)) then
+            if(metaObj%key.eq.key) then
+                if(keepReference) then
+                    twodimdbl => metaObj%twodimdbl
+                else
+                    allocate(twodimdbl(metaObj%sizem, metaObj%sizen), source=metaObj%twodimdbl)
+                endif
+            else
+                if(keepReference) then
+                    twodimdbl => returnTwoDimDbl(metaObj%next, key, keepReference)
+                else
+                    shp = enquireShape(metaObj%next, key)
+                    allocate(twodimdbl(shp(1), shp(2)), source=returnTwoDimDbl(metaObj%next, key, keepReference))
+                endif
+            endif
+        else
+            print *, '>>> DL_PY2F ERROR: keyword "', key, '" not found in dictionary.'
+        endif
+    endfunction returnTwoDimDbl
     recursive subroutine setScalar(metaObj, key, val)
         class(dictType) , intent(inout) :: metaObj
         character(len=*), intent(in)    :: key
@@ -997,7 +1201,7 @@ module DL_PY2F
             print *, '>>> DL_PY2F ERROR: keyword "', key, '" not found in dictionary.'
         endif
     endsubroutine setTwoDimInt
-    recursive subroutine setOneDimLong(metaObj, key, array)
+    recursive subroutine setOneDimLng(metaObj, key, array)
         class(dictType) , intent(inout) :: metaObj
         character(len=*), intent(in)    :: key
         integer(kind=8) , intent(in)    :: array(:)
@@ -1005,13 +1209,13 @@ module DL_PY2F
             if(metaObj%key.eq.key) then
                 metaObj%onedimlng = array
             else
-                call setOneDimLong(metaObj%next, key, array)
+                call setOneDimLng(metaObj%next, key, array)
             endif
         else
             print *, '>>> DL_PY2F ERROR: keyword "', key, '" not found in dictionary.'
         endif
-    endsubroutine setOneDimLong
-    recursive subroutine setTwoDimLong(metaObj, key, array)
+    endsubroutine setOneDimLng
+    recursive subroutine setTwoDimLng(metaObj, key, array)
         class(dictType) , intent(inout) :: metaObj
         character(len=*), intent(in)    :: key
         integer(kind=8) , intent(in)    :: array(:,:)
@@ -1019,12 +1223,12 @@ module DL_PY2F
             if(metaObj%key.eq.key) then
                 metaObj%twodimlng = array
             else
-                call setTwoDimLong(metaObj%next, key, array)
+                call setTwoDimLng(metaObj%next, key, array)
             endif
         else
             print *, '>>> DL_PY2F ERROR: keyword "', key, '" not found in dictionary.'
         endif
-    endsubroutine setTwoDimLong
+    endsubroutine setTwoDimLng
     subroutine getInt(metaObj, key, val)
         class(dictType) , intent(in)  :: metaObj
         character(len=*), intent(in)  :: key
@@ -1085,58 +1289,118 @@ module DL_PY2F
         endselect
         deallocate(metaObjPtr)
     endsubroutine getDouble
-    subroutine getOneDimInt(metaObj, key, array)
-        class(dictType) , intent(in)  :: metaObj
-        character(len=*), intent(in)  :: key
-        integer(kind=4) , intent(out) :: array(:)
-        type(dictType)  , pointer     :: metaObjPtr
+    subroutine getOneDimInt(metaObj, key, array, readonly)
+        class(dictType)          , intent(in)           :: metaObj
+        character(len=*)         , intent(in)           :: key
+        integer(kind=4) , pointer, intent(out)          :: array(:)
+        logical                  , intent(in), optional :: readonly
+        type(dictType)  , pointer                       :: metaObjPtr
+        logical                                         :: keepReference
+        keepReference = .true.
+        if(present(readonly)) then
+            keepReference = .not.readonly
+        endif
         allocate(metaObjPtr, source=metaObj)
-        array = metaObjPtr%returnOneDimInt(key)
+        if(keepReference) then
+            array => metaObjPtr%returnOneDimInt(key, keepReference)
+        else
+            allocate(array, source=metaObjPtr%returnOneDimInt(key, keepReference))
+        endif
         deallocate(metaObjPtr)
     endsubroutine getOneDimInt
-    subroutine getTwoDimInt(metaObj, key, array)
-        class(dictType) , intent(in)  :: metaObj
-        character(len=*), intent(in)  :: key
-        integer(kind=4) , intent(out) :: array(:,:)
-        type(dictType)  , pointer     :: metaObjPtr
+    subroutine getTwoDimInt(metaObj, key, array, readonly)
+        class(dictType)          , intent(in)           :: metaObj
+        character(len=*)         , intent(in)           :: key
+        integer(kind=4) , pointer, intent(out)          :: array(:,:)
+        logical                  , intent(in), optional :: readonly
+        type(dictType)  , pointer                       :: metaObjPtr
+        logical                                         :: keepReference
+        keepReference = .true.
+        if(present(readonly)) then
+            keepReference = .not.readonly
+        endif
         allocate(metaObjPtr, source=metaObj)
-        array = metaObjPtr%returnTwoDimInt(key)
+        if(keepReference) then
+            array => metaObjPtr%returnTwoDimInt(key, keepReference)
+        else
+            allocate(array, source=metaObjPtr%returnTwoDimInt(key, keepReference))
+        endif
         deallocate(metaObjPtr)
     endsubroutine getTwoDimInt
-    subroutine getOneDimLong(metaObj, key, array)
-        class(dictType) , intent(in)  :: metaObj
-        character(len=*), intent(in)  :: key
-        integer(kind=8) , intent(out) :: array(:)
-        type(dictType)  , pointer     :: metaObjPtr
+    subroutine getOneDimLng(metaObj, key, array, readonly)
+        class(dictType)          , intent(in)           :: metaObj
+        character(len=*)         , intent(in)           :: key
+        integer(kind=8) , pointer, intent(out)          :: array(:)
+        logical                  , intent(in), optional :: readonly
+        type(dictType)  , pointer                       :: metaObjPtr
+        logical                                         :: keepReference
+        keepReference = .true.
+        if(present(readonly)) then
+            keepReference = .not.readonly
+        endif
         allocate(metaObjPtr, source=metaObj)
-        array = metaObjPtr%returnOneDimInt(key)
+        if(keepReference) then
+            array => metaObjPtr%returnOneDimLng(key, keepReference)
+        else
+            allocate(array, source=metaObjPtr%returnOneDimLng(key, keepReference))
+        endif
         deallocate(metaObjPtr)
-    endsubroutine getOneDimLong
-    subroutine getTwoDimLong(metaObj, key, array)
-        class(dictType) , intent(in)  :: metaObj
-        character(len=*), intent(in)  :: key
-        integer(kind=8) , intent(out) :: array(:,:)
-        type(dictType)  , pointer     :: metaObjPtr
+    endsubroutine getOneDimLng
+    subroutine getTwoDimLng(metaObj, key, array, readonly)
+        class(dictType)          , intent(in)           :: metaObj
+        character(len=*)         , intent(in)           :: key
+        integer(kind=8) , pointer, intent(out)          :: array(:,:)
+        logical                  , intent(in), optional :: readonly
+        type(dictType)  , pointer                       :: metaObjPtr
+        logical                                         :: keepReference
+        keepReference = .true.
+        if(present(readonly)) then
+            keepReference = .not.readonly
+        endif
         allocate(metaObjPtr, source=metaObj)
-        array = metaObjPtr%returnTwoDimInt(key)
+        if(keepReference) then
+            array => metaObjPtr%returnTwoDimLng(key, keepReference)
+        else
+            allocate(array, source=metaObjPtr%returnTwoDimLng(key, keepReference))
+        endif
         deallocate(metaObjPtr)
-    endsubroutine getTwoDimLong
-    subroutine getOneDimDbl(metaObj, key, array)
-        class(dictType) , intent(in)  :: metaObj
-        character(len=*), intent(in)  :: key
-        real(kind=8)    , intent(out) :: array(:)
-        type(dictType)  , pointer     :: metaObjPtr
+    endsubroutine getTwoDimLng
+    subroutine getOneDimDbl(metaObj, key, array, readonly)
+        class(dictType)          , intent(in)           :: metaObj
+        character(len=*)         , intent(in)           :: key
+        real(kind=8)    , pointer, intent(out)          :: array(:)
+        logical                  , intent(in), optional :: readonly
+        type(dictType)  , pointer                       :: metaObjPtr
+        logical                                         :: keepReference
+        keepReference = .true.
+        if(present(readonly)) then
+            keepReference = .not.readonly
+        endif
         allocate(metaObjPtr, source=metaObj)
-        array = metaObjPtr%returnOneDimDbl(key)
+        if(keepReference) then
+            array => metaObjPtr%returnOneDimDbl(key, keepReference)
+        else
+            allocate(array, source=metaObjPtr%returnOneDimDbl(key, keepReference))
+        endif
         deallocate(metaObjPtr)
     endsubroutine getOneDimDbl
-    subroutine getTwoDimDbl(metaObj, key, array)
-        class(dictType) , intent(in)  :: metaObj
-        character(len=*), intent(in)  :: key
-        real(kind=8)    , intent(out) :: array(:,:)
-        type(dictType)  , pointer     :: metaObjPtr
+    subroutine getTwoDimDbl(metaObj, key, array, readonly)
+        class(dictType)          , intent(in)           :: metaObj
+        character(len=*)         , intent(in)           :: key
+        real(kind=8)    , pointer, intent(out)          :: array(:,:)
+        logical                  , intent(in), optional :: readonly
+        type(dictType)  , pointer                       :: metaObjPtr
+        logical                                         :: keepReference
+        keepReference = .true.
+        if(present(readonly)) then
+            keepReference = .not.readonly
+        endif
         allocate(metaObjPtr, source=metaObj)
-        array = metaObjPtr%returnTwoDimDbl(key)
+        if(keepReference) then
+            array => metaObjPtr%returnTwoDimDbl(key, keepReference)
+        else
+            allocate(array, source=metaObjPtr%returnTwoDimDbl(key, keepReference))
+        endif
         deallocate(metaObjPtr)
     endsubroutine getTwoDimDbl
     subroutine getCCharArray(metaObj, key, array)
