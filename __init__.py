@@ -51,7 +51,7 @@ def __getType(obj):
     else:
         return type(obj)
 def py2f(obj, debug=0, byref=False):
-    from ctypes import CFUNCTYPE, c_long, c_double, c_bool, c_char, c_wchar_p, c_char_p, c_void_p, addressof, pointer, POINTER, Structure
+    from ctypes import CFUNCTYPE, c_int, c_long, c_double, c_bool, c_char, c_wchar_p, c_char_p, c_void_p, addressof, pointer, POINTER, Structure
     from numpy  import array, asarray, ctypeslib, ma, str_
     from types  import ModuleType
     from sys    import stdout
@@ -94,20 +94,20 @@ def py2f(obj, debug=0, byref=False):
             _initialiser.append(c_bool(_default_type is list and _key in getattr(_obj, '_fields', [])))
     def __list2ndp(obj, key, foo):
         if hasattr(foo, "dtype"):
-            selectcases = { 'int64'  : c_long,
-                            'int32'  : c_long,
-                            'float64': c_double,
-                            'float32': c_double,
-                            'bool'   : c_long,
-                            'object' : c_long,
-                            'bytes64':'U8',
-                            'bytes32':'U8',
+            selectcases = { 'int64'   : c_long,
+                            'int32'   : c_int,
+                            'float64' : c_double,
+                            'float32' : c_double,
+                            'bool'    : c_long,
+                            'object'  : c_long,
+                            'bytes64' :'U8',
+                            'bytes32' :'U8',
                             'bytes128':'U8',
-                            'str32'  :'U8',
-                            'str64'  :'U8',
-                            'str256' :'U8',
-                            'record' : foo.dtype,
-                            'void'   : foo.dtype,
+                            'str32'   :'U8',
+                            'str64'   :'U8',
+                            'str256'  :'U8',
+                            'record'  : foo.dtype,
+                            'void'    : foo.dtype,
                           }
             def _addNPArray(_ctype, _key, _val):
                 npptr = ctypeslib.ndpointer(_ctype)
