@@ -1,0 +1,12 @@
+Source: dl-py2f
+Maintainer: You Lu <you.lu@stfc.ac.uk>
+Build-Depends: cmake, debhelper-compat (= 13),  dh-cmake, dh-cmake-compat (= 1), gcc, gfortran, g++
+Standards-Version: 3.9.3
+Section: utils
+
+Package: dl-py2f
+Priority: extra
+Architecture: amd64
+Depends: python3, python3-numpy
+Description: DL_PY2F is an open-source library for the creation of modern interfaces and data structures in Python that can interoperate with existing scientific software written in Fortran and manipulate their data.
+
