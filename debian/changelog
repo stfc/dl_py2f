@@ -1,0 +1,27 @@
+dl-py2f (1.1-0) noble; urgency=medium
+
+  * Enabled full duplication-free mode for the Python-to-Fortran interoperability
+    which allows the developer to use array pointers without allocating beforehand
+    or making duplication in memory
+  * Greatly improved the performance of Fortran-to-Python interoperability
+  * Added support for more NumPy-style operations such as
+      - ellipsis
+      - negative indexing
+      - newaxis
+      - slicing
+      - transposing
+
+ -- You Lu <you.lu@stfc.ac.uk>  Fri, 05 Dec 2025 07:38:12 +0000
+
+dl-py2f (1.0-0) noble; urgency=low
+
+  * Initial release.
+
+ -- You Lu <you.lu@stfc.ac.uk>  Sun, 10 Aug 2025 21:13:46 +0100
+
+dl-py2f (1.0-1) noble; urgency=low
+
+  * Resigned with GPG key
+  * Added postrm
+
+ -- You Lu <you.lu@stfc.ac.uk>  Mon, 11 Aug 2025 14:05:38 +0100
