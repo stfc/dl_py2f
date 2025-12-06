@@ -23,7 +23,7 @@ bibliography: paper.bib
 
 # Summary
 
-Fortran is long established as one of the major programming languages for scientific software programs, but has only limited facilities for interoperating with other modern languages such as Python. `DL_PY2F` is an open-source library for the creation of modern interfaces and data structures in Python that can interoperate with existing scientific software written in Fortran and manipulate their data.
+Fortran is long established as one of the major programming languages for scientific software, but has only limited facilities for interoperating with other modern languages such as Python. `DL_PY2F` is an open-source library for the creation of modern interfaces and data structures in Python that can interoperate with existing scientific software written in Fortran and manipulate their data.
 
 # Statement of need
 
@@ -39,7 +39,7 @@ While the `DL_PY2F` library is vital for the `Py-ChemShell` program, it has the 
     libapp = ctypes.CDLL('/abc/def/libapp.so')
     ierror = libapp.interface_app(dl_py2f.py2f(appObj))
 
-Here, `appObj` is an instance, typically created by the user at runtime, of the new package's Python class `App` which inherits from `ctypes.Structure`, for example:
+Here, `appObj` is an instance, typically created by the application's user at runtime, of the new package's Python class `App` which inherits from `ctypes.Structure`, for example:
 
     import ctypes, numpy
     from . import callback
@@ -62,7 +62,7 @@ On the Fortran side, the `interface_app` function receives the passed-in `appPtr
                 use iso_c_binding
             endfunction callback
         endinterface
-        type(dictType)     , pointer, public :: PyApp
+        type(dictType)     , pointer, public :: PyApp, PyChild
         procedure(callback), pointer, public :: PyCallback
         contains
         function interface_app(appPtr) bind(c) result(ireturn)
@@ -71,39 +71,41 @@ On the Fortran side, the `interface_app` function receives the passed-in `appPtr
             type(c_funptr)                      :: pyfuncPtr
             type(PyType)  , pointer             :: childPtr
             real(kind=8)  , pointer             :: coords(:,:)
-            integer                             :: npoints
             allocate(PyApp, source=ptr2dict(appPtr))
             call PyApp%get('child', childPtr)
             allocate(PyChild, source=ptr2dict(childPtr))
-            allocate(coords(3,npoints))
-            call PyApp%get('coords', coords)
             call PyApp%get('callback', pyfuncPtr)
             call c_f_procpointer(pyfuncPtr, PyCallback)
-            ! run the application
-            call my_app(npoints, coords)
-            call PyApp%set('coords', coords)
-            deallocate(PyApp, PyChild, coords)
+            call PyApp%get('coords', coords) ! a handle with write access to the NumPy array
+            call my_app(coords)              ! run the application
+            deallocate(PyApp, PyChild)
+            nullify(coords)                  ! cannot be deallocated as it does not own the NumPy array
         endfunction interface_app
     endmodule AppModule
 
-A great advantage of `DL_PY2F` for the application developers is that the attributes of the Python instance are conveniently retrieved by querying their names in a dictionary-like way. Two type-bound procedures `get` and `set` grant read and write access, respectively. For arrays, no copies are made because both operations act through memory addresses and values are thus changed in place and reflected on the Python side (if mutable). Callback functions can also be invoked, as follows:
+A great advantage of `DL_PY2F` for the application developers is that the attributes of the Python instance are conveniently retrieved by querying their names in a dictionary-like way. The type-bound accessor `get` moulds a handle of the target Python object with read and write (if mutable in Python) access. For arrays, no copies are made because access is via memory addresses; values are thus changed in place and reflected on the Python side. We also provide a safe mode in which the developer must make a copy first and explicitly use a `set` function to change the Python values:
 
-    subroutine get_something(coords, npoints)
-        use AppModule, only: PyApp, PyCallback
-        real(kind=8)         , intent(in) :: coords(3,npoints)
-        real(kind=8), pointer             :: buffer(:,:)
+    integer               :: npoints
+    real(kind=8), pointer :: buffer(:,:)
+    call PyApp%get('npoints', npoints)
+    allocate(buffer(3,npoints))
+    call PyApp%get('coords', buffer, readonly=.true.) ! buffer has no write access to the NumPy array
+    call do_something(buffer)
+    call PyApp%set('coords', buffer)
+    deallocate(buffer)
+ 
+Callback functions can also be invoked, as follows:
+
+    subroutine get_something()
+        use AppModule, only: PyCallback
         call PyCallback()
-        allocate(buffer(3,npoints))
-        call PyApp%get('coords', buffer)
-        coords = buffer
-        deallocate(buffer)
     endsubroutine
 
 `DL_PY2F`'s Python-to-Fortran interoperability has been comprehensively tested using both GNU and Intel compilers.
 
 ## Fortran-to-Python interoperability
 
-While the Python-to-Fortran interoperability described above is recommended for new or redeveloped Python projects, other applications may benefit from interoperability using Python wrappers around their existing Fortran codes. For this `DL_PY2F` offers an ABI-style second method based on analysis of the symbols in a pre-compiled shared object and parsing of the Fortran module files, which are assumed to be kept at compiletime. In this method Python's dot syntax may be used to access Fortran entities, for example, in a Python function invoked by the application at runtime:
+While the Python-to-Fortran interoperability described above is recommended for new or redeveloped Python projects, other applications may benefit from interoperability using Python wrappers around their existing Fortran codes. For this `DL_PY2F` offers an ABI-style second method based on analysis of the symbols in a pre-compiled shared object and parsing of the Fortran module files, which are assumed to be kept at compiletime. In this method, Python's dot syntax may be used to access Fortran entities, for example, in a Python function invoked by the application at runtime:
 
     import dl_py2f
     libapp = dl_py2f.DL_DL('/abc/def/libapp.so')
@@ -124,14 +126,14 @@ given that the original application's Fortran code contains:
         type(type_b) :: b
     endmodule my_mod
 
-All Python attributes, including arrays of numbers and derived-type instances, are automatically instantiated as soon as an instance of class `dl_py2f.DL_DL` is created and a path to the module files is specified. The seamless access to Fortran data empowered by `DL_PY2F` will be particularly useful for machine-learning enhanced scientific computing, and is currently being trialled with the established computational chemistry codes `DL-FIND` [@kaestner2009] and `DL_POLY` [@devereux2025]. Note that this second method for Fortran-to-Python interoperability in `DL_PY2F` is still undergoing testing and validation, and is currently limited to use with the GNU compiler gfortran, as the proprietary .mod file format used by the Intel compiler [@green2024] is not yet supported.
+All Python attributes, including arrays of numbers and derived-type instances, are automatically exposed as Python objects as soon as an instance of class `dl_py2f.DL_DL` is created and a path to the module files is specified. The seamless access to Fortran data empowered by `DL_PY2F` will be particularly useful for machine-learning enhanced scientific computing, and is currently being trialled with the established computational chemistry codes `DL-FIND` [@kaestner2009] and `DL_POLY` [@devereux2025]. Note that this second method for Fortran-to-Python interoperability in `DL_PY2F` is still undergoing testing and validation, and is currently limited to use with the GNU compiler gfortran, as the proprietary .mod file format used by the Intel compiler [@green2024] is not yet supported.
 
 ## Comparison with other tools
 
-A number of tools have been developed to facilitate coupling of Python and Fortran code. A major category of these are interface generators, such as [`F2PY`](https://numpy.org/doc/stable/f2py/) [@peterson2009] and its extensions, e.g. [`f90wrap`](https://github.com/jameskermode/f90wrap) [@kermode2020] and [`Scikit-build-core`](https://github.com/scikit-build/scikit-build-core). These tools serve as builders which process Fortran source files and write out Python extension modules (via an intermediate C layer), and they put stress on calling specific Fortran functions/subroutines from Python. Such use cases often demand editing the original Fortran code, which, however, could be inconvenient or even unfeasible. By comparison, `DL_PY2F` is intended for invoking a whole library via a call to the Fortran application's main routine, and is designed to only need a minimal interace and not require modifications to the original Fortran source code. `DL_PY2F`' also supports more of the Fortran language: it is not limited to Fortran standards beyond 95 and supports Fortran derived types. [`gfort2py`](https://github.com/rjfarmer/gfort2py) is an ABI tool that works similarly to the Fortran-to-Python interoperability in `DL_PY2F`, also without modification to the source code, while restricted to use of the `gfortran` compiler. In contrast to both `F2PY` and `gfort2py`, `DL_PY2F` does not provide compile tools which are only suitable for small pieces of Fortran code. Furthermore, `DL_PY2F` does not intervene in the Fortran applications' procedures, which normally involve a few parameters and are not compiled as exported symbols in shared objects. Instead, we focus on enabling modifications of application behaviour by manipulating computation data through inserting Python methods. An alternative route to realising Python-to-Fortran data binding would be to manually implement the mechanism based on the Python `ctypes` and `NumPy`'s `ctypeslib` modules. Such a challenging task might be indirectly assisted by tools such as [`CFFI`](https://github.com/cffi/cffi) which calls a Fortran-bound C code/library at the ABI/API level or [`SWIG+Fortran`](https://github.com/swig-fortran/swig) which generates Fortran 2003 wrappers to existing C/C++ libraries that are then used by Python. `DL_PY2F` provides a more convenient solution by automating this complex mechanism, and is portable across modern Fortran compilers.
+A number of tools have been developed to facilitate coupling of Python and Fortran code. A major category of these are interface generators, such as [`F2PY`](https://numpy.org/doc/stable/f2py/) [@peterson2009] and its extensions, e.g., [`f90wrap`](https://github.com/jameskermode/f90wrap) [@kermode2020]. These tools serve as builders which process Fortran source files and write out Python extension modules (via an intermediate C layer), and they put stress on calling specific Fortran functions/subroutines from Python. These approaches sometimes demand editing the original Fortran code, which, however, could be inconvenient or even unfeasible in more complex use cases. By comparison, `DL_PY2F` is designed to drive an entire Fortran application via a call to the application's main routine, requiring only a small, well-defined interface and no modifications to the original Fortran source code. It also supports modern Fortran features, including nested and allocatable derived types. [`gfort2py`](https://github.com/rjfarmer/gfort2py) is an ABI-level runtime tool that works similarly to the Fortran-to-Python layer of `DL_PY2F`, also without amendment to the source code and restricted to use of the `gfortran` compiler likewise. In contrast to `F2PY` and `gfort2py`, `DL_PY2F` does not provide compilation or build tools. Instead, it operates directly on existing shared libraries and their module files; this makes it particularly suited to large, established Fortran applications. Furthermore, `DL_PY2F` focuses on enabling modifications of the Fortran application's runtime behaviour by manipulating computation data rather than altering internal procedures or exporting large numbers of additional entry points. An alternative route to realising Python-to-Fortran data binding would be to manually implement the mechanism based on the Python `ctypes` and `NumPy`'s `ctypeslib` modules. Such a challenging task might be indirectly assisted by tools such as [`CFFI`](https://github.com/cffi/cffi) which invokes a Fortran-bound C code/library at the ABI/API level or [`SWIG+Fortran`](https://github.com/swig-fortran/swig) which generates Fortran 2003 wrappers to existing C/C++ libraries that are then used by Python. `DL_PY2F` provides a more convenient solution by automating this complex mechanism.
 
 # Obtaining `DL_PY2F`
-`DL_PY2F` is an open-source library released under [GNU Lesser General Public License v3.0](https://www.gnu.org/licenses/lgpl-3.0.en.html). It is available for download from the [repository](https://github.com/stfc/dl_py2f). There is also a comprehensive [example](https://github.com/stfc/dl_py2f-example) demonstrating how to use `DL_PY2F` in an application project. `DL_PY2F` has also been published and deployed in a [launchpad.net PPA](https://launchpad.net/~dl-py2f/+archive/ubuntu/ppa) and can be installed as a system package for Debian-type systems.
+`DL_PY2F` is an open-source library released under [GNU Lesser General Public License v3.0](https://www.gnu.org/licenses/lgpl-3.0.en.html). It is available for download from the [repository](https://github.com/stfc/dl_py2f). There is also a comprehensive [example](https://github.com/stfc/dl_py2f-example) demonstrating how to use `DL_PY2F` in an application project. `DL_PY2F` has also been published and deployed in a [launchpad.net PPA](https://launchpad.net/~dl-py2f/+archive/ubuntu/ppa) and can be installed as a system package for Debian-based systems.
 
 # Acknowledgements
 
