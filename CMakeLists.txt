@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 cmake_policy(SET CMP0048 NEW)
 project(DL_PY2F
-        VERSION       25.0
-        DESCRIPTION  "A generic library that seamlessly glues Python and Fortran"
+        VERSION       1.1.1
+        DESCRIPTION  "DL_PY2F: A library for Python-Fortran interoperability"
         LANGUAGES     CXX Fortran)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 set(CMAKE_Fortran_MODULE_DIRECTORY ${PROJECT_BINARY_DIR}/modules)

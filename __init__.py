@@ -287,5 +287,5 @@ def py2f(obj, debug=0, byref=False):
             raise
 import os, sys
 sys.path.append(os.path.dirname(__file__))
-from dl_f2py import DL_DL
-import utils
+from .dl_f2py import DL_DL
+from . import utils
