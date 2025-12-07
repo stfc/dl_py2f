@@ -19,8 +19,8 @@
 # you.lu@stfc.ac.uk
 __email__ = 'you.lu@stfc.ac.uk'
 __author__ = f'You Lu <{__email__}>'
-import libpath, os, utils
-from utils.colours import *
+import os, utils
+from importlib.resources import files
 from ctypes    import addressof, CDLL, memset, RTLD_GLOBAL, sizeof
 from ctypes    import c_bool, c_char_p, c_double, c_float, c_int, c_long, c_void_p, POINTER
 from ctypes    import c_byte, c_char, c_short, c_size_t, c_uint, c_ubyte, c_ulong, c_void_p, c_wchar
@@ -30,7 +30,9 @@ from math      import ceil, prod
 from itertools import product
 from inspect   import stack
 from weakref   import WeakValueDictionary
-from time import time
+from time      import time
+from .         import libpath
+from .utils    import colours as _clr
 _accessor_cache = {}
 _DL_CACHE = WeakValueDictionary()
 selectcases = { float      : c_double,
@@ -97,10 +99,10 @@ class _DL_DT_Pointer:
             base = caller.split('%')[-1].split('(')[0]
             is_linked_list = (base == name_member)
             if is_linked_list and self._parent._debug:
-                print(f' >>> NB: {_bE}{caller_base}{CLR_} is a {_bW}scalar linked list!{CLR_}')
+                print(f' >>> NB: {_clr._bE}{caller_base}{_clr.CLR_} is a {_clr._bW}scalar linked list!{_clr.CLR_}')
         if self._parent.lib_dl_py2f.associated(c_ulong(addr)):
             if self._parent._debug:
-                print(f' >>> WARNING: {_R}{caller_base}{CLR_} at {_uW}{hex(addr)}{CLR_} is likely to be a wild pointer!')
+                print(f' >>> WARNING: {_clr._R}{caller_base}{_clr.CLR_} at {_clr._uW}{hex(addr)}{_clr.CLR_} is likely to be a wild pointer!')
             return
         inst = DL_DT(addr,
                     dict_dt,
@@ -115,7 +117,7 @@ class _DL_DT_Pointer:
                 self._parent._return_immediately = True
             else:
                 if self._parent._debug:
-                    print(f' >>> WARNING: {_R}{caller_base}{CLR_} is likely to be an unassociated pointer to a linked list! (type: {_Y}{typename}{CLR_})')
+                    print(f' >>> WARNING: {_clr._R}{caller_base}{_clr.CLR_} is likely to be an unassociated pointer to a linked list! (type: {_clr._Y}{typename}{_clr.CLR_})')
             return inst
         return inst
 class _DL_DT_Array:
@@ -413,7 +415,8 @@ class DL_DT(_SimpleCData):
         try:
             return self._lib_dl_py2f
         except:
-            self._lib_dl_py2f = utils.modutils.getLinkedLib('dl_py2f', libpath.libpath, is_linked=True)
+            self._lib_dl_py2f = utils.modutils.getLinkedLib('dl_py2f', files(__package__), is_linked=True) \
+                             or utils.modutils.getLinkedLib('dl_py2f', libpath.libpath, is_linked=True)
             return self._lib_dl_py2f
     def __init__(self,
                  address      :int,
@@ -459,8 +462,8 @@ class DL_DT(_SimpleCData):
                         if lbuff[2] != v['_size_chunk']:
                             _is_allocated = False
                             if debug:
-                                print(f'{_bR}\n >>> WARNING: = In {CLR_}{_bY}{caller}{CLR_}{_bR}, there may be something wrong with derived-type array {_bY}{k}{CLR_}{_bR}!{CLR_}')
-                                print(f'{_bR}              Shape: {shape}{CLR_}')
+                                print(f'{_clr._bR}\n >>> WARNING: = In {_clr.CLR_}{_clr._bY}{caller}{_clr.CLR_}{_clr._bR}, there may be something wrong with derived-type array {_clr._bY}{k}{_clr.CLR_}{_clr._bR}!{_clr.CLR_}')
+                                print(f'{_clr._bR}              Shape: {shape}{_clr.CLR_}')
                             setattr(self, k, empty((), dtype=typestrs.get(v['_type'], 'i8')))
                             continue
                         if not _is_allocated:
@@ -473,7 +476,7 @@ class DL_DT(_SimpleCData):
 
                         if is_linked_list:
                             if debug:
-                                print(f' >>> NB: {_bE}{caller}%{k}{CLR_} is an {_bW}array of linked list of a deferred shape{CLR_}! (type: {_W_i}{v["_type"]}{CLR_})!')
+                                print(f' >>> NB: {_clr._bE}{caller}%{k}{_clr.CLR_} is an {_clr._bW}array of linked list of a deferred shape{_clr.CLR_}! (type: {_clr._W_i}{v["_type"]}{_clr.CLR_})!')
                             for i, _ in enumerate(indices):
                                 addr_base = address + (len(indices)-i-1)*v['_size_chunk']
                                 llbuff = [ c_long.from_address(addr_base).value for i in range(5+ndims*3) ]
@@ -490,7 +493,7 @@ class DL_DT(_SimpleCData):
                                     break
                         if not is_allocated:
                               if debug:
-                                  print(f' >>> NB: {_bW}{caller+'%'+k}{CLR_} is {_R_i}NOT ALLOCATED!{CLR_}')
+                                  print(f' >>> NB: {_clr._bW}{caller+'%'+k}{_clr.CLR_} is {_clr._R_i}NOT ALLOCATED!{_clr.CLR_}')
                               value = None
                               continue
                         self._children[k] = { '_kind'      : 'array_deferred',
@@ -584,8 +587,8 @@ class DL_DT(_SimpleCData):
                         if lbuff[2] != sizeof(v['_type']):
                             _is_allocated = False
                             if debug:
-                                print(f'{_bR}\n >>> WARNING: In {CLR_}{_bY}{caller}{CLR_}{_bR}, there may be something wrong with {v["_type"].__name__} array {CLR_}{_bY}{k}!{CLR_}')
-                                print(f'              Size is {_bR}{lbuff[2]}{CLR_} which is supposed to be {_bG}{sizeof(v["_type"])}{CLR_}')
+                                print(f'{_clr._bR}\n >>> WARNING: In {_clr.CLR_}{_clr._bY}{caller}{_clr.CLR_}{_clr._bR}, there may be something wrong with {v["_type"].__name__} array {_clr.CLR_}{_clr._bY}{k}!{_clr.CLR_}')
+                                print(f'              Size is {_clr._bR}{lbuff[2]}{_clr.CLR_} which is supposed to be {_clr._bG}{sizeof(v["_type"])}{_clr.CLR_}')
                             setattr(self, k, empty((), dtype=typestrs.get(v['_type'], 'i8')))
                             continue
                         size = lbuff[2]
@@ -615,12 +618,12 @@ class DL_DT(_SimpleCData):
                     if v.get('_is_pointer', False):
                         is_linked_list = caller.split('%')[-1].split('(')[0] == k
                         if is_linked_list and debug:
-                            print(f' >>> NB: {_bE}{caller}%{k}{CLR_} is a {_bW}scalar linked list!{CLR_}')
+                            print(f' >>> NB: {_clr._bE}{caller}%{k}{_clr.CLR_} is a {_clr._bW}scalar linked list!{_clr.CLR_}')
                         address = c_ulong.from_address(self.__address__+v['_offset']).value
                         if address:
                             if self.lib_dl_py2f.associated(c_ulong(address)):
                                 if debug:
-                                    print(f' >>> WARNING: {_R}{caller}%{CLR_}{_bR}{k}{CLR_} at ({_uW}{hex(address)}{CLR_}) might be a wild pointer!')
+                                    print(f' >>> WARNING: {_clr._R}{caller}%{_clr.CLR_}{_clr._bR}{k}{_clr.CLR_} at ({_clr._uW}{hex(address)}{_clr.CLR_}) might be a wild pointer!')
                                 value = None
                                 setattr(self, k, value)
                                 continue
@@ -649,7 +652,7 @@ class DL_DT(_SimpleCData):
 #                                            return
 #                                        else:
 #                                            if debug:
-#                                                print(f' >>> WARNING: {_R}{caller}%{CLR_}{_bR}{k}{CLR_} is likely to be an unassociated pointer to a linked list! (type: {_Y}{v["_type"]}{CLR_})')
+#                                                print(f' >>> WARNING: {_clr._R}{caller}%{_clr.CLR_}{_clr._bR}{k}{_clr.CLR_} is likely to be an unassociated pointer to a linked list! (type: {_clr._Y}{v["_type"]}{_clr.CLR_})')
 #                                    setattr(value, '_derived_type', v['_type'])
                                 except RecursionError:
                                     value = None
@@ -891,7 +894,8 @@ class DL_DL(CDLL):
         try:
             return self._lib_dl_py2f
         except:
-            self._lib_dl_py2f = utils.modutils.getLinkedLib('dl_py2f', libpath.libpath, is_linked=True)
+            self._lib_dl_py2f = utils.modutils.getLinkedLib('dl_py2f', files(__package__), is_linked=True) \
+                             or utils.modutils.getLinkedLib('dl_py2f', libpath.libpath, is_linked=True)
             return self._lib_dl_py2f
     @property
     def moddir(self):
@@ -1079,7 +1083,7 @@ class DL_DL(CDLL):
                 try:
                     ctype = mod[symbol]['_type']
                 except KeyError:
-                    print(f' >>> ERROR: The data type of symbol {symbol} in module {module} is not defined! Please contact {__email__}.')
+                    print(f' >>> ERROR: The data type of symbol {symbol} in module {module} is not defined! Please contact {_clr.__email__}.')
                 if mod[symbol].get('_is_pointer', False):
                     if return_ctype:
                         return ctype.from_address(c_ulong.in_dll(self, fullname_symbol).value)
@@ -1103,7 +1107,7 @@ class DL_DL(CDLL):
                     entity = self.getValue(symbol, ctype, module=module, return_ctype=True, debug=debug)
                     setters.get(type(entity), self.setInt)(entity, value)
                 except KeyError:
-                    print(f' >>> ERROR: The data type of symbol {symbol} in module {module} is not defined! Please contact {__email__}.')
+                    print(f' >>> ERROR: The data type of symbol {symbol} in module {module} is not defined! Please contact {_clr.__email__}.')
         return
     @staticmethod
     def setInt(entity, value):
@@ -1160,7 +1164,7 @@ class DL_DL(CDLL):
             for dir_full, subdirs, filenames in walk(moddir):
                 for filename in filenames:
                     if debug:
-                        print(f' >>> Parsing {_uW_}{path.join(dir_full, filename)}{CLR_}')
+                        print(f' >>> Parsing {_clr._uW_}{path.join(dir_full, filename)}{_clr.CLR_}')
                     filepath = path.join(dir_full, filename).strip()
                     basename = utils.fileutils.getBaseName(path.basename(filepath))
                     to_parse = True
@@ -1189,31 +1193,31 @@ class DL_DL(CDLL):
         basename = utils.fileutils.getBaseName(path.basename(modpath))
         def _printSummary(_dbuff):
             print('\n '+'*'*72)
-            print(f" {_bW}Summary of module{CLR_} '{_bB_b}{dbuff['_name']}{CLR_}'")
+            print(f" {_clr._bW}Summary of module{_clr.CLR_} '{_clr._bB_b}{dbuff['_name']}{_clr.CLR_}'")
             print(' '+'*'*72)
-            print(f' File path: {_u_W_}{path.abspath(modpath)}{CLR_}')
+            print(f' File path: {_clr._u_W_}{path.abspath(modpath)}{_clr.CLR_}')
             print(f' {dbuff["_title"]}')
             for _k, _v in _dbuff.items():
                 if _k == '_title':
                     continue
                 if type(_v) is dict:
-                    print(f'\n Entry "{_bC}{_k}{CLR_}":')
+                    print(f'\n Entry "{_clr._bC}{_clr._k}{_clr.CLR_}":')
                     len_keys = max([len(_) for _ in _v.keys()])
-                    fmt_keys = f'     {_bY}' + '{_kk:<' + f'{len_keys}' + '}' + f'{CLR_}'
+                    fmt_keys = f'     {_clr._bY}' + '{_clr._kk:<' + f'{len_keys}' + '}' + f'{_clr.CLR_}'
                     for _kk, _vv in _v.items():
                         if _kk.startswith('_'):
                             if type(_vv) is int:
-                                fmt_vv = f': {_bM_b}'+'{_vv}'+f'{CLR_}'
+                                fmt_vv = f': {_clr._bM_b}'+'{_clr._vv}'+f'{_clr.CLR_}'
                             elif type(_vv) is bool:
-                                fmt_vv = f': {_G}'+'{_vv}'+f'{CLR_}'
+                                fmt_vv = f': {_clr._G}'+'{_clr._vv}'+f'{_clr.CLR_}'
                             elif type(_vv) is str:
-                                fmt_vv = f': {_C}'+"'{_vv}'"+f'{CLR_}'
+                                fmt_vv = f': {_clr._C}'+"'{_clr._vv}'"+f'{_clr.CLR_}'
                             elif isinstance(_SimpleCData, type(_vv)):
-                                fmt_vv = f': {_R}'+'{_vv}'+f'{CLR_}'
+                                fmt_vv = f': {_clr._R}'+'{_clr._vv}'+f'{_clr.CLR_}'
                             else:
-                                fmt_vv = ': {_vv}'
+                                fmt_vv = ': {_clr._vv}'
                             print(f'{fmt_keys+fmt_vv}'.format(_kk=_kk, _vv=_vv))
-                    fmt_keys += ': {_vv}'
+                    fmt_keys += ': {_clr._vv}'
                     for _kk, _vv in _v.items():
                         if not _kk.startswith('_'):
                             if type(_vv) is dict:
@@ -1223,23 +1227,23 @@ class DL_DL(CDLL):
                                         print(' '*(len_keys+7), end='')
                                     if type(_vvv) is int:
                                         if _kkk == '_offset':
-                                            print(f'''{_bC}{"'"+_kkk+"'":17s}{CLR_}: {_bY_r}{_vvv}{CLR_}''')
+                                            print(f'''{_clr._bC}{"'"+_kkk+"'":17s}{_clr.CLR_}: {_clr._bY_r}{_clr._vvv}{_clr.CLR_}''')
                                         else:
-                                            print(f'''{_C}{"'"+_kkk+"'":17s}{CLR_}: {_M}{_vvv}{CLR_}''')
+                                            print(f'''{_clr._C}{"'"+_kkk+"'":17s}{_clr.CLR_}: {_clr._M}{_clr._vvv}{_clr.CLR_}''')
                                     elif type(_vvv) is bool:
-                                        print(f'''{_C}{"'"+_kkk+"'":17s}{CLR_}: {_G}{_vvv}{CLR_}''')
+                                        print(f'''{_clr._C}{"'"+_kkk+"'":17s}{_clr.CLR_}: {_clr._G}{_clr._vvv}{_clr.CLR_}''')
                                     elif type(_vvv) is str:
-                                        print(f'''{_C}{"'"+_kkk+"'":17s}{CLR_}: {_bY}{_vvv}{CLR_}''')
+                                        print(f'''{_clr._C}{"'"+_kkk+"'":17s}{_clr.CLR_}: {_clr._bY}{_clr._vvv}{_clr.CLR_}''')
                                     elif type(_vvv) is tuple:
-                                        print(f'''{_C}{"'"+_kkk+"'":17s}{CLR_}: {_vvv}''')
+                                        print(f'''{_clr._C}{"'"+_kkk+"'":17s}{_clr.CLR_}: {_clr._vvv}''')
                                     elif isinstance(_SimpleCData, type(_vvv)):
-                                        print(f'''{_C}{"'"+_kkk+"'":17s}{CLR_}: {_bGbE}{_vvv}{CLR_}''')
+                                        print(f'''{_clr._C}{"'"+_kkk+"'":17s}{_clr.CLR_}: {_clr._bGbE}{_clr._vvv}{_clr.CLR_}''')
                                     else:
-                                        print(f'''{_C}{"'"+_kkk+"'":17s}{CLR_}: {_R}{_vvv}{CLR_}''')
+                                        print(f'''{_clr._C}{"'"+_kkk+"'":17s}{_clr.CLR_}: {_clr._R}{_clr._vvv}{_clr.CLR_}''')
                             else:
                                 print(f'{fmt_keys}'.format(_kk=_kk, _vv=_vv))
                 else:
-                    print(f'\n Entry "{_k}": {_v}')
+                    print(f'\n Entry "{_clr._k}": {_clr._v}')
             print(f'\n >>> Total time used: {time()-t0} s\n')
         dbuff = self._DL_MOD(self, {'_name':basename}) # module-file-based dict, however we don't know which module from the declarations (unless we use the filename)
         indices2entries = {}
@@ -1544,7 +1548,7 @@ class DL_DL(CDLL):
                                     residue = sum(sizes)%dict_member['_stride']
                                     if padding and residue:
                                         if debug > 1:
-                                            print(f' >>> {_bW}Padding{CLR_} {_bC}{entry}%{CLR_}{_bY}{name_member}{CLR_} by {_bM}{dict_member["_stride"]-residue}{CLR_}:')
+                                            print(f' >>> {_clr._bW}Padding{_clr.CLR_} {_clr._bC}{entry}%{_clr.CLR_}{_clr._bY}{name_member}{_clr.CLR_} by {_clr._bM}{dict_member["_stride"]-residue}{_clr.CLR_}:')
                                         pad = abs(dict_member['_stride'] - residue)
                                         sizes[-1] += pad
                                         dict_member.update({'_padded':pad})
@@ -1554,8 +1558,8 @@ class DL_DL(CDLL):
                                     residue = sum(sizes)%dict_member['_stride']
                                     if residue and dict_member['_size'] > residue:
                                         if debug > 1 and not is_internal:
-                                            print(f' >>> {_bW}Padding{CLR_} {_bC}{entry}%{CLR_}{_bY}{name_member}{CLR_} by {_bM}{dict_member["_stride"]-residue}{CLR_} bytes:')
-                                            print(f' >>>     Size: {_bM}{dict_member["_size"]}{CLR_}, Stride: {_bM}{dict_member["_stride"]}{CLR_}, Residue: {_bM}{residue}{CLR_}')
+                                            print(f' >>> {_clr._bW}Padding{_clr.CLR_} {_clr._bC}{entry}%{_clr.CLR_}{_clr._bY}{name_member}{_clr.CLR_} by {_clr._bM}{dict_member["_stride"]-residue}{_clr.CLR_} bytes:')
+                                            print(f' >>>     Size: {_clr._bM}{dict_member["_size"]}{_clr.CLR_}, Stride: {_clr._bM}{dict_member["_stride"]}{_clr.CLR_}, Residue: {_clr._bM}{residue}{_clr.CLR_}')
                                         pad = abs(dict_member['_stride'] - residue)
                                         sizes[-1] += pad
                                         dict_member.update({'_is_padded':True})
@@ -1579,8 +1583,8 @@ class DL_DL(CDLL):
                                         residue = sum(sizes)%dict_member['_stride']
                                         if residue and dict_member['_size'] > residue:
                                             if debug > 1 and not is_internal:
-                                                print(f' >>> {_bW}Padding{CLR_} {_bC}{entry}%{CLR_}{_bY}{name_member}{CLR_} by {_bM}{dict_member["_stride"]-residue}{CLR_} bytes:')
-                                                print(f' >>>     Size: {_bM}{dict_member["_size"]}{CLR_}, Stride: {_bM}{dict_member["_stride"]}{CLR_}, Residue: {_bM}{residue}{CLR_}')
+                                                print(f' >>> {_clr._bW}Padding{_clr.CLR_} {_clr._bC}{entry}%{_clr.CLR_}{_clr._bY}{name_member}{_clr.CLR_} by {_clr._bM}{dict_member["_stride"]-residue}{_clr.CLR_} bytes:')
+                                                print(f' >>>     Size: {_clr._bM}{dict_member["_size"]}{_clr.CLR_}, Stride: {_clr._bM}{dict_member["_stride"]}{_clr.CLR_}, Residue: {_clr._bM}{residue}{_clr.CLR_}')
                                             pad = abs(dict_member['_stride'] - residue)
                                             sizes[-1] += pad
                                             dict_member.update({'_is_padded':True})
@@ -1596,7 +1600,7 @@ class DL_DL(CDLL):
                                     residue = sum(sizes)%dict_member['_stride']
                                     if padding and residue:
                                         if debug > 1:
-                                            print(f' >>> {_bW}Padding{CLR_} {_bC}{entry}.{CLR_}{_bY}{name_member}{CLR_} by {_bM}{stride-residue}{CLR_}:')
+                                            print(f' >>> {_clr._bW}Padding{_clr.CLR_} {_clr._bC}{entry}.{_clr.CLR_}{_clr._bY}{name_member}{_clr.CLR_} by {_clr._bM}{stride-residue}{_clr.CLR_}:')
                                         pad = abs(dict_member['_stride'] - residue)
                                         sizes[-1] += pad
                                         dict_member.update({'_is_padded':True})
@@ -1623,7 +1627,7 @@ class DL_DL(CDLL):
                                     residue = sum(sizes)%dict_member['_stride']
                                     if padding and residue and not no_padding:
                                         if debug > 1:
-                                            print(f' >>> {_bW}Padding{CLR_} {_bY}{entry}.{CLR_}{_bR}{name_member}{CLR_} by {_bM}{stride-residue}{CLR_}:')
+                                            print(f' >>> {_clr._bW}Padding{_clr.CLR_} {_clr._bY}{entry}.{_clr.CLR_}{_clr._bR}{name_member}{_clr.CLR_} by {_clr._bM}{stride-residue}{_clr.CLR_}:')
                                         pad = abs(dict_member['_stride'] - residue)
                                         sizes[-1] += pad
                                         dict_member.update({'_is_padded':True})
@@ -1641,7 +1645,7 @@ class DL_DL(CDLL):
                                             dict_member.update({'_is_padded':True})
                                             dict_member.update({'_padded':pad})
                                             if debug > 1:
-                                                print(f' >>> {_bW}Padding{CLR_} {_bY}{entry}%{CLR_}{_bR}{name_member}{CLR_} by {_bM}{pad}{CLR_} bytes:')
+                                                print(f' >>> {_clr._bW}Padding{_clr.CLR_} {_clr._bY}{entry}%{_clr.CLR_}{_clr._bR}{name_member}{_clr.CLR_} by {_clr._bM}{pad}{_clr.CLR_} bytes:')
                                     else:
                                         residue = sum(sizes)%dict_member['_stride']
                                         if residue and dict_member['_size'] > residue and not all([ s==4 for s in sizes ]):
@@ -1650,15 +1654,15 @@ class DL_DL(CDLL):
                                             dict_member.update({'_is_padded':True})
                                             dict_member.update({'_padded':pad})
                                             if debug > 1 and not is_internal:
-                                                print(f' >>> {_bW}Padding{CLR_} {_bC}{entry}%{CLR_}{_bY}{name_member}{CLR_} by {_bM}{pad}{CLR_} bytes:')
-                                                print(f' >>>     Size: {_bM}{size}{CLR_}, Stride: {_bM}{dict_member["_stride"]}{CLR_}, Residue: {_bM}{residue}{CLR_}')
+                                                print(f' >>> {_clr._bW}Padding{_clr.CLR_} {_clr._bC}{entry}%{_clr.CLR_}{_clr._bY}{name_member}{_clr.CLR_} by {_clr._bM}{pad}{_clr.CLR_} bytes:')
+                                                print(f' >>>     Size: {_clr._bM}{size}{_clr.CLR_}, Stride: {_clr._bM}{dict_member["_stride"]}{_clr.CLR_}, Residue: {_clr._bM}{residue}{_clr.CLR_}')
                                 try:
                                     offset += sizes[-1]
                                 except IndexError:
                                     offset += 0
                                 sizes += [dict_member['_size']]
                                 if debug > 1 and not is_internal:
-                                    print(f' >>> {_bC}{entry}.{CLR_}{_bY}{name_member}{CLR_} offset: {_bM}{offset}{CLR_}')
+                                    print(f' >>> {_clr._bC}{entry}.{_clr.CLR_}{_clr._bY}{name_member}{_clr.CLR_} offset: {_clr._bM}{offset}{_clr.CLR_}')
                         dict_member.update({'_offset': offset})
                         fp.write('\n            ⟩')
                         name_member = ''
@@ -1826,7 +1830,7 @@ class DL_DL(CDLL):
                             size_array = 1
                             ndims = 1
                         if debug > 1:
-                            print(f' >>>     {_R}Old size{CLR_} of type {_bC}{_type}{CLR_}:', _size_type)
+                            print(f' >>>     {_clr._R}Old size{_clr.CLR_} of type {_clr._bC}{_clr._type}{_clr.CLR_}:', _size_type)
                         if _subtype == _type:
                             if '_ndims' in _dict_subtype:
                                 if _dict_subtype.get('_is_deferred', False):
@@ -1851,14 +1855,14 @@ class DL_DL(CDLL):
                         if _size_subtype:
                             _size_type += (_size_subtype-8)*size_array
                         if debug > 1:
-                            print(f' >>>     {_G}New size{CLR_} of type {_bC}{_type}{CLR_}:', _size_type)
+                            print(f' >>>     {_clr._G}New size{_clr.CLR_} of type {_clr._bC}{_clr._type}{_clr.CLR_}:', _size_type)
             residue = _size_type%8
             if _size_type == 4:
                 _padding = False
             if _padding and residue and 8 > residue:
                 _size_type += 8 - residue
                 if debug > 1:
-                    print(f' >>>     Padded {_bC}{_type}{CLR_} by {8-residue} bytes to final size {_bM}{_size_type}{CLR_}')
+                    print(f' >>>     Padded {_clr._bC}{_clr._type}{_clr.CLR_} by {8-residue} bytes to final size {_clr._bM}{_clr._size_type}{_clr.CLR_}')
             dbuff[_type].update({'_size_chunk':_size_type})
             return _size_type
         for k, v in dbuff.items():
@@ -1880,7 +1884,7 @@ class DL_DL(CDLL):
                             if tp:
                                 vv.update({'_type':tp})
                             if debug > 1:
-                                print(f' >>> {_R}Old offset{CLR_} of {_C}{k}{CLR_}%{_Y}{kk}{CLR_}: {_M}{vv["_offset"]}{CLR_}', f'(accumulation = {accumulation})')
+                                print(f' >>> {_clr._R}Old offset{_clr.CLR_} of {_clr._C}{k}{_clr.CLR_}%{_clr._Y}{kk}{_clr.CLR_}: {_clr._M}{vv["_offset"]}{_clr.CLR_}', f'(accumulation = {accumulation})')
                             offset_assumed = vv['_offset'] + accumulation - vv.get('_padded', 0)
                             if vv['_type'] == '_tb_procedure':
                                 residue = 0
@@ -1889,7 +1893,7 @@ class DL_DL(CDLL):
                                 residue = (offset_assumed)%stride
                             if vv.get('_is_padded') and residue:
                                 if debug > 1:
-                                    print(f' >>> {_bM}Repadded{CLR_} {_bY}"{kk}"{CLR_} by 4 because {size_derived}+{vv["_offset"]} has residue {residue}')
+                                    print(f' >>> {_clr._bM}Repadded{_clr.CLR_} {_clr._bY}"{kk}"{_clr.CLR_} by 4 because {size_derived}+{vv["_offset"]} has residue {residue}')
                                     print(f' >>> otherwise offset would be {offset_assumed} (stride = {vv["_stride"]})')
                                 pad = abs(vv.get('_stride', 8) - residue)
                                 vv['_offset'] += accumulation - vv.get('_padded', 0) + pad
@@ -1909,7 +1913,7 @@ class DL_DL(CDLL):
                                 else:
                                     vv['_offset'] += accumulation
                             if debug > 1:
-                                print(f' >>> {_bG}New offset{CLR_} of {_bC}{k}{CLR_}%{_bY}{kk}{CLR_}: {_bM}{vv["_offset"]}{CLR_}', f'(accumulation = {accumulation})')
+                                print(f' >>> {_clr._bG}New offset{_clr.CLR_} of {_clr._bC}{k}{_clr.CLR_}%{_clr._bY}{kk}{_clr.CLR_}: {_clr._bM}{vv["_offset"]}{_clr.CLR_}', f'(accumulation = {accumulation})')
                             if tp and kk != '_def_init':
                                 vv.update({'_type':tp})
                                 if '_dim' in vv:
@@ -1937,7 +1941,7 @@ class DL_DL(CDLL):
                                 accumulation += size_derived
                                 accumulation -= 8*size_array
                                 if debug > 1:
-                                    print(f' >>> {_bG}New size{CLR_} of {_bY}{k}{CLR_}.{_bC}{tp}{CLR_}: {_bM}{size_new}{CLR_} (size_derived = {size_derived}, accumulation = {accumulation})\n')
+                                    print(f' >>> {_clr._bG}New size{_clr.CLR_} of {_clr._bY}{k}{_clr.CLR_}.{_clr._bC}{tp}{_clr.CLR_}: {_clr._bM}{size_new}{_clr.CLR_} (size_derived = {size_derived}, accumulation = {accumulation})\n')
                                 was_derived = True
                             else:
                                 size_derived = 0
@@ -1948,29 +1952,29 @@ class DL_DL(CDLL):
         object.__setattr__(self.modules, dbuff['_name'], dbuff)
         return dbuff
     def __printSbuff(self, s, sbuff=-1, depth=-1, entry='', debug=False):
-        ccode = '_bE'
+        ccode = f'{_clr._bE}'
         if depth == 0:
-            ccode = f'{_W}'
+            ccode = f'{_clr._W}'
         elif depth == 1:
-            ccode = f'{_R}'
+            ccode = f'{_clr._R}'
         elif depth == 2:
-            ccode = f'{_Y}'
+            ccode = f'{_clr._Y}'
         elif depth == 3:
-            ccode = f'{_bY}'
+            ccode = f'{_clr._bY}'
         elif depth == 4:
-            ccode = f'{_G}'
+            ccode = f'{_clr._G}'
         elif depth == 5:
-            ccode = f'{_C}'
+            ccode = f'{_clr._C}'
         elif depth == 6:
-            ccode = f'{_B}'
+            ccode = f'{_clr._B}'
         elif depth == 7:
-            ccode = f'{_M}'
+            ccode = f'{_clr._M}'
         if entry == self.__entry or not entry:
             if debug:
                 if sbuff < depth:
-                    print(f' >>> DEBUG: entering {sbuff} -> {depth}, sbuff{sbuff} = {ccode}{s}{CLR_}')
+                    print(f' >>> DEBUG: entering {sbuff} -> {depth}, sbuff{sbuff} = {ccode}{s}{_clr.CLR_}')
                 else:
-                    print(f' >>> DEBUG: leaving {sbuff} -> {depth}, sbuff{sbuff} = {ccode}{s}{CLR_}')
+                    print(f' >>> DEBUG: leaving {sbuff} -> {depth}, sbuff{sbuff} = {ccode}{s}{_clr.CLR_}')
     @property
     def derived_types(self):
          return list(self._derived_types.keys())
