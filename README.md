@@ -56,25 +56,25 @@ The [example](https://github.com/stfc/dl_py2f-example) also works as a test benc
 
 Apart from the source code on the [github repository](https://github.com/stfc/dl_py2f), `DL_PY2F` has also been published and deployed in a [launchpad.net PPA](https://launchpad.net/~dl-py2f/+archive/ubuntu/ppa) and can be installed systemwide using `apt`:
 
-`sudo add-apt-repository ppa:dl-py2f/ppa`
+`$ sudo add-apt-repository ppa:dl-py2f/ppa`
 
-`sudo apt update`
+`$ sudo apt update`
 
-`sudo apt install dl-py2f`
+`$ sudo apt install dl-py2f`
 
 :warning: Since Debian PPA does not allow underscore `_`, the package name published on [launchpad.net](https://launchpad.net/~dl-py2f/+archive/ubuntu/ppa) is **`dl-py2f`** but not `dl_py2f`.
 
 :bulb: `sudo` access is required for installing system-wide packages using `apt`.
 
-Alternatively, `DL_PY2F` can be installed via PyPI (the `pip` command):
+Alternatively, `DL_PY2F` can be installed via [PyPI](https://pypi.org/project/dl-py2f) (the `pip` command):
 
-`python3 -m venv .venv`
+`$ python3 -m venv .venv`
 
-`source .venv/bin/activate`
+`$ source .venv/bin/activate`
 
-`pip install --upgrade pip`
+`$ pip install --upgrade pip`
 
-`pip install dl_py2f`
+`$ pip install dl_py2f`
 
 :heavy_exclamation_mark: **Caution:** `DL_PY2F` deployed via PPA (`apt`) and PyPI (`pip`) only works with application projects compiled using **gfortran** due to dl_py2f.mod we shipped.
 
