@@ -25,7 +25,7 @@ You Lu and Thomas W. Keal, *Journal of Open Source Software*, in preparation
 
 The Python-to-Fortran interoperability has been comprehensively tested using both GNU and Intel compilers.
 
-:warning: **Warning:** However, the method for Fortran-to-Python interoperability is still undergoing testing and validation, and is currently limited to use with the GNU compiler gfortran, as the proprietary .mod file format used by the Intel compiler is not yet supported.
+:warning: **Warning:** However, the method for Fortran-to-Python interoperability is still undergoing testing and validation, and is currently limited to use with the GNU compiler **gfortran**, as the proprietary .mod file format used by the Intel compiler is not yet supported.
 
 # Getting started
 
@@ -76,7 +76,7 @@ Alternatively, `DL_PY2F` can be installed via PyPI (the `pip` command):
 
 `pip install dl_py2f`
 
-:heavy_exclamation_mark: **Caution:** `DL_PY2F` deployed via PPA (`apt`) and PyPI (`pip`) only works with application projects compiled using gfortran due to dl_py2f.mod we shipped.
+:heavy_exclamation_mark: **Caution:** `DL_PY2F` deployed via PPA (`apt`) and PyPI (`pip`) only works with application projects compiled using **gfortran** due to dl_py2f.mod we shipped.
 
 The use of system installed `DL_PY2F` is also demonstrated in the [example](https://github.com/stfc/dl_py2f-example) package.
 
