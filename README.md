@@ -66,6 +66,18 @@ Apart from the source code on the [github repository](https://github.com/stfc/dl
 
 :bulb: `sudo` access is required for installing system-wide packages using `apt`.
 
+Alternatively, `DL_PY2F` can be installed via PyPI (the `pip` command):
+
+`python3 -m venv .venv`
+
+`source .venv/bin/activate`
+
+`pip install --upgrade pip`
+
+`pip install dl_py2f`
+
+:caution: **Caution:** `DL_PY2F` deployed via PPA (`apt`) and PyPI (`pip`) only works with application projects compiled using gfortran due to dl_py2f.mod we shipped.
+
 The use of system installed `DL_PY2F` is also demonstrated in the [example](https://github.com/stfc/dl_py2f-example) package.
 
 For more information about the usage of `DL_PY2F` please also read the paper: [You Lu and Thomas W. Keal, *Journal of Open Source Software*, in preparation](https://joss.theoj.org/papers/).
