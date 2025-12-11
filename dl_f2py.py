@@ -493,7 +493,7 @@ class DL_DT(_SimpleCData):
                                     break
                         if not is_allocated:
                               if debug:
-                                  print(f' >>> NB: {_clr._bW}{caller+'%'+k}{_clr.CLR_} is {_clr._R_i}NOT ALLOCATED!{_clr.CLR_}')
+                                  print(f' >>> NB: {_clr._bW}{caller+"%"+k}{_clr.CLR_} is {_clr._R_i}NOT ALLOCATED!{_clr.CLR_}')
                               value = None
                               continue
                         self._children[k] = { '_kind'      : 'array_deferred',
