@@ -68,6 +68,14 @@ Apart from the source code on the [github repository](https://github.com/stfc/dl
 
 Alternatively, `DL_PY2F` can be installed via [PyPI](https://pypi.org/project/dl-py2f) (the `pip` command):
 
+`export FC=gfortran; export CC=gcc; export CXX=g++`
+
+if you use GNU compilers, or using Intel ones
+
+`export FC=ifx; export CC=icx; export CXX=icpx`
+
+:warning: Please keep in mind that only the Python-to-Fortran interoperability works with Intel compilers.
+
 `$ python3 -m venv .venv`
 
 `$ source .venv/bin/activate`
@@ -75,8 +83,6 @@ Alternatively, `DL_PY2F` can be installed via [PyPI](https://pypi.org/project/dl
 `$ pip install --upgrade pip`
 
 `$ pip install dl_py2f`
-
-:heavy_exclamation_mark: **Caution:** `DL_PY2F` deployed via PPA (`apt`) and PyPI (`pip`) only works with application projects compiled using **gfortran** due to dl_py2f.mod we shipped.
 
 The use of system installed `DL_PY2F` is also demonstrated in the [example](https://github.com/stfc/dl_py2f-example) package.
 
