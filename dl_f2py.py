@@ -179,7 +179,7 @@ class _DL_DT_Array:
         if self._meta['_kind'] == 'array_deferred':
             base = c_ulong.from_address(self._parent.__address__ + offset).value
             if base == 0:
-                raise RuntimeError(f'Deferred array "{self._meta["_name"]}" is not allocated (NULL pointer).')
+                raise RuntimeError(f' >>> DL_F2PY ERROR: Deferred array "{self._meta["_name"]}" is not allocated (NULL pointer).')
         else:
             base = self._parent.__address__ + offset
         addr = base + flat*size_chunk
@@ -435,8 +435,7 @@ class DL_DT(_SimpleCData):
                  return_ctype :bool = False,
                  debug        :bool = False):
         if type(dict_dt) is not dict or not dict_dt.get('_is_derived', False):
-            print('\n >>> DL_F2PY ERROR: Argument dict_dt must be a dict containing information of data structure of a Fortran derived type', flush=True)
-            exit(999)
+            raise RuntimeError(' >>> DL_F2PY ERROR: Argument dict_dt must be a dict containing information of data structure of a Fortran derived type', flush=True)
         self._dict_dt       = dict_dt
         self._derived_types = derived_types
         self._caller        = caller
@@ -633,6 +632,7 @@ class DL_DT(_SimpleCData):
                             sbuff_setter = ''
                             if v['_type'] == '_tb_procedure':
                                 continue
+                            addr = self.__address__ + v['_offset']
                             value = v['_type'].from_address(self.__address__+v['_offset'])
                             setter_args = f'self._DL_DT_{k}'
                             setattr(self, '_DL_DT_'+k, value)
@@ -894,11 +894,14 @@ class DL_DL(CDLL):
                 for moddir in self.moddir:
                     self.parseAllModules(moddir, caller='modules')
             return self._modules
-        except:
-            self._modules = self._DL_MOD(self, {'_name': '__modules__'})
-            if self._to_parse_all:
-                for moddir in self.moddir:
-                    self.parseAllModules(moddir, caller='modules')
+        except Exception:
+            import traceback, sys
+            traceback.print_exc()
+            if not hasattr(self, '_modules'):
+                self._modules = self._DL_MOD(self, {'_name': '__modules__'})
+            self._to_parse_all = False
+            for moddir in self.moddir:
+                self.parseAllModules(moddir, caller='modules')
             return self._modules
     @modules.setter
     def modules(self, val):
@@ -908,7 +911,8 @@ class DL_DL(CDLL):
                 print(f'\n >>> WARNING: The following module instances will be overwritten:\n             ', ', '.join(overlap))
             self._modules.update(val)
         except:
-            self._modules = self._DL_MOD(self, {'_name': '__modules__'})
+            if not hasattr(self, '_modules'):
+                self._modules = self._DL_MOD(self, {'_name': '__modules__'})
             self._modules.update(val)
     @property
     def nsymbols(self):
@@ -921,14 +925,13 @@ class DL_DL(CDLL):
             symbols_module = self.getModuleSymbols(module)
             lbuff = [ s for s in symbols_module if s.lower().rstrip('_').endswith('_'+symbol.strip().lower()) ]
             if len(lbuff) == 0:
-                print(f' >>> DL_PY2F ERROR: Module {module} does not have symbol "{symbol}"\n', flush=True)
-                exit(999)
+                raise RuntimeError(f' >>> DL_PY2F ERROR: Module {module} does not have symbol "{symbol}"\n', flush=True)
             elif len(lbuff) == 1:
                 return lbuff[0]
             else:
-                print(f' >>> DL_PY2F ERROR: Module {module} has more than one symbols containing string "{symbol}":')
-                print( '                    ', ' '.join(lbuff))
-                exit(999)
+                sbuff  = f' >>> DL_PY2F ERROR: Module {module} has more than one symbols containing string "{symbol}":'
+                sbuff += '\n                    ', ' '.join(lbuff)
+                raise RuntimeError(sbuff)
         else:
             return symbol
     def getValue(self, symbol, ctype=c_int, shape=(), module='', return_ctype=False, debug=False):
@@ -1088,13 +1091,11 @@ class DL_DL(CDLL):
             memset(addr+i, lbuff[i], 1)
     def parseAllModules(self, moddir, recursive=True, padding=True, overwrite=False, caller='', debug=False):
         from os import path, sep, walk
-        mods = self._DL_MOD(self, {'_name': '__modules__'})
-        if caller == 'modules':
-            items = getattr(self, '_modules', {}).items()
-            self._to_parse_all = False
-        else:
-            items = object.__getattribute__(self, 'modules').items()
-            self._to_parse_all = False
+        if not hasattr(self, '_modules'):
+            self._modules = self._DL_MOD(self, {'_name': '__modules__'})
+        mods = self._modules
+        items = [(m, d) for (m, d) in mods.items() if isinstance(d, dict)]
+        self._to_parse_all = False
         if recursive:
             for dir_full, subdirs, filenames in walk(moddir):
                 for filename in filenames:
@@ -1104,6 +1105,8 @@ class DL_DL(CDLL):
                     basename = utils.fileutils.getBaseName(path.basename(filepath))
                     to_parse = True
                     for m, d in items:
+                        if not isinstance(d, dict):
+                            continue
                         f = d.get('_filename', '')
                         if filename == f and basename == m and not overwrite:
                             to_parse = False
@@ -1115,7 +1118,6 @@ class DL_DL(CDLL):
                         self._to_parse = True
         else:
             pass
-        self.modules = mods
         return mods
     def parseModule(self, modpath, padding=True, debug=False):
         import gzip
@@ -1316,7 +1318,7 @@ class DL_DL(CDLL):
                     elif depth == 4:
                         sbuff4 = ''
                         lbuff3 = sbuff3.split()
-                        self.__printSbuff(sbuff3, sbuff=3, depth=4, entry='arr03_of_int', debug=debug)
+#                        self.__printSbuff(sbuff3, sbuff=3, depth=4, entry='arr03_of_int', debug=debug)
                         if is_internal:
                             fp.write('\n            ⟨')
                             continue
@@ -1333,11 +1335,13 @@ class DL_DL(CDLL):
                                 if lbuff3[0] == 'CHARACTER' and lbuff3[-1] == 'CHARACTER':
                                     dict_entry.update({'_is_char':True})
                                     dict_entry.update({'_type':selectcases[lbuff3[0]+lbuff3[1]]})
+                                    dict_entry.update({'_length': int(lbuff3[1].strip("'"))})
                         else:
                             if len(lbuff3) == 6:
                                 if lbuff3[0] == 'CHARACTER' and lbuff3[-1] == 'CHARACTER':
                                     dict_entry.update({'_is_char':True})
                                     dict_entry.update({'_type':selectcases[lbuff3[0]+lbuff3[1]]})
+                                    dict_entry.update({'_length': int(lbuff3[1].strip("'"))})
                             if dict_entry.get('_is_char', False):
                                 if len(lbuff3) == 3:
                                     if lbuff3[-1] == 'EXPLICIT':
@@ -1352,7 +1356,7 @@ class DL_DL(CDLL):
                     elif depth == 5:
                         sbuff5 = ''
                         lbuff4 = sbuff4.split()
-                        self.__printSbuff(sbuff4, sbuff=4, depth=5, entry='arr03_of_int', debug=debug)
+#                        self.__printSbuff(sbuff4, sbuff=4, depth=5, entry='arr03_of_int', debug=debug)
                         if is_internal:
                             fp.write('\n                ⟪')
                             continue
@@ -1382,7 +1386,7 @@ class DL_DL(CDLL):
                     elif depth == 6:
                         sbuff6 = ''
                         lbuff5 = sbuff5.split()
-                        self.__printSbuff(sbuff5, sbuff=5, depth=6, entry='arr03_of_int', debug=debug)
+#                        self.__printSbuff(sbuff5, sbuff=5, depth=6, entry='arr03_of_int', debug=debug)
                         if is_internal or dict_entry.get('_no_member', False) or 'dict_member' not in locals():
                             sbuff6 = ''
                             fp.write('\n                    <')
@@ -1393,26 +1397,22 @@ class DL_DL(CDLL):
                                 dict_member.update({'_lbuff': []})
                                 dict_member.update({'_forced_pad':True})
                         elif len(lbuff5) == 6:
-                            key = lbuff5[0] + lbuff5[1]
-                            if key in selectcases:
-                                dt = selectcases[key]
-                                nbytes = int(lbuff5[1])
-                                if lbuff5[0] == 'COMPLEX':
-                                    nbytes *= 2
-                                dict_member.update({'_type': dt})
-                                dict_member.update({'_nbytes': nbytes})
-                                dict_member.update({'_size'  : nbytes})
-                                dict_member.update({'_stride': nbytes})
-                                types2sizes.update({dt: nbytes})
-                                if dict_member.get('_is_pending', False):
-                                    offset, offset_done = _recalcOffset(dict_member, sizes, offset, padding)
-                            elif lbuff5[0] == 'CHARACTER' and lbuff5[-1] == 'CHARACTER':
+                            if lbuff5[0] == 'CHARACTER' and lbuff5[-1] == 'CHARACTER':
                                 dict_member.update({'_is_char':True})
                                 dict_member.update({'_type':selectcases[lbuff5[0]+lbuff5[1]]})
-                                if dict_member.get('_is_deferred', False):
-                                    dict_member.setdefault('_stride', 8)
-                                    dict_member.setdefault('_size', 8)
-                                    dict_member.update({'_is_deferred_char': True})
+                                dict_member.update({'_length': int(lbuff5[1].strip("'"))})
+                            else:
+                                key = lbuff5[0] + lbuff5[1]
+                                if key in selectcases:
+                                    dt = selectcases[key]
+                                    nbytes = int(lbuff5[1])
+                                    if lbuff5[0] == 'COMPLEX':
+                                        nbytes *= 2
+                                    dict_member.update({'_type': dt})
+                                    dict_member.update({'_nbytes': nbytes})
+                                    dict_member.update({'_size'  : nbytes})
+                                    dict_member.update({'_stride': nbytes})
+                                    types2sizes.update({dt: nbytes})
                                     if dict_member.get('_is_pending', False):
                                         offset, offset_done = _recalcOffset(dict_member, sizes, offset, padding)
                         else:
@@ -1454,7 +1454,7 @@ class DL_DL(CDLL):
                             continue
                         sbuff2 = ''
                         lbuff3 = sbuff3.split()
-                        self.__printSbuff(sbuff3, sbuff=3, depth=2, entry='arr03_of_int', debug=debug)
+#                        self.__printSbuff(sbuff3, sbuff=3, depth=2, entry='arr03_of_int', debug=debug)
                         if 'PARAMETER' in lbuff3:
                             dict_entry.update({'_is_const':True})
                         if 'VARIABLE' in lbuff3:
@@ -1486,7 +1486,6 @@ class DL_DL(CDLL):
                                         ids2types.update({index:entry})
                                         types2ids.update({entry:index})
                                         dict_entry.update({'_type_id':index})
-                        if len(lbuff3) > 1:
                             if lbuff3[0]+lbuff3[1] in selectcases:
                                 dt = selectcases[lbuff3[0]+lbuff3[1]]
                                 dict_entry.update({'_type':dt})
@@ -1513,7 +1512,7 @@ class DL_DL(CDLL):
                     elif depth == 3:
                         sbuff3 = ''
                         lbuff4 = sbuff4.split()
-                        self.__printSbuff(sbuff4, sbuff=4, depth=3, entry='arr03_of_int', debug=debug)
+#                        self.__printSbuff(sbuff4, sbuff=4, depth=3, entry='arr03_of_int', debug=debug)
                         if is_internal:
                             sbuff4 = ''
                             fp.write('\n            ⟩')
@@ -1550,15 +1549,10 @@ class DL_DL(CDLL):
                             dict_member
                         except UnboundLocalError:
                             continue
+                        if not name_member.strip():
+                            continue
                         if dict_member.get('_ndims', 0):
                             need_dim = (not dict_member.get('_is_deferred', False))
-                            if '_stride' not in dict_member or '_size' not in dict_member or (need_dim and not dict_member.get('_dim', None)):
-                                dict_member['_is_pending'] = True
-                                dict_member['_name'] = name_member
-                                sbuff3 = ''
-                                sbuff4 = ''
-                                fp.write('\n            ⟩')
-                                continue
                             dict_member.update({'_forced_pad':True})
                             if dict_member.get('_is_deferred', False):
                                 if dict_member.get('_is_char', False):
@@ -1570,7 +1564,10 @@ class DL_DL(CDLL):
                                         sizes[-1] += pad
                                         dict_member.update({'_padded':pad})
                                         dict_member.update({'_is_padded':True})
-                                    offset += sizes[-1]
+                                    try:
+                                        offset += sizes[-1]
+                                    except IndexError:
+                                        offset += 0
                                 else:
                                     residue = sum(sizes)%dict_member['_stride']
                                     if residue and dict_member['_size'] > residue:
@@ -1666,10 +1663,10 @@ class DL_DL(CDLL):
                                     else:
                                         if ('_stride' not in dict_member) or ('_size' not in dict_member):
                                             dict_member['_is_pending'] = True
+                                            dict_member.setdefault('_offset', offset)
                                             dict_member['_name'] = name_member
                                             sbuff3 = ''
                                             sbuff4 = ''
-                                            fp.write('\n            ⟩')
                                             continue
                                         residue = sum(sizes)%dict_member['_stride']
                                         if residue and dict_member['_size'] > residue and not all([ s==4 for s in sizes ]):
@@ -1688,18 +1685,24 @@ class DL_DL(CDLL):
                                 if debug > 1 and not is_internal:
                                     print(f' >>> {_clr._bC}{entry}.{_clr.CLR_}{_clr._bY}{name_member}{_clr.CLR_} offset: {_clr._bM}{offset}{_clr.CLR_}')
                         dict_member.update({'_offset': offset})
-                        fp.write('\n            ⟩')
+                        fp.write(f'\n            ⟩')
                         name_member = ''
                     elif depth == 4:
-                        if is_internal or dict_entry.get('_no_member', False) or 'dict_member' not in locals():
+                        if is_internal:
                             sbuff5 = ''
                             fp.write('\n                ⟫')
                             continue
                         sbuff4 = ''
+                        lbuff5 = sbuff5.split()
+                        if dict_entry.get('_is_char', False):
+                            if len(lbuff5) == 2 and lbuff5[1].startswith("'") and lbuff5[1].endswith("'"):
+                                dict_entry.update({'_length': int(lbuff5[1].strip("'"))})
+                        if dict_entry.get('_no_member', False) or 'dict_member' not in locals():
+                            sbuff5 = ''
+                            fp.write('\n                ⟫')
+                            continue
                         if not name_member.strip() and dict_member.get('_name'):
                             name_member = dict_member['_name']
-                        lbuff5 = sbuff5.split()
-                        self.__printSbuff(sbuff5, sbuff=5, depth=4, entry='arr03_of_int', debug=debug)
                         if len(lbuff5) == 0:
                             pass
                         elif len(lbuff5) == 6:
@@ -1770,7 +1773,7 @@ class DL_DL(CDLL):
                         if dict_member.get('_is_pending', False):
                             offset, offset_done = _recalcOffset(dict_member, sizes, offset, padding)
                             if offset_done and '_offset' not in dict_member:
-                                raise RuntimeError(f'_offset missing: {entry}%{kk if "kk" in locals() else name_member}')
+                                raise RuntimeError(f' >>> DL_F2PY ERROR: _offset missing for {entry}%{kk if "kk" in locals() else name_member}')
                         sbuff5 = ''
                         fp.write('\n                ⟫')
                     elif depth == 5:
@@ -1780,7 +1783,7 @@ class DL_DL(CDLL):
                             continue
                         sbuff5 = ''
                         lbuff6 = sbuff6.split()
-                        self.__printSbuff(sbuff6, sbuff=6, depth=5, entry='arr03_of_int', debug=debug)
+#                        self.__printSbuff(sbuff6, sbuff=6, depth=5, entry='arr03_of_int', debug=debug)
                         if dict_entry.get('_is_const', False) and dict_entry.get('_ndims', 0):
                             dt = lbuff4
                             hexadecimal = sbuff6.split()[-1].strip("'")
@@ -1816,8 +1819,12 @@ class DL_DL(CDLL):
                         lbuff7 = sbuff7.split()
                         if dict_member.get('_is_char'):
                             if len(lbuff7) == 8 and lbuff7[-1].startswith("'") and lbuff7[-1].endswith("'"):
-                                dict_member.update({'_length':int(lbuff7[-1].strip("'"))})
-                                dict_member.update({'_size'  :int(lbuff7[-1].strip("'"))})
+                                dict_member.update({'_length': int(lbuff7[-1].strip("'"))})
+                                dict_member.update({'_size'  : int(lbuff7[-1].strip("'"))})
+                                if dict_member.get('_is_pending', False):
+                                    offset, offset_done = _recalcOffset(dict_member, sizes, offset, padding)
+                                    if offset_done and '_offset' not in dict_member:
+                                        raise RuntimeError(f' >>> DL_F2PY ERROR: _offset missing for pending char: {entry}%{name_member}')
                         fp.write('\n                        ”')
                         sbuff7 = ''
                     else:
@@ -1883,7 +1890,6 @@ class DL_DL(CDLL):
                         if _subtype == _type:
                             if '_ndims' in _dict_subtype:
                                 if _dict_subtype.get('_is_deferred', False):
-                                    _size_subtype = 48 + _dict_subtype['_ndims']*24 
                                     _size_subtype = 40 + _dict_subtype['_ndims']*24 
                             else:
                                 if _dict_subtype.get('_is_pointer', False):
