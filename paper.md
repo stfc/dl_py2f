@@ -101,7 +101,7 @@ Callback functions can also be invoked, as follows:
         call PyCallback()
     endsubroutine
 
-`DL_PY2F`'s Python-to-Fortran interoperability has been comprehensively tested using both GNU and Intel compilers.
+`DL_PY2F`'s Python-to-Fortran interoperability has been comprehensively tested using both GNU, Intel, and Flang/Clang++ compilers.
 
 ## Fortran-to-Python interoperability
 
@@ -126,7 +126,7 @@ given that the original application's Fortran code contains:
         type(type_b) :: b
     endmodule my_mod
 
-All Python attributes, including arrays of numbers and derived-type instances, are automatically exposed as Python objects as soon as an instance of class `dl_py2f.DL_DL` is created and a path to the module files is specified. The seamless access to Fortran data empowered by `DL_PY2F` will be particularly useful for machine-learning enhanced scientific computing, and is currently being trialled with the established computational chemistry codes `DL-FIND` [@kaestner2009] and `DL_POLY` [@devereux2025]. Note that this second method for Fortran-to-Python interoperability in `DL_PY2F` is still undergoing testing and validation, and is currently limited to use with the GNU compiler gfortran, as the proprietary .mod file format used by the Intel compiler [@green2024] is not yet supported.
+All Python attributes, including arrays of numbers and derived-type instances, are automatically exposed as Python objects as soon as an instance of class `dl_py2f.DL_DL` is created and a path to the module files is specified. The seamless access to Fortran data empowered by `DL_PY2F` will be particularly useful for machine-learning enhanced scientific computing, and is currently being trialled with the established computational chemistry codes `DL-FIND` [@kaestner2009] and `DL_POLY` [@devereux2025]. Note that this second method for Fortran-to-Python interoperability in `DL_PY2F` is still undergoing testing and validation, and is currently limited to use with the GNU compiler gfortran, as the proprietary .mod file format used by the Intel compiler [@green2024] or other compilers' .mod format is not yet supported.
 
 ## Comparison with other tools
 

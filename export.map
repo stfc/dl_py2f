@@ -70,3 +70,19 @@ cce {
             private_finalise$dl_py2f_;
     local:  *;
 };
+
+# flang
+flang {
+    global: _QMdl_py2fPprivate_initialise*;
+            _QMdl_py2fPprivate_finalise*;
+            _QMdl_py2fPassign*;
+            _QMdl_py2fPget*;
+            _QMdl_py2fPset*;
+            _QMdl_py2fPkeys*;
+            _QMdl_py2fPreturn*;
+            _QMdl_py2fPenquireshape*;
+            _QMdl_py2fPenquiretype*;
+            _QMdl_py2fPenquirekey*;
+            _QMdl_py2fPptr2dict*;
+    local :  *;
+};
