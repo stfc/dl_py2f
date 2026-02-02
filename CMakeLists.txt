@@ -9,6 +9,12 @@ set(CMAKE_Fortran_MODULE_DIRECTORY ${PROJECT_BINARY_DIR}/modules)
 include_directories(${PROJECT_BINARY_DIR}/modules)
 configure_file(libpath.py.in ${CMAKE_CURRENT_LIST_DIR}/libpath.py @ONLY)
 add_library(dl_py2f SHARED dl_py2f.f90 dl_py2f.cpp)
+
+# suppress warnings for nvc++
+if(CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
+    target_compile_options(dl_py2f PRIVATE $<$<COMPILE_LANGUAGE:CXX>:--diag_suppress declared_but_not_referenced>)
+endif()
+
 if("${DL_PY2F_ARCH}" STREQUAL "cpe-gnu")
     set_target_properties(dl_py2f PROPERTIES COMPILE_FLAGS "-fcheck=no-bounds")
 elseif("${DL_PY2F_ARCH}" STREQUAL "cray")
