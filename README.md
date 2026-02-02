@@ -23,7 +23,7 @@ You Lu and Thomas W. Keal, *Journal of Open Source Software*, in preparation
 
 ## Project status
 
-The Python-to-Fortran interoperability has been comprehensively tested using GNU, Intel, and Flang/Clang++ compilers. It also works with NVIDIA HPC compilers although currently integer arrays must be retrieved and altered in the "safe mode" (`readonly=.true.`) due to a bug in nvfortran.
+The Python-to-Fortran interoperability has been comprehensively tested using GNU, Intel, and Flang/Clang++ compilers. It also works with NVIDIA HPC compilers although currently arrays must be retrieved and altered in the "safe mode" (`readonly=.true.`) due to a bug in nvfortran.
 
 :warning: **Warning:** However, the method for Fortran-to-Python interoperability is still undergoing testing and validation, and is currently limited to use with the GNU compiler **gfortran**, as the proprietary .mod file format used by the Intel compiler or other compilers' .mod format is not yet supported.
 
