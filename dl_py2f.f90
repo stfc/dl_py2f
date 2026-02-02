@@ -17,6 +17,7 @@
 !  <https://www.gnu.org/licenses/>.
 
 ! you.lu@stfc.ac.uk
+
 module DL_PY2F
     use iso_c_binding
     implicit none
@@ -42,9 +43,11 @@ module DL_PY2F
         type(CStructType) :: cdata
     endtype PyType
     type dictType
-        character(len=LENSTR)     :: type  = ""
-        integer                   :: sizem =  0
-        integer                   :: sizen =  0
+        character(len=LENSTR)     :: type   = ""
+        integer                   :: sizem  =  0
+        integer                   :: sizen  =  0
+        integer                   :: stride =  1
+        type(c_ptr)               :: addr0
         character(len=:), pointer :: key             => null()
         class(*)        , pointer :: scalar          => null()
         class(*)        , pointer :: array(:)        => null()
@@ -58,6 +61,7 @@ module DL_PY2F
         real(kind=8)    , pointer :: twodimdbl(:,:)  => null()
         real(kind=8)    , pointer :: onedimcdbl(:)   => null()
         real(kind=8)    , pointer :: twodimcdbl(:,:) => null()
+        type(c_funptr)  , pointer :: cfuncptr        => null()
         type(dictType)  , pointer :: next            => null()
         contains
         generic, public :: assign => assignScalar,     &
@@ -104,6 +108,7 @@ module DL_PY2F
         procedure, private :: assignOneDimLng
         procedure, private :: assignTwoDimLng
         procedure, private :: assignPyPtr
+        procedure, private :: assignCFuncPtr
         procedure, private :: getIntCLong
         procedure, private :: getInt
         procedure, private :: getReal
@@ -191,10 +196,10 @@ module DL_PY2F
                     call metaobj%assign(trim(namebuff), nonetype)
                 case('function')
                     call c_f_pointer(cdata(i)%attr, cfuncbuff)
-                    call metaobj%assign(trim(namebuff), cfuncbuff)
+                    call metaobj%assignCFuncPtr(trim(namebuff), cfuncbuff)
                 case('object')
                     call c_f_pointer(cdata(i)%attr, pyptrbuff)
-                    call metaObj%assign(trim(namebuff), pyptrbuff)
+                    call metaObj%assignPyPtr(trim(namebuff), pyptrbuff)
                 case('int')
                     call c_f_pointer(cdata(i)%attr, cintbuff)
                     call metaObj%assign(trim(namebuff), cintbuff)
@@ -248,7 +253,8 @@ module DL_PY2F
                                 endif
                                 if(sizen.eq.1) then
                                     onedimdblbuff => dblarraybuff(1,1:sizem)
-                                    call metaObj%assign(trim(namebuff), onedimdblbuff, keepReference)
+                                    call metaObj%assign(trim(namebuff), onedimdblbuff, keepReference, &
+                                                        cdata(i)%attr, ncols)
                                 elseif(sizen.gt.1) then
                                     twodimdblbuff => dblarraybuff(1:sizen,:)
                                     call metaObj%assign(trim(namebuff), twodimdblbuff, keepReference)
@@ -257,7 +263,8 @@ module DL_PY2F
                                 call c_f_pointer(cdata(i)%attr, dblarraybuff, (/1, sizem*sizen/))
                                 if(sizen.eq.1) then
                                     onedimdblbuff => dblarraybuff(1,:)
-                                    call metaObj%assign(trim(namebuff), onedimdblbuff, keepReference)
+                                    call metaObj%assign(trim(namebuff), onedimdblbuff, keepReference, &
+                                                        cdata(i)%attr, 1)
                                 elseif(sizen.gt.1) then
                                     call c_f_pointer(c_loc(dblarraybuff), twodimdblbuff, [sizen,sizem])
                                     call metaObj%assign(trim(namebuff), twodimdblbuff, keepReference)
@@ -296,7 +303,8 @@ module DL_PY2F
                                 endif
                                 if(sizen.eq.1) then
                                     onedimlngbuff => lngarraybuff(1,1:sizem)
-                                    call metaObj%assign(trim(namebuff), onedimlngbuff, keepReference)
+                                    call metaObj%assign(trim(namebuff), onedimlngbuff, keepReference, &
+                                                        cdata(i)%attr, ncols)
                                 elseif(sizen.gt.1) then
                                     twodimlngbuff => lngarraybuff(1:sizen,:)
                                     call metaObj%assign(trim(namebuff), twodimlngbuff, keepReference)
@@ -305,7 +313,8 @@ module DL_PY2F
                                 call c_f_pointer(cdata(i)%attr, lngarraybuff, (/1, sizem*sizen/))
                                 if(sizen.eq.1) then
                                     onedimlngbuff => lngarraybuff(1,:)
-                                    call metaObj%assign(trim(namebuff), onedimlngbuff, keepReference)
+                                    call metaObj%assign(trim(namebuff), onedimlngbuff, keepReference, &
+                                                        cdata(i)%attr, 1)
                                 elseif(sizen.gt.1) then
                                     call c_f_pointer(c_loc(lngarraybuff), twodimlngbuff, [sizen,sizem])
                                     call metaObj%assign(trim(namebuff), twodimlngbuff, keepReference)
@@ -348,25 +357,25 @@ module DL_PY2F
                     endif
             endselect
         enddo
-        chararraybuff  => null()
-        intarraybuff   => null()
-        lngarraybuff   => null()
-        dblarraybuff   => null()
-        onedimintbuff  => null()
-        twodimintbuff  => null()
-        onedimlngbuff  => null()
-        twodimlngbuff  => null()
-        onedimdblbuff  => null()
-        twodimdblbuff  => null()
-        pyptrbuff      => null()
-        cintbuff       => null()
-        cfuncbuff      => null()
-        bbuff          => null()
-        cdblbuff       => null()
-        onedimcharbuff => null()
-        twodimcharbuff => null()
-        cbuff          => null()
-        debug_ptr      => null()
+        nullify(chararraybuff)
+        nullify(intarraybuff)
+        nullify(lngarraybuff)
+        nullify(dblarraybuff)
+        nullify(onedimintbuff)
+        nullify(twodimintbuff)
+        nullify(onedimlngbuff)
+        nullify(twodimlngbuff)
+        nullify(onedimdblbuff)
+        nullify(twodimdblbuff)
+        nullify(pyptrbuff)
+        nullify(cintbuff)
+        nullify(cfuncbuff)
+        nullify(bbuff)
+        nullify(cdblbuff)
+        nullify(onedimcharbuff)
+        nullify(twodimcharbuff)
+        nullify(cbuff)
+        nullify(debug_ptr)
     endsubroutine private_initialise
     recursive subroutine private_finalise(metaObj)
         class(dictType), intent(inout) :: metaObj
@@ -376,40 +385,36 @@ module DL_PY2F
             if(associated(metaObj%key)) then
                 deallocate(metaObj%key)
             endif
-            selecttype(tmp=>metaObj%scalar)
-                class default
-                    metaObj%scalar => null()
-            endselect
-            metaObj%array => null()
-            metaObj%PyPtr => null()
-            metaObj%onedimchar => null()
-            metaObj%onedimint  => null()
-            metaObj%twodimint  => null()
-            metaObj%onedimlng  => null()
-            metaObj%twodimlng  => null()
-            metaObj%onedimdbl  => null()
-            metaObj%twodimdbl  => null()
-            metaObj%onedimcdbl => null()
-            metaObj%twodimcdbl => null()
+            nullify(metaObj%scalar)
+            nullify(metaObj%array)
+            nullify(metaObj%PyPtr)
+            nullify(metaObj%onedimchar)
+            nullify(metaObj%onedimint)
+            nullify(metaObj%twodimint)
+            nullify(metaObj%onedimlng)
+            nullify(metaObj%twodimlng)
+            nullify(metaObj%onedimdbl)
+            nullify(metaObj%twodimdbl)
+            nullify(metaObj%onedimcdbl)
+            nullify(metaObj%twodimcdbl)
+            nullify(metaObj%cfuncptr)
         elseif(associated(metaObj%key).and..not.associated(metaObj%next)) then
             if(associated(metaObj%key)) then
                 deallocate(metaObj%key)
             endif
-            selecttype(tmp=>metaObj%scalar)
-                class default
-                    metaObj%scalar => null()
-            endselect
-            metaObj%array => null()
-            metaObj%PyPtr => null()
-            metaObj%onedimchar => null()
-            metaObj%onedimint  => null()
-            metaObj%twodimint  => null()
-            metaObj%onedimlng  => null()
-            metaObj%twodimlng  => null()
-            metaObj%onedimdbl  => null()
-            metaObj%twodimdbl  => null()
-            metaObj%onedimcdbl => null()
-            metaObj%twodimcdbl => null()
+            nullify(metaObj%scalar)
+            nullify(metaObj%array)
+            nullify(metaObj%PyPtr)
+            nullify(metaObj%onedimchar)
+            nullify(metaObj%onedimint)
+            nullify(metaObj%twodimint)
+            nullify(metaObj%onedimlng)
+            nullify(metaObj%twodimlng)
+            nullify(metaObj%onedimdbl)
+            nullify(metaObj%twodimdbl)
+            nullify(metaObj%onedimcdbl)
+            nullify(metaObj%twodimcdbl)
+            nullify(metaObj%cfuncptr)
         endif
         call flush(6)
     endsubroutine private_finalise
@@ -463,6 +468,24 @@ module DL_PY2F
             metaObj%PyPtr => source
         endif
     endsubroutine assignPyPtr
+    recursive subroutine assignCFuncPtr(metaObj, key, source)
+        class(dictType)          , intent(inout) :: metaObj
+        character(len=*)         , intent(in)    :: key
+        type(c_funptr)  , target , intent(in)    :: source
+        if(associated(metaObj%key)) then
+            if(metaObj%key.eq.key) then
+                metaObj%cfuncptr => source
+            else
+                if(.not.associated(metaObj%next)) then
+                    allocate(metaObj%next)
+                endif
+                call assignCFuncPtr(metaObj%next, key, source)
+            endif
+        else
+            allocate(metaObj%key, source=key)
+            metaObj%cfuncptr => source
+        endif
+    endsubroutine assignCFuncPtr
     recursive subroutine assignOneDimChar(metaObj, key, source, keepRef)
         class(dictType)          , intent(inout)           :: metaObj
         character(len=*)         , intent(in)              :: key
@@ -572,11 +595,13 @@ module DL_PY2F
             endif
         endif
     endsubroutine assignTwoDimInt
-    recursive subroutine assignOneDimLng(metaObj, key, source, keepRef)
+    recursive subroutine assignOneDimLng(metaObj, key, source, keepRef, addr0, stride)
         class(dictType)          , intent(inout)           :: metaObj
         character(len=*)         , intent(in)              :: key
         integer(kind=8) , pointer, intent(in)              :: source(:)
         logical                  , intent(in)   , optional :: keepRef
+        type(c_ptr)              , intent(in)   , optional :: addr0
+        integer                  , intent(in)   , optional :: stride
         logical                                            :: keepReference
         keepReference = .true.
         if(present(keepRef)) then
@@ -591,11 +616,13 @@ module DL_PY2F
                 else
                     allocate(metaObj%onedimlng(metaObj%sizem), source=source)
                 endif
+                if(present(addr0)) metaObj%addr0 = addr0
+                if(present(stride)) metaObj%stride = stride
             else
                 if(.not.associated(metaObj%next)) then
                     allocate(metaObj%next)
                 endif
-                call assignOneDimLng(metaObj%next, key, source, keepReference)
+                call assignOneDimLng(metaObj%next, key, source, keepReference, addr0, stride)
             endif
         else
             allocate(metaObj%key, source=key)
@@ -605,6 +632,8 @@ module DL_PY2F
             else
                 allocate(metaObj%onedimlng(metaObj%sizem), source=source)
             endif
+            if(present(addr0)) metaObj%addr0 = addr0
+            if(present(stride)) metaObj%stride = stride
         endif
     endsubroutine assignOneDimLng
     recursive subroutine assignTwoDimLng(metaObj, key, source, keepRef)
@@ -646,11 +675,13 @@ module DL_PY2F
             endif
         endif
     endsubroutine assignTwoDimLng
-    recursive subroutine assignOneDimDbl(metaObj, key, source, keepRef)
+    recursive subroutine assignOneDimDbl(metaObj, key, source, keepRef, addr0, stride)
         class(dictType)          , intent(inout)           :: metaObj
         character(len=*)         , intent(in)              :: key
         real(kind=8)    , pointer, intent(in)              :: source(:)
         logical                  , intent(in)   , optional :: keepRef
+        type(c_ptr)              , intent(in)   , optional :: addr0
+        integer                  , intent(in)   , optional :: stride
         logical                                            :: keepReference
         keepReference = .true.
         if(present(keepRef)) then
@@ -665,11 +696,13 @@ module DL_PY2F
                 else
                     allocate(metaObj%onedimdbl(metaObj%sizem), source=source)
                 endif
+                if(present(addr0)) metaObj%addr0 = addr0
+                if(present(stride)) metaObj%stride = stride
             else
                 if(.not.associated(metaObj%next)) then
                     allocate(metaObj%next)
                 endif
-                call assignOneDimDbl(metaObj%next, key, source, keepReference)
+                call assignOneDimDbl(metaObj%next, key, source, keepReference, addr0, stride)
             endif
         else
             allocate(metaObj%key, source=key)
@@ -679,6 +712,8 @@ module DL_PY2F
             else
                 allocate(metaObj%onedimdbl(metaObj%sizem), source=source)
             endif
+            if(present(addr0)) metaObj%addr0 = addr0
+            if(present(stride)) metaObj%stride = stride
         endif
     endsubroutine assignOneDimDbl
     recursive subroutine assignTwoDimDbl(metaObj, key, source, keepRef)
@@ -790,7 +825,7 @@ module DL_PY2F
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
                 call flush(6)
-                val => metaObj%scalar
+                val => metaObj%cfuncptr
             else
                 if(.not.associated(metaObj%next)) then
                     print *, '>>> DL_PY2F ERROR: keyword "', key, '" not found in dictionary.'
@@ -809,24 +844,9 @@ module DL_PY2F
         class(dictType) , intent(in) :: metaObj
         character(len=*), intent(in) :: key
         type(PyType)    , pointer    :: val
-        type(c_ptr)     , pointer    :: ptr
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
-                ptr => metaObj%scalar
-                selecttype(tmp=>metaObj%scalar)
-                    type is(character(len=*))
-                        if(tmp.eq."NoneType") then
-                            val => null()
-                        else
-                            val => metaObj%scalar
-                        endif
-                    class default
-                        if(associated(metaObj%scalar)) then
-                            val => metaObj%scalar
-                        else
-                            val => null()
-                        endif
-                endselect
+                val => metaObj%PyPtr
             else
                 val => returnPyPtr(metaObj%next, key)
             endif
@@ -873,15 +893,12 @@ module DL_PY2F
             call flush(6)
             if(metaObj%key.eq.trim(key)) then
                 if(associated(metaObj%onedimchar)) type = 'character'
-                ! MS 22/01/2025: renamed all "dimint" as "dimlng" because they are actually 64-bit
-                !                and 32-bit integers are yet to be supported (TODO)
                 if(associated(metaObj%onedimlng))  type = 'long'
                 if(associated(metaObj%twodimlng))  type = 'long'
                 if(associated(metaObj%onedimdbl))  type = 'double'
                 if(associated(metaObj%twodimdbl))  type = 'double'
                 if(associated(metaObj%onedimcdbl)) type = 'c_double'
                 if(associated(metaObj%twodimcdbl)) type = 'c_double'
-                ! MS 21/01/2025: added support for scalars
                 if(metaObj%sizem.eq.0.and.metaObj%sizen.eq.0) then
                     selecttype(tmp=>metaObj%scalar)
                         type is(integer(kind=4))
@@ -892,7 +909,6 @@ module DL_PY2F
                             type = 'float'
                         type is(real(kind=8))
                             type = 'double'
-                        ! MS TODO: to support more types
                         class default
                             type = 'unknown'
                     endselect
@@ -1149,9 +1165,14 @@ module DL_PY2F
         class(dictType) , intent(inout) :: metaObj
         character(len=*), intent(in)    :: key
         real(kind=8)    , intent(in)    :: array(:)
+        real(kind=8)    , pointer       :: pyarray(:,:)
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
                 metaObj%onedimdbl = array
+                if(c_associated(metaObj%addr0)) then
+                    call c_f_pointer(metaObj%addr0, pyarray, [metaObj%stride, metaObj%sizem])
+                    pyarray(1, 1:metaObj%sizem) = array(1:metaObj%sizem)
+                endif
             else
                 call setOneDimDbl(metaObj%next, key, array)
             endif
@@ -1205,9 +1226,14 @@ module DL_PY2F
         class(dictType) , intent(inout) :: metaObj
         character(len=*), intent(in)    :: key
         integer(kind=8) , intent(in)    :: array(:)
+        integer(kind=8) , pointer       :: pyarray(:,:)
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
                 metaObj%onedimlng = array
+                if(c_associated(metaObj%addr0)) then
+                    call c_f_pointer(metaObj%addr0, pyarray, [metaObj%stride, metaObj%sizem])
+                    pyarray(1, 1:metaObj%sizem) = array(1:metaObj%sizem)
+                endif
             else
                 call setOneDimLng(metaObj%next, key, array)
             endif
