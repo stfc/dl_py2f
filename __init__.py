@@ -114,7 +114,7 @@ def py2f(obj, debug=0, byref=False):
                 if _val.size > 0:
                     npptr._shape_ = _val.shape
                 fbuff.append((_key, npptr))
-                initialiser.append(asarray(_val, dtype=_ctype).ctypes.data)
+                initialiser.append(_val.ctypes.data)
             def _addRecArray(_ctype, _arr):
                 for field in _ctype.names:
                     _appendInitAtoF(initialiser, foo, field, list)
@@ -124,7 +124,7 @@ def py2f(obj, debug=0, byref=False):
                 if _val.size > 0:
                     npptr._shape_ = (_val.shape[0],len(_val.dtype.names))
                 fbuff.append((_key, npptr))
-                initialiser.append(asarray(_val, dtype=_ctype).ctypes.data)
+                initialiser.append(_val.ctypes.data)
             try:
                 _addNPArray(selectcases[foo.dtype.name], key, getattr(obj, key))
             except KeyError:

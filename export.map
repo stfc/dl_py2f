@@ -86,3 +86,10 @@ flang {
             _QMdl_py2fPptr2dict*;
     local :  *;
 };
+
+# nvfortran
+nvfortran {
+    global: dl_py2f__dicttype_td_*;
+            dl_py2f_ptr2dict_*;
+    local : *;
+};
