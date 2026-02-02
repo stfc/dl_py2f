@@ -101,7 +101,7 @@ Callback functions can also be invoked, as follows:
         call PyCallback()
     endsubroutine
 
-`DL_PY2F`'s Python-to-Fortran interoperability has been comprehensively tested using both GNU, Intel, and Flang/Clang++ compilers.
+`DL_PY2F`'s Python-to-Fortran interoperability has been comprehensively tested using both GNU, Intel, Flang/Clang++, and NVIDIA HPC[^a] compilers.
 
 ## Fortran-to-Python interoperability
 
@@ -144,4 +144,6 @@ The `DL_PY2F` library was created during the redevelopment of [ChemShell](https:
 ---
 nocite: '@*'
 ---
+
+[^a] Currently with NVIDIA HPC compilers integer arrays must be retrieved and altered using the `get` and `set` methods, respectively, in the `readonly=.true.` mode due to a compiler bug in nvfortran.
 
