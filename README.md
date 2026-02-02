@@ -48,7 +48,7 @@ The Python-to-Fortran interoperability has been comprehensively tested using GNU
 
 :warning: The Fortran-to-Python method does **NOT** yet work with the Intel, Flang/Clang++, or NVIDIA compilers.[^a]
 
-[a]: Intel's proprietary .mod file format is unpublished and unsupported. Support for Flang/Clang++ and NVIDIA compilers is yet to be implemented.
+[^a]: Intel's proprietary .mod file format is unpublished and unsupported. Support for Flang/Clang++ and NVIDIA compilers is yet to be implemented.
 
 ## Using and testing `DL_PY2F`
 
