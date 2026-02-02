@@ -145,6 +145,7 @@ The `DL_PY2F` library was created during the redevelopment of [ChemShell](https:
 nocite: '@*'
 ---
 
-[^a] Currently, with NVIDIA HPC compilers, integer arrays must be retrieved and altered using the `get` and `set` methods, respectively, in the `readonly=.true.` mode due to a compiler bug in nvfortran.
+[^a] Currently, with NVIDIA HPC compilers, arrays must be retrieved and altered using the `get` and `set` methods, respectively, in the `readonly=.true.` mode due to a compiler bug in nvfortran.
+
 
 
