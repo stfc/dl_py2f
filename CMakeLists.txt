@@ -1,13 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
 cmake_policy(SET CMP0048 NEW)
 project(DL_PY2F
-        VERSION       1.1.7
+        VERSION       1.1.8
         DESCRIPTION  "DL_PY2F: A library for Python-Fortran interoperability"
         LANGUAGES     CXX Fortran)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
 set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
 include_directories(${CMAKE_CURRENT_LIST_DIR})
-configure_file(libpath.py.in ${CMAKE_CURRENT_LIST_DIR}/libpath.py @ONLY)
 add_library(dl_py2f SHARED dl_py2f.f90 dl_py2f.cpp)
 
 # suppress warnings for nvc++
@@ -52,7 +51,7 @@ install(TARGETS dl_py2f
 install(FILES dl_f2py.py __init__.py
         DESTINATION /usr/lib/python3/dist-packages/dl_py2f)
 
-install(FILES libdir_debian.py
+install(FILES libpath_debian.py
         DESTINATION /usr/lib/python3/dist-packages/dl_py2f
         RENAME libpath.py)
 
