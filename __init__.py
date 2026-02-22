@@ -21,12 +21,13 @@ __author__     = [ 'You Lu', 'Thomas W. Keal' ]
 __copyright__  = 'Copyright (C) 2025 The authors of DL_PY2F'
 __credits__    = [ 'You Lu', 'Thomas W. Keal' ]
 __license__    = 'LGPLv3'
-__version__    = '1.1.8'
+__version__    = '1.1.9'
 __maintainer__ = __author__[0]
 __email__      = 'you.lu@stfc.ac.uk'
 __status__     = ''
 __dictname = '_kwargs'
-__arrname = '_master'
+__arrname = '_mega'
+_CStructs_cached = {}
 def __getType(obj):
     from numpy  import ndarray, float64, float32, int64, int32
     from types  import ModuleType, FunctionType
@@ -199,6 +200,10 @@ def py2f(obj, debug=0, byref=False):
         if key.startswith('_'):
             continue
         try:
+            selectcases[__getType(getattr(obj, key))]
+        except (KeyError, TypeError):
+            continue
+        try:
             isRec = getattr(obj, key).dtype.name.startswith('record')
         except:
             isRec = False
@@ -208,6 +213,8 @@ def py2f(obj, debug=0, byref=False):
             selectcases[__getType(getattr(obj, key))](obj, key, getattr(obj, key))
         except KeyError:
             print(" >>> DL_PY2F ERROR: type "+str(__getType(getattr(obj, key)))+" of entry \""+key+"\" not supported.\n")
+        except TypeError:
+            pass
     fields = [ item for sublist in zip(zip([ 'type'    + f[0]   for f in fbuff ],
                                            [ c_char*ATTRLEN     for f in fbuff ]),
                                        zip([ f[0] + ' '*ATTRLEN for f in fbuff ],
@@ -251,9 +258,9 @@ def py2f(obj, debug=0, byref=False):
     fields.insert(3, ('width', c_long))
     try:
         if hasattr(obj, __arrname):
-            _master = getattr(obj, __arrname)
-            width_list = [ _master[field].shape[1] if _master[field].ndim == 2 else
-                           array(_master.dtype.fields[field][0].names).size for field in _master.dtype.fields ]
+            _abuff = getattr(obj, __arrname)
+            width_list = [ _abuff[field].shape[1] if _abuff[field].ndim == 2 else
+                           array(_abuff.dtype.fields[field][0].names).size for field in _abuff.dtype.fields ]
             _width = sum(width_list)
         initialiser.insert(3, c_long(_width))
     except:
@@ -268,12 +275,17 @@ def py2f(obj, debug=0, byref=False):
             if not (i-5)%7:
                 print()
             print("     {:5d}    {:32.32}    {:24.24} {}".format(i, '\"'+fields[i][0]+'\"', fields[i][1].__name__, v))
-    class CStruct(Structure):
-        _fields_ = fields
-        def __new__(cls, *args):
-            inst = Structure.__new__(cls)
-            stdout.flush()
-            return inst
+    _CStruct = tuple((name, ctype) for name, ctype in fields)
+    if _CStruct in _CStructs_cached:
+        CStruct = _CStructs_cached[_CStruct]
+    else:
+        class CStruct(Structure):
+            _fields_ = fields
+            def __new__(cls, *args):
+                inst = Structure.__new__(cls)
+                stdout.flush()
+                return inst
+        _CStructs_cached[_CStruct] = CStruct
     if not byref:
         return CStruct(*initialiser)
     else:
