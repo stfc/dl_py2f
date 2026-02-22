@@ -78,6 +78,8 @@ On the Fortran side, the `interface_app` function receives the passed-in `appPtr
             call c_f_procpointer(pyfuncPtr, PyCallback)
             call PyApp%get('coords', coords) ! a handle with write access to the NumPy array
             call my_app(coords)              ! run the application
+            call PyApp%finalise()
+            call PyChild%finalise()
             deallocate(PyApp, PyChild)
             nullify(coords)                  ! cannot be deallocated as it does not own the NumPy array
         endfunction interface_app
