@@ -1,0 +1,1997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>DL_PY2F Reference Manual</title>
+<style>
+body {
+    font-family: "DejaVu Sans", "Noto Sans CJK SC", "Noto Sans", Arial, Helvetica, sans-serif;
+    font-size: 11pt;
+    line-height: 1.5;
+    color: #1a1a1a;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 20px 30px;
+}
+h1 { font-size: 20pt; border-bottom: 2px solid #333; padding-bottom: 4pt; }
+h2 { font-size: 15pt; border-bottom: 1px solid #999; padding-bottom: 3pt; margin-top: 24pt; }
+h3 { font-size: 13pt; margin-top: 18pt; }
+h4 { font-size: 11.5pt; margin-top: 14pt; }
+p  { margin: 6pt 0; }
+code {
+    font-family: "DejaVu Sans Mono", "Courier New", monospace;
+    font-size: 9.5pt;
+    background: #f4f4f4;
+    padding: 1pt 4pt;
+    border-radius: 3pt;
+}
+pre {
+    background: #f4f4f4;
+    border: 1px solid #ddd;
+    border-radius: 4pt;
+    padding: 10pt 14pt;
+    font-size: 9pt;
+    line-height: 1.4;
+    overflow-x: auto;
+}
+pre code { background: none; padding: 0; font-size: 9pt; }
+table {
+    border-collapse: collapse;
+    width: auto;
+    margin: 10pt 0;
+    font-size: 10pt;
+}
+td, th { white-space: nowrap; }
+td:last-child, th:last-child { white-space: normal; }
+th, td {
+    border: 1px solid #bbb;
+    padding: 5pt 8pt;
+    text-align: left;
+    vertical-align: top;
+}
+th { background: #e8e8e8; font-weight: bold; }
+tr:nth-child(even) { background: #f9f9f9; }
+ul, ol { margin: 4pt 0 4pt 12pt; padding-left: 0; }
+li { margin: 3pt 0; }
+strong { font-weight: bold; }
+blockquote { border-left: 3pt solid #ccc; padding-left: 10pt; color: #555; margin: 6pt 0; }
+a { color: #0366d6; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* --- Table of Contents --- */
+.toc {
+    background: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 4pt;
+    padding: 12pt 16pt;
+    margin: 12pt 0 24pt 0;
+}
+.toc h2 { font-size: 14pt; margin-top: 0; border-bottom: 1px solid #999; padding-bottom: 4pt; }
+.toc ul { list-style: none; margin: 4pt 0 2pt 0; padding-left: 0; }
+.toc > ul > li { margin: 3pt 0; font-weight: bold; font-size: 10.5pt; }
+.toc > ul > li > ul { margin: 1pt 0 1pt 14pt; }
+.toc > ul > li > ul > li { font-weight: normal; font-size: 9.5pt; margin: 1pt 0; }
+.toc > ul > li > ul > li > ul { margin: 0 0 0 14pt; }
+.toc > ul > li > ul > li > ul > li { font-size: 9pt; margin: 0; color: #444; }
+.toc a { color: #1a1a1a; text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+pre { line-height: 125%; }
+td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.highlight .hll { background-color: #ffffcc }
+.highlight { background: #f8f8f8; }
+.highlight .c { color: #3D7B7B; font-style: italic } /* Comment */
+.highlight .err { border: 1px solid #FF0000 } /* Error */
+.highlight .k { color: #008000; font-weight: bold } /* Keyword */
+.highlight .o { color: #666666 } /* Operator */
+.highlight .ch { color: #3D7B7B; font-style: italic } /* Comment.Hashbang */
+.highlight .cm { color: #3D7B7B; font-style: italic } /* Comment.Multiline */
+.highlight .cp { color: #9C6500 } /* Comment.Preproc */
+.highlight .cpf { color: #3D7B7B; font-style: italic } /* Comment.PreprocFile */
+.highlight .c1 { color: #3D7B7B; font-style: italic } /* Comment.Single */
+.highlight .cs { color: #3D7B7B; font-style: italic } /* Comment.Special */
+.highlight .gd { color: #A00000 } /* Generic.Deleted */
+.highlight .ge { font-style: italic } /* Generic.Emph */
+.highlight .ges { font-weight: bold; font-style: italic } /* Generic.EmphStrong */
+.highlight .gr { color: #E40000 } /* Generic.Error */
+.highlight .gh { color: #000080; font-weight: bold } /* Generic.Heading */
+.highlight .gi { color: #008400 } /* Generic.Inserted */
+.highlight .go { color: #717171 } /* Generic.Output */
+.highlight .gp { color: #000080; font-weight: bold } /* Generic.Prompt */
+.highlight .gs { font-weight: bold } /* Generic.Strong */
+.highlight .gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+.highlight .gt { color: #0044DD } /* Generic.Traceback */
+.highlight .kc { color: #008000; font-weight: bold } /* Keyword.Constant */
+.highlight .kd { color: #008000; font-weight: bold } /* Keyword.Declaration */
+.highlight .kn { color: #008000; font-weight: bold } /* Keyword.Namespace */
+.highlight .kp { color: #008000 } /* Keyword.Pseudo */
+.highlight .kr { color: #008000; font-weight: bold } /* Keyword.Reserved */
+.highlight .kt { color: #B00040 } /* Keyword.Type */
+.highlight .m { color: #666666 } /* Literal.Number */
+.highlight .s { color: #BA2121 } /* Literal.String */
+.highlight .na { color: #687822 } /* Name.Attribute */
+.highlight .nb { color: #008000 } /* Name.Builtin */
+.highlight .nc { color: #0000FF; font-weight: bold } /* Name.Class */
+.highlight .no { color: #880000 } /* Name.Constant */
+.highlight .nd { color: #AA22FF } /* Name.Decorator */
+.highlight .ni { color: #717171; font-weight: bold } /* Name.Entity */
+.highlight .ne { color: #CB3F38; font-weight: bold } /* Name.Exception */
+.highlight .nf { color: #0000FF } /* Name.Function */
+.highlight .nl { color: #767600 } /* Name.Label */
+.highlight .nn { color: #0000FF; font-weight: bold } /* Name.Namespace */
+.highlight .nt { color: #008000; font-weight: bold } /* Name.Tag */
+.highlight .nv { color: #19177C } /* Name.Variable */
+.highlight .ow { color: #AA22FF; font-weight: bold } /* Operator.Word */
+.highlight .w { color: #bbbbbb } /* Text.Whitespace */
+.highlight .mb { color: #666666 } /* Literal.Number.Bin */
+.highlight .mf { color: #666666 } /* Literal.Number.Float */
+.highlight .mh { color: #666666 } /* Literal.Number.Hex */
+.highlight .mi { color: #666666 } /* Literal.Number.Integer */
+.highlight .mo { color: #666666 } /* Literal.Number.Oct */
+.highlight .sa { color: #BA2121 } /* Literal.String.Affix */
+.highlight .sb { color: #BA2121 } /* Literal.String.Backtick */
+.highlight .sc { color: #BA2121 } /* Literal.String.Char */
+.highlight .dl { color: #BA2121 } /* Literal.String.Delimiter */
+.highlight .sd { color: #BA2121; font-style: italic } /* Literal.String.Doc */
+.highlight .s2 { color: #BA2121 } /* Literal.String.Double */
+.highlight .se { color: #AA5D1F; font-weight: bold } /* Literal.String.Escape */
+.highlight .sh { color: #BA2121 } /* Literal.String.Heredoc */
+.highlight .si { color: #A45A77; font-weight: bold } /* Literal.String.Interpol */
+.highlight .sx { color: #008000 } /* Literal.String.Other */
+.highlight .sr { color: #A45A77 } /* Literal.String.Regex */
+.highlight .s1 { color: #BA2121 } /* Literal.String.Single */
+.highlight .ss { color: #19177C } /* Literal.String.Symbol */
+.highlight .bp { color: #008000 } /* Name.Builtin.Pseudo */
+.highlight .fm { color: #0000FF } /* Name.Function.Magic */
+.highlight .vc { color: #19177C } /* Name.Variable.Class */
+.highlight .vg { color: #19177C } /* Name.Variable.Global */
+.highlight .vi { color: #19177C } /* Name.Variable.Instance */
+.highlight .vm { color: #19177C } /* Name.Variable.Magic */
+.highlight .il { color: #666666 } /* Literal.Number.Integer.Long */</style>
+</head>
+<body>
+<h1 id="dl_py2f-reference-manual-v119">DL_PY2F — Reference Manual (v1.1.9)</h1>
+<p><em>21 March 2026</em></p>
+<div class="toc"><h2>Contents</h2>
+<div class="toc">
+<ul>
+<li><a href="#overview">Overview</a><ul>
+<li><a href="#licence">Licence</a></li>
+<li><a href="#getting-dl_py2f">Getting DL_PY2F</a><ul>
+<li><a href="#method-1-from-source-recommended">Method 1: from source (recommended)</a></li>
+<li><a href="#method-2-pypi-recommended">Method 2: PyPI (recommended)</a></li>
+<li><a href="#method-3-debian-ppa">Method 3: Debian PPA</a></li>
+<li><a href="#launching">Launching</a></li>
+</ul>
+</li>
+<li><a href="#memory-ownership-core-principle">Memory ownership (core principle)</a></li>
+</ul>
+</li>
+<li><a href="#part-1-python-to-fortran-interoperability">Part 1 — Python-to-Fortran interoperability</a><ul>
+<li><a href="#11-getting-started">1.1 Getting started</a><ul>
+<li><a href="#accessing-python-data-from-existing-fortran-code">Accessing Python data from existing Fortran code</a></li>
+</ul>
+</li>
+<li><a href="#12-workflow">1.2 Workflow</a><ul>
+<li><a href="#mode-a-lazy-mode-alias-no-copies">Mode A: lazy mode (alias, no copies)</a></li>
+<li><a href="#mode-b-safe-mode-explicit-copy-and-set">Mode B: safe mode (explicit copy and set)</a></li>
+</ul>
+</li>
+<li><a href="#13-callback-functions">1.3 Callback functions</a><ul>
+<li><a href="#python-side">Python side</a></li>
+<li><a href="#accessing-the-owning-object">Accessing the owning object</a></li>
+<li><a href="#fortran-side">Fortran side</a></li>
+<li><a href="#interaction-with-lazy-mode">Interaction with lazy mode</a></li>
+<li><a href="#lifetime-and-error-handling">Lifetime and error handling</a></li>
+</ul>
+</li>
+<li><a href="#14-advanced-class-features">1.4 Advanced class features</a><ul>
+<li><a href="#class-attributes-reference">Class attributes reference</a></li>
+<li><a href="#the-objutilsinit-decorator">The @objutils.init() decorator</a></li>
+<li><a href="#structured-arrays-in-_kwargs-and-_fields">Structured arrays in _kwargs and _fields</a></li>
+<li><a href="#nested-objects">Nested objects</a></li>
+<li><a href="#scalars-and-mutability">Scalars and mutability</a></li>
+<li><a href="#the-size-setter-and-_mega-resizing">The size setter and _mega resizing</a></li>
+</ul>
+</li>
+<li><a href="#15-api-reference">1.5 API reference</a><ul>
+<li><a href="#py2f-the-pythontofortran-conversion-function">py2f — the Python‑to‑Fortran conversion function</a></li>
+<li><a href="#ptr2dict-handle-to-dictionary-conversion">ptr2dict — handle-to-dictionary conversion</a></li>
+<li><a href="#dicttypefinalise-release-metadata">dictType%finalise — release metadata</a></li>
+<li><a href="#dicttypeget-generic-getter-16-specific-procedures">dictType%get — generic getter (16 specific procedures)</a></li>
+<li><a href="#dicttypeset-generic-setter-8-specific-procedures">dictType%set — generic setter (8 specific procedures)</a></li>
+<li><a href="#introspection-routines">Introspection routines</a></li>
+</ul>
+</li>
+<li><a href="#16-data-model">1.6 Data model</a><ul>
+<li><a href="#python-types">Python types</a></li>
+<li><a href="#numpy-arrays">NumPy arrays</a></li>
+</ul>
+</li>
+<li><a href="#17-memory-ownership">1.7 Memory ownership</a></li>
+</ul>
+</li>
+<li><a href="#part-2-fortran-to-python-interoperability">Part 2 — Fortran-to-Python interoperability</a><ul>
+<li><a href="#21-getting-started">2.1 Getting started</a></li>
+<li><a href="#22-data-model">2.2 Data model</a><ul>
+<li><a href="#supported-intrinsic-types">Supported intrinsic types</a></li>
+<li><a href="#supported-array-ranks">Supported array ranks</a></li>
+<li><a href="#supported-fortran-attributes">Supported Fortran attributes</a></li>
+<li><a href="#linked-lists">Linked lists</a></li>
+<li><a href="#arrays-contiguity-and-strides">Arrays, contiguity, and strides</a></li>
+<li><a href="#memory-ownership">Memory ownership</a></li>
+</ul>
+</li>
+<li><a href="#23-initialisation-and-teardown">2.3 Initialisation and teardown</a></li>
+<li><a href="#24-api-reference">2.4 API reference</a><ul>
+<li><a href="#dl_dl-sharedlibrary-loader">DL_DL — shared‑library loader</a></li>
+<li><a href="#bytelevel-setters-static-methods-on-dl_dl">Byte‑level setters (static methods on DL_DL)</a></li>
+<li><a href="#dl_dt-derivedtype-proxy">DL_DT — derived‑type proxy</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#part-3-shared-reference">Part 3 — Shared reference</a><ul>
+<li><a href="#31-error-handling-and-diagnostics">3.1 Error handling and diagnostics</a></li>
+<li><a href="#32-compatibility-and-limitations">3.2 Compatibility and limitations</a></li>
+<li><a href="#33-mpi-multi-instance-usage">3.3 MPI / multi-instance usage</a><ul>
+<li><a href="#model-a-one-python-interpreter-per-mpi-rank">Model A — one Python interpreter per MPI rank</a></li>
+<li><a href="#model-b-single-python-interpreter-with-mpi-distribution">Model B — single Python interpreter with MPI distribution</a></li>
+<li><a href="#general-notes">General notes</a></li>
+</ul>
+</li>
+<li><a href="#34-common-pitfalls-and-reminders">3.4 Common pitfalls and reminders</a></li>
+<li><a href="#35-utility-modules-dl_py2futils">3.5 Utility modules (dl_py2f.utils)</a><ul>
+<li><a href="#objutils-object-initialisation">objutils — object initialisation</a></li>
+<li><a href="#nputils-numpy-helpers">nputils — NumPy helpers</a></li>
+<li><a href="#modutils-sharedlibrary-loading">modutils — shared‑library loading</a></li>
+<li><a href="#fileutils-file-operations">fileutils — file operations</a></li>
+<li><a href="#miscutils-miscellaneous-helpers">miscutils — miscellaneous helpers</a></li>
+<li><a href="#strutils-string-helpers">strutils — string helpers</a></li>
+<li><a href="#dictutils-dictionary-helpers">dictutils — dictionary helpers</a></li>
+<li><a href="#iterutils-iteration-and-flattening-helpers">iterutils — iteration and flattening helpers</a></li>
+<li><a href="#ctypeutils-ctypes-byte-conversion">ctypeutils — ctypes byte conversion</a></li>
+<li><a href="#colours-ansi-terminal-colour-constants">colours — ANSI terminal colour constants</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+
+</div>
+<h2 id="overview">Overview</h2>
+<p><code>DL_PY2F</code> is an open-source library for creating modern Python interfaces and NumPy-based data structures around existing Fortran applications, giving both sides direct access to the same data without copies where possible. It has been used in production to drive <a href="https://chemshell.org">ChemShell</a>. This document is the reference for application developers using <code>DL_PY2F</code>, covering how to set up and use the library, supported data types and array ranks, memory ownership, MPI patterns, and known limitations.</p>
+<p>DL_PY2F provides two interoperability directions:</p>
+<p><strong>Python-to-Fortran (primary, production ready).</strong> You define your data in a Python class, and Fortran accesses it by name through a dictionary-like interface (<code>dictType</code>). Zero‑copy is used wherever possible. The Python side loads the compiled Fortran <code>.so</code> via <code>ctypes.CDLL</code>; the Fortran side uses DL_PY2F's source-level API (<code>use DL_PY2F</code>, <code>dictType</code>, <code>get</code>/<code>set</code>). The library never edits or regenerates Fortran sources, nor does it generate Python wrapper code (unlike tools such as F2PY).</p>
+<p><strong>Fortran-to-Python (beta, gfortran‑only).</strong> Python loads an existing Fortran <code>.so</code> and parses <code>.mod</code> metadata to expose module variables, procedures, and derived types with dot syntax, without any changes to the Fortran source. Intel, Flang, and nvfortran module formats are not supported yet.</p>
+<p>The reference is organised into three parts: Part 1 covers Python-to-Fortran interoperability, Part 2 covers Fortran-to-Python interoperability, and Part 3 collects material shared by both directions (MPI, errors, compatibility, pitfalls). Application developers working in only one direction can read the relevant part without wading through the other.</p>
+<h3 id="licence">Licence</h3>
+<p>DL_PY2F is open source and released under the <a href="https://www.gnu.org/licenses/lgpl-3.0.en.html">GNU Lesser General Public License v3.0</a> (LGPLv3).</p>
+<h3 id="getting-dl_py2f">Getting DL_PY2F</h3>
+<p>DL_PY2F can be obtained in three ways. In all cases the result is a shared library <code>libdl_py2f.so</code> and a Fortran module file <code>dl_py2f.mod</code> that your application links against at buildtime, plus a Python package <code>dl_py2f</code> that you import at runtime.</p>
+<p>The Fortran-to-Python path requires gfortran because it parses gfortran's <code>.mod</code> file format. The Python-to-Fortran path works with all listed compilers. See <a href="#32-compatibility-and-limitations">section 3.2</a> for the full compiler compatibility matrix and minimum version requirements.</p>
+<h4 id="method-1-from-source-recommended">Method 1: from source (recommended)</h4>
+<p>Clone the DL_PY2F repository into your application's source tree and build it together with your code using CMake. This is the most flexible approach because it compiles DL_PY2F with the same compiler and compiler options as your application. Since DL_PY2F is licensed under LGPLv3, application developers are free to redistribute it alongside their own projects.</p>
+<p><strong>Project structure.</strong> A recommended layout for a DL_PY2F-based project is:</p>
+<div class="highlight"><pre><span></span><code>my_project/
+├── my_app/
+│   ├── __init__.py       # package init: imports, doSomething()
+│   ├── my_app.py         # Python class (ctypes.Structure + _kwargs)
+│   ├── callback.py       # callback function(s) invoked from Fortran
+│   ├── my_app_dirs.py.in # CMake-configured paths (lib and module dirs)
+│   ├── CMakeLists.txt    # build file
+│   ├── interface.f90     # Fortran bind(c) interface using DL_PY2F
+│   ├── my_code/          # my existing Fortran codebase
+│   │   ├── my_code.f90
+│   │   └── my_module.f90
+│   └── dl_py2f/          # clone DL_PY2F here
+└── user_script.py        # end-user entry point
+</code></pre></div>
+
+<p>The <code>__init__.py</code> is the entry point to your package. It loads the compiled shared library, calls <code>py2f()</code>, and invokes the Fortran interface:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">ctypes</span><span class="o">,</span> <span class="nn">os.path</span>
+<span class="kn">import</span> <span class="nn">dl_py2f</span>
+<span class="kn">from</span> <span class="nn">.my_app</span>      <span class="kn">import</span> <span class="n">MyApp</span>
+<span class="kn">from</span> <span class="nn">.my_app_dirs</span> <span class="kn">import</span> <span class="n">libdir</span>
+
+<span class="k">def</span> <span class="nf">doSomething</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+    <span class="n">libapp</span> <span class="o">=</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">CDLL</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">libdir</span><span class="p">,</span> <span class="s1">&#39;libmy_app.so&#39;</span><span class="p">))</span>
+    <span class="n">handle</span> <span class="o">=</span> <span class="n">dl_py2f</span><span class="o">.</span><span class="n">py2f</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">byref</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">ierror</span> <span class="o">=</span> <span class="n">libapp</span><span class="o">.</span><span class="n">interface_my_app</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ierror</span>
+</code></pre></div>
+
+<p>The end-user script (<code>user_script.py</code>) imports your package, creates an instance, and calls the function:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">my_app</span> <span class="kn">import</span> <span class="n">MyApp</span><span class="p">,</span> <span class="n">doSomething</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">MyApp</span><span class="p">()</span>
+<span class="n">app</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">ierror</span> <span class="o">=</span> <span class="n">doSomething</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+</code></pre></div>
+
+<p>A separate user script is not strictly required. For simpler projects you can define a <code>__main__</code> block in <code>__init__.py</code> as the entry point instead.</p>
+<p><strong>Compiling.</strong> Set the compilers via environment variables before running CMake:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># GNU</span>
+$<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">FC</span><span class="o">=</span>gfortran<span class="p">;</span><span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">CXX</span><span class="o">=</span>g++
+<span class="c1"># OR Intel (Python-to-Fortran only)</span>
+$<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">FC</span><span class="o">=</span>ifx<span class="p">;</span><span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">CXX</span><span class="o">=</span>icpx
+<span class="c1"># OR Flang/Clang++ (Python-to-Fortran only)</span>
+$<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">FC</span><span class="o">=</span>flang<span class="p">;</span><span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">CXX</span><span class="o">=</span>clang++
+<span class="c1"># OR NVIDIA HPC (Python-to-Fortran only)</span>
+$<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">FC</span><span class="o">=</span>nvfortran<span class="p">;</span><span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">CXX</span><span class="o">=</span>nvc++
+</code></pre></div>
+
+<p>Clone DL_PY2F into the source tree and compile:</p>
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>my_project/my_app
+$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/stfc/dl_py2f.git<span class="w"> </span>dl_py2f
+
+$<span class="w"> </span>cmake<span class="w"> </span>-S<span class="w"> </span>.<span class="w"> </span>-B<span class="w"> </span>build<span class="w"> </span>-DFROM_SOURCE:BOOL<span class="o">=</span>TRUE
+$<span class="w"> </span>cmake<span class="w"> </span>--build<span class="w"> </span>build
+</code></pre></div>
+
+<p>There are two recommended approaches for organising the CMake build.</p>
+<p><strong>Option A</strong> (recommended for large Fortran codebases): compile your existing Fortran code as one or more static libraries (<code>.a</code> archives) with <code>-fPIC</code> (required because they will be linked into a shared library), then compile only the thin interface layer (<code>interface.f90</code>) as a shared library (<code>.so</code>) and link the static archives into it. This keeps the build modular and avoids recompiling your entire codebase when only the interface changes:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span><span class="w"> </span><span class="s">3.16</span><span class="p">)</span>
+<span class="nb">project</span><span class="p">(</span><span class="s">My_Code</span><span class="w"> </span><span class="s">LANGUAGES</span><span class="w"> </span><span class="s">Fortran</span><span class="p">)</span>
+
+<span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_LIBRARY_OUTPUT_DIRECTORY</span><span class="w"> </span><span class="o">${</span><span class="nv">PROJECT_BINARY_DIR</span><span class="o">}</span><span class="s">/lib</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_Fortran_MODULE_DIRECTORY</span><span class="w"> </span><span class="o">${</span><span class="nv">PROJECT_BINARY_DIR</span><span class="o">}</span><span class="s">/modules</span><span class="p">)</span>
+
+<span class="c"># my thin interface layer</span>
+<span class="nb">add_library</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">SHARED</span><span class="w"> </span><span class="s">interface.f90</span><span class="p">)</span>
+
+<span class="c"># link my existing Fortran code as a static archive</span>
+<span class="nb">target_link_options</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">PRIVATE</span><span class="w"> </span><span class="s2">&quot;LINKER:--whole-archive&quot;</span><span class="p">)</span>
+<span class="nb">target_link_options</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">PRIVATE</span><span class="w"> </span><span class="o">${</span><span class="nv">YOUR_CODE_DIR</span><span class="o">}</span><span class="s">/libmy_code.a</span><span class="p">)</span>
+<span class="nb">target_link_options</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">PRIVATE</span><span class="w"> </span><span class="s2">&quot;LINKER:--no-whole-archive&quot;</span><span class="p">)</span>
+
+<span class="c"># compile DL_PY2F from source</span>
+<span class="nb">if</span><span class="p">(</span><span class="s">FROM_SOURCE</span><span class="p">)</span>
+<span class="w">    </span><span class="nb">add_subdirectory</span><span class="p">(</span><span class="o">${</span><span class="nv">CMAKE_CURRENT_LIST_DIR</span><span class="o">}</span><span class="s">/dl_py2f</span><span class="p">)</span>
+<span class="w">    </span><span class="nb">include_directories</span><span class="p">(</span><span class="o">${</span><span class="nv">CMAKE_CURRENT_LIST_DIR</span><span class="o">}</span><span class="s">/dl_py2f</span><span class="p">)</span>
+<span class="nb">endif</span><span class="p">()</span>
+
+<span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">PRIVATE</span><span class="w"> </span><span class="s">dl_py2f</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>Option B</strong> (simpler, suitable for smaller projects): compile all Fortran source files into a single shared library:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">cmake_minimum_required</span><span class="p">(</span><span class="s">VERSION</span><span class="w"> </span><span class="s">3.16</span><span class="p">)</span>
+<span class="nb">project</span><span class="p">(</span><span class="s">My_Code</span><span class="w"> </span><span class="s">LANGUAGES</span><span class="w"> </span><span class="s">Fortran</span><span class="p">)</span>
+
+<span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_LIBRARY_OUTPUT_DIRECTORY</span><span class="w"> </span><span class="o">${</span><span class="nv">PROJECT_BINARY_DIR</span><span class="o">}</span><span class="s">/lib</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span><span class="s">CMAKE_Fortran_MODULE_DIRECTORY</span><span class="w"> </span><span class="o">${</span><span class="nv">PROJECT_BINARY_DIR</span><span class="o">}</span><span class="s">/modules</span><span class="p">)</span>
+
+<span class="nb">add_library</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">SHARED</span><span class="w"> </span><span class="s">interface.f90</span>
+<span class="w">                          </span><span class="s">my_code/my_code.f90</span>
+<span class="w">                          </span><span class="s">my_code/my_module.f90</span><span class="p">)</span>
+
+<span class="nb">if</span><span class="p">(</span><span class="s">FROM_SOURCE</span><span class="p">)</span>
+<span class="w">    </span><span class="nb">add_subdirectory</span><span class="p">(</span><span class="o">${</span><span class="nv">CMAKE_CURRENT_LIST_DIR</span><span class="o">}</span><span class="s">/dl_py2f</span><span class="p">)</span>
+<span class="w">    </span><span class="nb">include_directories</span><span class="p">(</span><span class="o">${</span><span class="nv">CMAKE_CURRENT_LIST_DIR</span><span class="o">}</span><span class="s">/dl_py2f</span><span class="p">)</span>
+<span class="nb">endif</span><span class="p">()</span>
+
+<span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">PRIVATE</span><span class="w"> </span><span class="s">dl_py2f</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>Option C</strong> (when the existing Fortran code is only available as a shared library): if the existing codebase provides a <code>.so</code> rather than static archives, circular dependencies can arise when the interface layer and the existing library depend on each other's symbols (e.g., the interface calls into the existing <code>.so</code>, which in turn calls back into the interface's callback routines). One workaround is to compile the interface layer as a static library, embed it into a thin wrapper <code>.so</code> via <code>--whole-archive</code>, and link that wrapper against the existing <code>.so</code>. However, symbol overriding between the two shared libraries is not guaranteed by the linker. The preferred solutions are either to obtain static archives from the existing codebase, or to build everything as a single project.</p>
+<p>For complex projects, it is recommended to use a linker version script (e.g., <code>export.map</code>) to control which symbols are exported from the <code>.so</code> and prevent name clashes between libraries.</p>
+<h4 id="method-2-pypi-recommended">Method 2: PyPI (recommended)</h4>
+<p>Install into a Python virtual environment. This is the simplest approach, requiring only internet access and <code>pip</code>:</p>
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">source</span><span class="w"> </span>.venv/bin/activate
+$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>dl_py2f
+</code></pre></div>
+
+<p>With DL_PY2F installed via pip, CMake finds the library and module file under the virtual environment's <code>site-packages/dl_py2f/</code> directory. No <code>FROM_SOURCE</code> flag is needed.</p>
+<h4 id="method-3-debian-ppa">Method 3: Debian PPA</h4>
+<p>gfortran only, because Debian PPA builds with free toolchains and the precompiled <code>.mod</code> file shipped is in gfortran format:</p>
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>sudo<span class="w"> </span>add-apt-repository<span class="w"> </span>ppa:dl-py2f/ppa
+$<span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>dl-py2f
+</code></pre></div>
+
+<p>Note: the package name on Launchpad is <code>dl-py2f</code> (with a hyphen) because Debian PPA does not allow underscores. With DL_PY2F installed system-wide, your <code>CMakeLists.txt</code> does not need <code>FROM_SOURCE</code> or <code>add_subdirectory</code>; CMake will find the library and module file in the standard system paths.</p>
+<h4 id="launching">Launching</h4>
+<p>After building (regardless of which installation method was used), run the Python script with <code>PYTHONPATH</code> pointing to the project root. If DL_PY2F was installed via pip (Method 2), activate the virtual environment first:</p>
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>my_project
+$<span class="w"> </span><span class="nb">source</span><span class="w"> </span>.venv/bin/activate<span class="w">   </span><span class="c1"># if using a virtual environment</span>
+$<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">PYTHONPATH</span><span class="o">=</span><span class="nv">$PWD</span>
+$<span class="w"> </span>python3<span class="w"> </span>user_script.py
+</code></pre></div>
+
+<h3 id="memory-ownership-core-principle">Memory ownership (core principle)</h3>
+<p>Allocation and deallocation remain the responsibility of the side that created the memory. DL_PY2F never frees memory it did not allocate. A handle is valid only while the underlying allocation exists; beyond that, behaviour is undefined. Direction‑specific ownership rules are documented in <a href="#17-memory-ownership">section 1.7</a> and <a href="#22-data-model">section 2.2</a>.</p>
+<h2 id="part-1-python-to-fortran-interoperability">Part 1 — Python-to-Fortran interoperability</h2>
+<p>The application developer defines data in Python and passes it to Fortran through a minimal <code>bind(c)</code> interface, requiring minimal or no modifications to the original Fortran source. Callback functions (<a href="#13-callback-functions">section 1.3</a>) further enable the developer to inject Python routines, such as machine-learning models or custom analysis routines, into the Fortran execution flow at runtime.</p>
+<h3 id="11-getting-started">1.1 Getting started</h3>
+<p><strong>Python side</strong>: define a class inheriting from <code>ctypes.Structure</code> with a <code>_kwargs</code> dictionary. Each key in <code>_kwargs</code> becomes an entry that Fortran can retrieve by name. Scalars (<code>int</code>, <code>float</code>, <code>bool</code>, <code>str</code>) are passed by value; NumPy arrays are passed by reference (zero-copy when contiguous). Keys starting with <code>_</code> are skipped.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">ctypes</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">dl_py2f</span>
+
+<span class="k">class</span> <span class="nc">MyApp</span><span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">Structure</span><span class="p">):</span>
+    <span class="n">_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;natoms&#39;</span> <span class="p">:</span>  <span class="mi">0</span><span class="p">,</span>
+                <span class="s1">&#39;energy&#39;</span> <span class="p">:</span>  <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span> <span class="mi">1</span><span class="p">,</span>    <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+                <span class="s1">&#39;coords&#39;</span> <span class="p">:</span>  <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+              <span class="p">}</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">MyApp</span><span class="p">()</span>
+<span class="n">app</span><span class="o">.</span><span class="n">natoms</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">app</span><span class="o">.</span><span class="n">coords</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">],</span>
+                          <span class="p">[</span><span class="mf">4.0</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">],</span>
+                          <span class="p">[</span><span class="mf">7.0</span><span class="p">,</span> <span class="mf">8.0</span><span class="p">,</span> <span class="mf">9.0</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+</code></pre></div>
+
+<p>Load the compiled Fortran shared library, convert the object with <code>py2f()</code>, and call the Fortran entry point. Ensure the Python object and its NumPy arrays remain alive for the entire Fortran call because DL_PY2F does not extend their lifetime.</p>
+<div class="highlight"><pre><span></span><code><span class="n">libapp</span> <span class="o">=</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">CDLL</span><span class="p">(</span><span class="s1">&#39;/path/to/libexample.so&#39;</span><span class="p">)</span>
+<span class="n">handle</span> <span class="o">=</span> <span class="n">dl_py2f</span><span class="o">.</span><span class="n">py2f</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+<span class="n">ierror</span> <span class="o">=</span> <span class="n">libapp</span><span class="o">.</span><span class="n">interface_example</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>
+
+<span class="c1"># results are now available in app.energy, app.coords, etc.</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">energy</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>Fortran side</strong>: receive the handle as <code>type(PyType), intent(in)</code>, convert it to a <code>dictType</code> with <code>ptr2dict</code>, and use <code>get</code>/<code>set</code> to access entries by name:</p>
+<div class="highlight"><pre><span></span><code><span class="kt">integer</span><span class="p">(</span><span class="kt">c_int</span><span class="p">)</span><span class="w"> </span><span class="k">function </span><span class="n">interface_example</span><span class="p">(</span><span class="n">objPtr</span><span class="p">)</span><span class="w"> </span><span class="k">bind</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+
+<span class="w">    </span><span class="k">use </span><span class="nb">iso_c_binding</span>
+<span class="nb">    </span><span class="k">use </span><span class="n">DL_PY2F</span><span class="p">,</span><span class="w"> </span><span class="k">only</span><span class="p">:</span><span class="w"> </span><span class="n">PyType</span><span class="p">,</span><span class="w"> </span><span class="n">dictType</span><span class="p">,</span><span class="w"> </span><span class="n">ptr2dict</span>
+
+<span class="w">    </span><span class="k">type</span><span class="p">(</span><span class="n">PyType</span><span class="p">)</span><span class="w">            </span><span class="p">,</span><span class="w"> </span><span class="k">intent</span><span class="p">(</span><span class="n">in</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">objPtr</span>
+
+<span class="w">    </span><span class="k">type</span><span class="p">(</span><span class="n">dictType</span><span class="p">)</span><span class="w"> </span><span class="p">,</span><span class="w"> </span><span class="k">pointer</span><span class="w">             </span><span class="kd">::</span><span class="w"> </span><span class="n">PyObj</span>
+<span class="w">    </span><span class="kt">integer</span><span class="p">(</span><span class="kt">c_long</span><span class="p">)</span><span class="w">                      </span><span class="kd">::</span><span class="w"> </span><span class="n">natoms</span>
+<span class="w">    </span><span class="kt">real</span><span class="p">(</span><span class="nb">kind</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span><span class="w">   </span><span class="p">,</span><span class="w"> </span><span class="k">pointer</span><span class="w">             </span><span class="kd">::</span><span class="w"> </span><span class="n">energy</span><span class="p">(:),</span><span class="w"> </span><span class="n">coords</span><span class="p">(:,:)</span>
+
+<span class="w">    </span><span class="c">! convert handle to a dictionary</span>
+<span class="w">    </span><span class="k">allocate</span><span class="p">(</span><span class="n">PyObj</span><span class="p">,</span><span class="w"> </span><span class="n">source</span><span class="o">=</span><span class="n">ptr2dict</span><span class="p">(</span><span class="n">objPtr</span><span class="p">))</span>
+
+<span class="w">    </span><span class="c">! retrieve data by name</span>
+<span class="w">    </span><span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;natoms&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">natoms</span><span class="p">)</span>
+<span class="w">    </span><span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;energy&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">energy</span><span class="p">)</span><span class="w">        </span><span class="c">! zero-copy alias</span>
+<span class="w">    </span><span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;coords&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">coords</span><span class="p">)</span><span class="w">        </span><span class="c">! zero-copy alias</span>
+
+<span class="w">    </span><span class="c">! compute and write results in place</span>
+<span class="w">    </span><span class="k">call </span><span class="n">compute_energy</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span><span class="w"> </span><span class="n">energy</span><span class="p">)</span>
+<span class="w">    </span><span class="n">coords</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="n">coords</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">2.0</span>
+
+<span class="w">    </span><span class="c">! clean up: release metadata, nullify pointers (never deallocate aliased arrays)</span>
+<span class="w">    </span><span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">finalise</span><span class="p">()</span>
+<span class="w">    </span><span class="k">deallocate</span><span class="p">(</span><span class="n">PyObj</span><span class="p">)</span>
+<span class="w">    </span><span class="k">nullify</span><span class="p">(</span><span class="n">energy</span><span class="p">,</span><span class="w"> </span><span class="n">coords</span><span class="p">)</span>
+<span class="w">    </span><span class="n">interface_example</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+
+<span class="k">endfunction </span><span class="n">interface_example</span>
+</code></pre></div>
+
+<p>After the Fortran function returns, the Python side sees the updated values in <code>app.energy</code> and <code>app.coords</code> because the arrays were aliased (zero-copy). On the Fortran side, clean up with <code>finalise</code> + <code>deallocate</code> on the dictionary and <code>nullify</code> on the pointers. On the Python side, normal garbage collection applies.</p>
+<h4 id="accessing-python-data-from-existing-fortran-code">Accessing Python data from existing Fortran code</h4>
+<p>In practice, it is common to place the interface function inside a Fortran module and make <code>PyObj</code> a public module-level variable:</p>
+<div class="highlight"><pre><span></span><code><span class="k">module </span><span class="n">ExampleModule</span>
+
+<span class="w">    </span><span class="k">use </span><span class="n">DL_PY2F</span><span class="p">,</span><span class="w"> </span><span class="k">only</span><span class="p">:</span><span class="w"> </span><span class="n">dictType</span>
+
+<span class="w">    </span><span class="k">type</span><span class="p">(</span><span class="n">dictType</span><span class="p">),</span><span class="w"> </span><span class="k">pointer</span><span class="p">,</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">PyObj</span>
+
+<span class="w">    </span><span class="k">contains</span>
+
+<span class="k">    </span><span class="kt">integer</span><span class="p">(</span><span class="kt">c_int</span><span class="p">)</span><span class="w"> </span><span class="k">function </span><span class="n">interface_example</span><span class="p">(</span><span class="n">objPtr</span><span class="p">)</span><span class="w"> </span><span class="k">bind</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+<span class="w">        </span><span class="c">! function body</span>
+<span class="w">    </span><span class="k">endfunction </span><span class="n">interface_example</span>
+
+<span class="k">endmodule </span><span class="n">ExampleModule</span>
+</code></pre></div>
+
+<p>This allows helper routines in separate files (compiled into the same <code>.so</code>) to get and set Python data at any point during the Fortran execution, not only at the entry point or through callbacks:</p>
+<div class="highlight"><pre><span></span><code><span class="k">subroutine </span><span class="n">get_coords</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+
+<span class="w">    </span><span class="k">use </span><span class="n">ExampleModule</span><span class="p">,</span><span class="w"> </span><span class="k">only</span><span class="p">:</span><span class="w"> </span><span class="n">PyObj</span>
+
+<span class="w">    </span><span class="kt">real</span><span class="p">(</span><span class="nb">kind</span><span class="o">=</span><span class="mi">8</span><span class="p">),</span><span class="w"> </span><span class="k">pointer</span><span class="p">,</span><span class="w"> </span><span class="k">intent</span><span class="p">(</span><span class="n">out</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">coords</span><span class="p">(:,:)</span>
+
+<span class="w">    </span><span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;coords&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">coords</span><span class="p">)</span>
+
+<span class="k">endsubroutine </span><span class="n">get_coords</span>
+
+<span class="k">subroutine </span><span class="n">set_coords</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+
+<span class="w">    </span><span class="k">use </span><span class="n">ExampleModule</span><span class="p">,</span><span class="w"> </span><span class="k">only</span><span class="p">:</span><span class="w"> </span><span class="n">PyObj</span>
+
+<span class="w">    </span><span class="kt">real</span><span class="p">(</span><span class="nb">kind</span><span class="o">=</span><span class="mi">8</span><span class="p">),</span><span class="w">          </span><span class="k">intent</span><span class="p">(</span><span class="n">in</span><span class="p">)</span><span class="w">  </span><span class="kd">::</span><span class="w"> </span><span class="n">coords</span><span class="p">(:,:)</span>
+
+<span class="w">    </span><span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;coords&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">coords</span><span class="p">)</span>
+
+<span class="k">endsubroutine </span><span class="n">set_coords</span>
+</code></pre></div>
+
+<p>The existing Fortran codebase can then call these routines directly, requiring minimal or no modifications:</p>
+<div class="highlight"><pre><span></span><code><span class="k">call </span><span class="n">get_coords</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+<span class="k">call </span><span class="n">do_computation</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span><span class="w"> </span><span class="n">energy</span><span class="p">)</span>
+<span class="k">call </span><span class="n">set_coords</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+</code></pre></div>
+
+<p>This keeps DL_PY2F-specific code (<code>%get</code>, <code>%set</code>) confined to the helper routines. The original codebase has no dependency on DL_PY2F, can be compiled and tested independently, and remains unchanged if the interoperability layer is ever replaced.</p>
+<h3 id="12-workflow">1.2 Workflow</h3>
+<p>The Python side is the same regardless of which access mode is used on the Fortran side:</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">App</span><span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">Structure</span><span class="p">):</span>
+    <span class="n">_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;energy&#39;</span> <span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span> <span class="mi">1</span><span class="p">,</span>     <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+               <span class="s1">&#39;forces&#39;</span> <span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span><span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">)}</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">App</span><span class="p">()</span>
+
+<span class="n">handle</span> <span class="o">=</span> <span class="n">dl_py2f</span><span class="o">.</span><span class="n">py2f</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">byref</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ierror</span> <span class="o">=</span> <span class="n">libapp</span><span class="o">.</span><span class="n">interface_app</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>
+</code></pre></div>
+
+<p>The array sizes here are fixed. For resizable arrays backed by <code>_mega</code>, see <a href="#14-advanced-class-features">section 1.4</a>.</p>
+<p>On the Fortran side, you choose per array how to access the data:</p>
+<ul>
+<li><strong>Lazy (alias) mode</strong> — <code>PyObj%get('coords', twodimdbl)</code> yields a pointer into the NumPy buffer. Mutate it in place; never <code>deallocate</code> it, <code>nullify</code> the pointer instead.</li>
+<li><strong>Safe (copy then set) mode</strong> — <code>get(..., readonly=.true.)</code> copies into a Fortran‑allocated buffer. After use, push changes back with <code>PyObj%set('coords', buffer)</code> and then <code>deallocate</code> the buffer.</li>
+</ul>
+<p>On Fortran exit, call <code>PyObj%finalise()</code>, then <code>deallocate(PyObj)</code>, and <code>nullify</code> any remaining pointers. Never free Python‑owned arrays from Fortran.</p>
+<h4 id="mode-a-lazy-mode-alias-no-copies">Mode A: lazy mode (alias, no copies)</h4>
+<p>In this mode the Fortran pointers alias the Python buffers directly. Never <code>deallocate</code> them.</p>
+<div class="highlight"><pre><span></span><code><span class="kt">integer</span><span class="p">(</span><span class="kt">c_int</span><span class="p">)</span><span class="w"> </span><span class="k">function </span><span class="n">interface_app</span><span class="p">(</span><span class="n">objPtr</span><span class="p">)</span><span class="w"> </span><span class="k">bind</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+
+<span class="w">    </span><span class="k">use </span><span class="nb">iso_c_binding</span>
+<span class="nb">    </span><span class="k">use </span><span class="n">DL_PY2F</span><span class="p">,</span><span class="w"> </span><span class="k">only</span><span class="p">:</span><span class="w"> </span><span class="n">PyType</span><span class="p">,</span><span class="w"> </span><span class="n">dictType</span><span class="p">,</span><span class="w"> </span><span class="n">ptr2dict</span>
+
+<span class="w">    </span><span class="k">type</span><span class="p">(</span><span class="n">PyType</span><span class="p">),</span><span class="w"> </span><span class="k">intent</span><span class="p">(</span><span class="n">in</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">objPtr</span>
+<span class="w">    </span><span class="k">type</span><span class="p">(</span><span class="n">dictType</span><span class="p">),</span><span class="w"> </span><span class="k">pointer</span><span class="w">  </span><span class="kd">::</span><span class="w"> </span><span class="n">PyObj</span>
+<span class="w">    </span><span class="kt">real</span><span class="p">(</span><span class="nb">kind</span><span class="o">=</span><span class="mi">8</span><span class="p">),</span><span class="w"> </span><span class="k">pointer</span><span class="w">    </span><span class="kd">::</span><span class="w"> </span><span class="n">energy</span><span class="p">(:),</span><span class="w"> </span><span class="n">forces</span><span class="p">(:,:)</span>
+
+<span class="w">    </span><span class="k">allocate</span><span class="p">(</span><span class="n">PyObj</span><span class="p">,</span><span class="w"> </span><span class="n">source</span><span class="o">=</span><span class="n">ptr2dict</span><span class="p">(</span><span class="n">objPtr</span><span class="p">))</span>
+
+<span class="w">    </span><span class="c">! alias into NumPy arrays (zero-copy)</span>
+<span class="w">    </span><span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;energy&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">energy</span><span class="p">)</span>
+<span class="w">    </span><span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;forces&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">forces</span><span class="p">)</span>
+
+<span class="w">    </span><span class="c">! modify in place; changes are reflected on the Python side immediately</span>
+<span class="w">    </span><span class="k">call </span><span class="n">compute_energy</span><span class="p">(</span><span class="n">forces</span><span class="p">,</span><span class="w"> </span><span class="n">energy</span><span class="p">)</span>
+<span class="w">    </span><span class="n">forces</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="n">forces</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">2.0</span>
+
+<span class="w">    </span><span class="c">! teardown: finalise metadata, never deallocate aliased data</span>
+<span class="w">    </span><span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">finalise</span><span class="p">()</span>
+<span class="w">    </span><span class="k">deallocate</span><span class="p">(</span><span class="n">PyObj</span><span class="p">)</span>
+<span class="w">    </span><span class="k">nullify</span><span class="p">(</span><span class="n">energy</span><span class="p">,</span><span class="w"> </span><span class="n">forces</span><span class="p">)</span>
+
+<span class="k">endfunction </span><span class="n">interface_app</span>
+</code></pre></div>
+
+<p><code>energy</code> and <code>forces</code> point directly into the NumPy buffers. No copies are made, and modifications are reflected on the Python side immediately. If Fortran <code>deallocate</code>s an aliased pointer, it corrupts Python memory; always use <code>nullify</code> instead.</p>
+<h4 id="mode-b-safe-mode-explicit-copy-and-set">Mode B: safe mode (explicit copy and set)</h4>
+<p>In this mode the developer allocates separate Fortran buffers and explicitly controls when data is read from and written back to Python.</p>
+<div class="highlight"><pre><span></span><code><span class="kt">integer</span><span class="p">(</span><span class="kt">c_int</span><span class="p">)</span><span class="w"> </span><span class="k">function </span><span class="n">interface_app</span><span class="p">(</span><span class="n">objPtr</span><span class="p">)</span><span class="w"> </span><span class="k">bind</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+
+<span class="w">    </span><span class="k">use </span><span class="nb">iso_c_binding</span>
+<span class="nb">    </span><span class="k">use </span><span class="n">DL_PY2F</span><span class="p">,</span><span class="w"> </span><span class="k">only</span><span class="p">:</span><span class="w"> </span><span class="n">PyType</span><span class="p">,</span><span class="w"> </span><span class="n">dictType</span><span class="p">,</span><span class="w"> </span><span class="n">ptr2dict</span>
+
+<span class="w">    </span><span class="k">type</span><span class="p">(</span><span class="n">PyType</span><span class="p">),</span><span class="w"> </span><span class="k">intent</span><span class="p">(</span><span class="n">in</span><span class="p">)</span><span class="w">  </span><span class="kd">::</span><span class="w"> </span><span class="n">objPtr</span>
+<span class="w">    </span><span class="k">type</span><span class="p">(</span><span class="n">dictType</span><span class="p">),</span><span class="w"> </span><span class="k">pointer</span><span class="w">   </span><span class="kd">::</span><span class="w"> </span><span class="n">PyObj</span>
+<span class="w">    </span><span class="kt">real</span><span class="p">(</span><span class="nb">kind</span><span class="o">=</span><span class="mi">8</span><span class="p">),</span><span class="w"> </span><span class="k">allocatable</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">energy</span><span class="p">(:),</span><span class="w"> </span><span class="n">forces</span><span class="p">(:,:)</span>
+<span class="w">    </span><span class="kt">integer</span><span class="w">                   </span><span class="kd">::</span><span class="w"> </span><span class="n">shp</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="w">    </span><span class="k">allocate</span><span class="p">(</span><span class="n">PyObj</span><span class="p">,</span><span class="w"> </span><span class="n">source</span><span class="o">=</span><span class="n">ptr2dict</span><span class="p">(</span><span class="n">objPtr</span><span class="p">))</span>
+
+<span class="w">    </span><span class="c">! query shape and allocate Fortran-owned buffers</span>
+<span class="w">    </span><span class="n">shp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">PyObj</span><span class="p">%</span><span class="n">enquireShape</span><span class="p">(</span><span class="s1">&#39;forces&#39;</span><span class="p">)</span>
+<span class="w">    </span><span class="k">allocate</span><span class="p">(</span><span class="n">forces</span><span class="p">(</span><span class="n">shp</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span><span class="n">shp</span><span class="p">(</span><span class="mi">2</span><span class="p">)),</span><span class="w"> </span><span class="n">energy</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+
+<span class="w">    </span><span class="c">! copy from Python into local buffers (isolated from Python)</span>
+<span class="w">    </span><span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;forces&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">forces</span><span class="p">,</span><span class="w"> </span><span class="n">readonly</span><span class="o">=</span><span class="p">.</span><span class="n">true</span><span class="p">.)</span>
+<span class="w">    </span><span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;energy&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">energy</span><span class="p">,</span><span class="w"> </span><span class="n">readonly</span><span class="o">=</span><span class="p">.</span><span class="n">true</span><span class="p">.)</span>
+
+<span class="w">    </span><span class="c">! modify the local copy</span>
+<span class="w">    </span><span class="k">call </span><span class="n">compute_energy</span><span class="p">(</span><span class="n">forces</span><span class="p">,</span><span class="w"> </span><span class="n">energy</span><span class="p">)</span>
+<span class="w">    </span><span class="n">forces</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="n">forces</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">2.0</span>
+
+<span class="w">    </span><span class="c">! push modified copy back to Python</span>
+<span class="w">    </span><span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;forces&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">forces</span><span class="p">)</span>
+<span class="w">    </span><span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;energy&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">energy</span><span class="p">)</span>
+
+<span class="w">    </span><span class="c">! teardown: finalise metadata, deallocate Fortran buffers</span>
+<span class="w">    </span><span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">finalise</span><span class="p">()</span>
+<span class="w">    </span><span class="k">deallocate</span><span class="p">(</span><span class="n">PyObj</span><span class="p">)</span>
+<span class="w">    </span><span class="k">deallocate</span><span class="p">(</span><span class="n">forces</span><span class="p">,</span><span class="w"> </span><span class="n">energy</span><span class="p">)</span>
+
+<span class="k">endfunction </span><span class="n">interface_app</span>
+</code></pre></div>
+
+<p><code>readonly=.true.</code> forces a copy from Python. Changes reach Python only if you call <code>%set</code> afterwards. This mode is safer against accidental corruption, at the cost of the extra copy.</p>
+<h3 id="13-callback-functions">1.3 Callback functions</h3>
+<p>Callback functions allow Fortran to invoke Python code at runtime. This makes it possible to inject Python functionality, for example a machine-learning model or a custom analysis routine, into the Fortran execution flow with minimal changes to the existing codebase. On the Python side, a callable is placed in <code>_kwargs</code> and converted to a C function pointer by <code>py2f()</code>. On the Fortran side, the pointer is retrieved with <code>dictType%get</code> and bound to a procedure pointer using <code>c_f_procpointer</code>.</p>
+<h4 id="python-side">Python side</h4>
+<p>Place the callable in <code>_kwargs</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="n">_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;callback&#39;</span> <span class="p">:</span> <span class="n">callback</span><span class="p">,</span>
+            <span class="o">...</span>
+          <span class="p">}</span>
+</code></pre></div>
+
+<p><code>py2f()</code> wraps the callable as a C function pointer via <code>ctypes.CFUNCTYPE</code>. The return type defaults to <code>c_long</code> (<code>INTEGER(8)</code>); if the callable has type hints, <code>py2f()</code> inspects them to select the appropriate return type (e.g., <code>float</code> maps to <code>c_double</code>).</p>
+<h4 id="accessing-the-owning-object">Accessing the owning object</h4>
+<p>To allow the callback to access the owning object's data when invoked from Fortran, attach the object to the function as an attribute:</p>
+<div class="highlight"><pre><span></span><code><span class="n">callback</span><span class="o">.</span><span class="n">obj</span> <span class="o">=</span> <span class="bp">self</span>   <span class="c1"># &#39;obj&#39; is an arbitrary attribute name</span>
+</code></pre></div>
+
+<p>Inside the callback body, <code>callback.obj</code> provides access to all attributes of the owning instance:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">callback</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="n">callback</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">energy</span><span class="p">[:]</span> <span class="o">*=</span> <span class="mf">1.1</span>
+    <span class="n">callback</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">forces</span><span class="p">[:]</span> <span class="o">*=</span> <span class="mf">1.0</span>
+    <span class="n">callback</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">doSomething</span><span class="p">()</span>
+    <span class="k">return</span> <span class="mi">0</span>
+</code></pre></div>
+
+<h4 id="fortran-side">Fortran side</h4>
+<p>Declare an abstract interface matching the callback's C signature, then retrieve and bind:</p>
+<div class="highlight"><pre><span></span><code><span class="c">! declare the expected C signature</span>
+<span class="k">abstract interface</span>
+<span class="k">    </span><span class="kt">integer</span><span class="p">(</span><span class="kt">c_long</span><span class="p">)</span><span class="w"> </span><span class="k">function </span><span class="n">callback</span><span class="p">()</span><span class="w"> </span><span class="k">bind</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+<span class="w">        </span><span class="k">use </span><span class="nb">iso_c_binding</span>
+<span class="nb">    </span><span class="k">endfunction </span><span class="n">callback</span>
+<span class="k">endinterface</span>
+<span class="k">procedure</span><span class="p">(</span><span class="n">callback</span><span class="p">),</span><span class="w"> </span><span class="k">pointer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">PyCallback</span>
+<span class="k">type</span><span class="p">(</span><span class="kt">c_funptr</span><span class="p">)</span><span class="w">               </span><span class="kd">::</span><span class="w"> </span><span class="n">pyfuncPtr</span>
+
+<span class="c">! retrieve and bind the Python callback</span>
+<span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;callback&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">pyfuncPtr</span><span class="p">)</span>
+<span class="k">call </span><span class="nb">c_f_procpointer</span><span class="p">(</span><span class="n">pyfuncPtr</span><span class="p">,</span><span class="w"> </span><span class="n">PyCallback</span><span class="p">)</span>
+
+<span class="c">! invoke it</span>
+<span class="n">ierror</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">PyCallback</span><span class="p">()</span>
+</code></pre></div>
+
+<p>The <code>getCFuncPtr</code> specific procedure of <code>dictType%get</code> resolves the <code>c_funptr</code> target. See <a href="#15-api-reference">section 1.5</a> for the full generic getter table.</p>
+<h4 id="interaction-with-lazy-mode">Interaction with lazy mode</h4>
+<p>When arrays are retrieved in lazy (alias) mode before the callback is invoked, mutations made by the Python callback are immediately visible in the Fortran pointers:</p>
+<div class="highlight"><pre><span></span><code><span class="c">! alias into the Python buffers (zero-copy)</span>
+<span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;energy&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">energy</span><span class="p">)</span>
+<span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;forces&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">forces</span><span class="p">)</span>
+
+<span class="c">! Python mutates energy/forces in place</span>
+<span class="n">ierror</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">PyCallback</span><span class="p">()</span>
+
+<span class="c">! energy and forces now reflect the Python-side changes</span>
+<span class="k">call </span><span class="n">compute_energy</span><span class="p">(</span><span class="n">forces</span><span class="p">,</span><span class="w"> </span><span class="n">energy</span><span class="p">)</span>
+</code></pre></div>
+
+<p>In safe mode (<code>readonly=.true.</code>), the Fortran copy is isolated from the callback's changes. To pick up values modified by the callback, call <code>%get</code> again after the callback returns. See <a href="#12-workflow">section 1.2</a> Mode B for an example.</p>
+<h4 id="lifetime-and-error-handling">Lifetime and error handling</h4>
+<ul>
+<li>Keep the Python callable and its owning object alive for as long as the Fortran side may invoke the callback. <code>py2f()</code> does not extend lifetimes.</li>
+<li>If a Python exception is raised inside the callback, catch it within the callback itself. An uncaught exception cannot propagate back through Fortran and will crash the program.</li>
+</ul>
+<h3 id="14-advanced-class-features">1.4 Advanced class features</h3>
+<p><a href="#11-getting-started">Section 1.1</a> shows only <code>_kwargs</code>. For larger applications, especially those with resizable arrays, structured data, or class hierarchies, DL_PY2F provides additional class attributes that automate initialisation and manage a columnar backing store.</p>
+<h4 id="class-attributes-reference">Class attributes reference</h4>
+<p><strong><code>_kwargs</code></strong> (required, <code>dict</code>).
+A dictionary mapping attribute names to their default values and data types. The default value determines the type that <code>py2f()</code> uses when converting the entry for Fortran, so the actual value assigned at runtime should match the default's type. Every entry becomes a field visible to Fortran after <code>py2f()</code> processes the object. Keys beginning with <code>_</code> are skipped. See <a href="#16-data-model">section 1.6</a> for the full list of supported types.</p>
+<p><strong><code>_fields</code></strong> (optional, sequence, namely <code>tuple</code> or <code>list</code>, of <code>str</code>).
+A tuple or list of attribute names that are backed by a single contiguous <code>RecArray</code> (<code>_mega</code>). Every field listed here must use 8‑byte‑aligned dtypes (<code>float64</code>, <code>int64</code>, <code>S8</code>, or a structured dtype whose sub‑fields are themselves 8‑byte‑aligned) so the record layout stays stable across C and Fortran. Structured arrays (see <a href="#structured-arrays-in-_kwargs-and-_fields">below</a>) can be included in <code>_fields</code>. Arrays in <code>_kwargs</code> that are <em>not</em> listed in <code>_fields</code> remain independent, they are still passed to Fortran but are not part of <code>_mega</code> and can have any shape.</p>
+<p><strong><code>_mega</code></strong> (auto‑created, <code>RecArray</code>).
+A <code>RecArray</code> (a <code>numpy.recarray</code> subclass from <code>dl_py2f.utils.nputils</code>) that holds the columnar data for all entries in <code>_fields</code>. It is a container array where all fields share the same first dimension, which makes it convenient for particle-based simulations and similar applications where many arrays (coordinates, charges, tags, etc.) must be resized together. Resizing <code>_mega</code> with <code>expand()</code> resizes all fields at once (e.g., <code>self._mega.expand(100)</code>). It is created automatically by the <code>@dl_py2f.utils.objutils.init()</code> decorator (see <a href="#the-objutilsinit-decorator">below</a>). Do not create <code>_mega</code> manually.</p>
+<p><strong><code>_priorities</code></strong> (optional, sequence, namely <code>tuple</code> or <code>list</code>, of <code>str</code>).
+Controls the order in which <code>_kwargs</code> attributes are initialised when they depend on one another. Attributes listed earlier are initialised first. For example, if setting <code>coords</code> depends on <code>natoms</code> having been set, list <code>natoms</code> before <code>coords</code>.</p>
+<p><strong><code>_init</code></strong> (optional, sequence, namely <code>tuple</code> or <code>list</code>, of <code>str</code>).
+Used by the <code>@objutils.init()</code> decorator to determine which class attributes to process during initialisation (not used by <code>py2f()</code>). Each entry can be either a <code>dict</code> (e.g., <code>_kwargs</code>, <code>_internals</code>), whose key-value pairs are initialised as instance attributes, or a sequence (e.g., <code>_fields</code>), which is flattened and stored as an instance attribute. Multiple types can be mixed in the same <code>_init</code> tuple. For example:</p>
+<div class="highlight"><pre><span></span><code><span class="n">_init</span> <span class="o">=</span> <span class="s1">&#39;_kwargs&#39;</span><span class="p">,</span> <span class="s1">&#39;_internals&#39;</span><span class="p">,</span> <span class="s1">&#39;_fields&#39;</span>
+</code></pre></div>
+
+<p>This initialises all entries from <code>_kwargs</code> and <code>_internals</code> as instance attributes, and flattens <code>_fields</code> into a single sequence on the instance. The ordering within each dict is controlled by <code>_priorities</code>.</p>
+<p><strong><code>_inherit</code></strong> (optional, sequence, namely <code>tuple</code> or <code>list</code>, of <code>str</code>).
+Names class attributes that should be merged from parent classes. The <code>@objutils.init()</code> decorator concatenates sequences (tuples or lists) and merges dictionaries from the parent chain automatically. This is how a subclass can extend <code>_fields</code> or <code>_priorities</code> without repeating the parent's entries. For example:</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">Base</span><span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">Structure</span><span class="p">):</span>
+    <span class="n">_fields</span>  <span class="o">=</span> <span class="s1">&#39;coords&#39;</span><span class="p">,</span> <span class="s1">&#39;charges&#39;</span>
+    <span class="n">_inherit</span> <span class="o">=</span> <span class="s1">&#39;_fields&#39;</span><span class="p">,</span>
+
+<span class="k">class</span> <span class="nc">Child</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="n">_fields</span> <span class="o">=</span> <span class="s1">&#39;velocities&#39;</span><span class="p">,</span>    <span class="c1"># only the new field</span>
+<span class="c1"># after @objutils.init(), Child instance has</span>
+<span class="c1"># _fields = (&#39;coords&#39;, &#39;charges&#39;, &#39;velocities&#39;)</span>
+</code></pre></div>
+
+<p><strong><code>synons</code></strong> (optional, <code>dict</code>).
+<code>py2f()</code> checks <code>obj.synons</code> and, for each matching key, uses the mapped name on the Fortran side instead of the original key. Multiple Python names can map to the same Fortran name, which lets the application developer create convenient synonyms for end users of the application. For example:</p>
+<div class="highlight"><pre><span></span><code><span class="n">synons</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;natoms&#39;</span><span class="p">:</span> <span class="s1">&#39;npts&#39;</span><span class="p">,</span> <span class="s1">&#39;number_of_atoms&#39;</span><span class="p">:</span> <span class="s1">&#39;npts&#39;</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="s1">&#39;xyz&#39;</span><span class="p">}</span>
+</code></pre></div>
+
+<p>Here both <code>natoms</code> and <code>number_of_atoms</code> on the Python side map to <code>npts</code> on the Fortran side, so end users can use whichever name is more natural in their context. <code>coords</code> maps to <code>xyz</code>. If <code>synons</code> is not defined, <code>py2f()</code> uses the original <code>_kwargs</code> key names. Note: <code>synons</code> will be renamed to <code>_synons</code> in a future version for consistency with other class attributes.</p>
+<p><strong><code>_internals</code></strong> (optional, <code>dict</code>).
+Attributes that live only on the Python side. When <code>_internals</code> is listed in <code>_init</code>, the <code>@objutils.init()</code> decorator initialises its entries as member attributes of the instance, just like <code>_kwargs</code> entries. However, because <code>py2f()</code> reads only <code>_kwargs</code>, anything in <code>_internals</code> is invisible to Fortran.</p>
+<h4 id="the-objutilsinit-decorator">The <code>@objutils.init()</code> decorator</h4>
+<p>Apply <code>@objutils.init()</code> (from <code>dl_py2f.utils.objutils</code>) to the class <code>__init__</code> method. It runs three steps before the decorated body executes:</p>
+<ol>
+<li><strong>Inherit</strong>: merges sequence and dict attributes from parent classes listed in <code>_inherit</code>.</li>
+<li><strong>Initialise</strong>: processes each dict listed in <code>_init</code>, respecting <code>_priorities</code> ordering. If a key has a property setter, the decorator delegates to it.</li>
+<li><strong>Run</strong>: executes the original <code>__init__</code> body.</li>
+</ol>
+<h4 id="structured-arrays-in-_kwargs-and-_fields">Structured arrays in <code>_kwargs</code> and <code>_fields</code></h4>
+<p>A structured array (NumPy <code>recarray</code> or void‑dtype array) can be placed in <code>_kwargs</code> and optionally in <code>_fields</code>. When <code>py2f()</code> encounters one, it unpacks each named sub‑field into a separate Fortran array, each retrievable by name via <code>dictType%get</code>. For example, a Z‑matrix with sub‑fields <code>j</code>, <code>bond</code>, <code>k</code>, <code>angle</code>, <code>l</code>, <code>dihedral</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">zeros</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">int64</span><span class="p">,</span> <span class="n">float64</span>
+
+<span class="n">_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;zmatrix&#39;</span> <span class="p">:</span> <span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">([(</span><span class="s1">&#39;j&#39;</span><span class="p">,</span>        <span class="n">int64</span><span class="p">),</span>
+                                                       <span class="p">(</span><span class="s1">&#39;bond&#39;</span><span class="p">,</span>     <span class="n">float64</span><span class="p">),</span>
+                                                       <span class="p">(</span><span class="s1">&#39;k&#39;</span><span class="p">,</span>        <span class="n">int64</span><span class="p">),</span>
+                                                       <span class="p">(</span><span class="s1">&#39;angle&#39;</span><span class="p">,</span>    <span class="n">float64</span><span class="p">),</span>
+                                                       <span class="p">(</span><span class="s1">&#39;l&#39;</span><span class="p">,</span>        <span class="n">int64</span><span class="p">),</span>
+                                                       <span class="p">(</span><span class="s1">&#39;dihedral&#39;</span><span class="p">,</span> <span class="n">float64</span><span class="p">)])),</span>
+          <span class="p">}</span>
+<span class="n">_fields</span> <span class="o">=</span> <span class="s1">&#39;coords&#39;</span><span class="p">,</span> <span class="s1">&#39;tags&#39;</span><span class="p">,</span> <span class="s1">&#39;zmatrix&#39;</span>   <span class="c1"># zmatrix is part of _mega</span>
+</code></pre></div>
+
+<p>On the Python side, populate sub‑fields with dictionary‑style or attribute access:</p>
+<div class="highlight"><pre><span></span><code><span class="n">app</span><span class="o">.</span><span class="n">zmatrix</span><span class="p">[</span><span class="s1">&#39;bond&#39;</span><span class="p">]</span>     <span class="o">=</span> <span class="mf">1.5</span>    <span class="c1"># or app.zmatrix.bond = 1.5</span>
+<span class="n">app</span><span class="o">.</span><span class="n">zmatrix</span><span class="p">[</span><span class="s1">&#39;angle&#39;</span><span class="p">]</span>    <span class="o">=</span> <span class="mf">109.5</span>  <span class="c1"># or app.zmatrix.angle = 109.5</span>
+<span class="n">app</span><span class="o">.</span><span class="n">zmatrix</span><span class="p">[</span><span class="s1">&#39;dihedral&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">180.0</span>  <span class="c1"># or app.zmatrix.dihedral = 180.0</span>
+</code></pre></div>
+
+<p>On the Fortran side, each sub‑field is a separate 1D array:</p>
+<div class="highlight"><pre><span></span><code><span class="kt">real</span><span class="p">(</span><span class="nb">kind</span><span class="o">=</span><span class="mi">8</span><span class="p">),</span><span class="w"> </span><span class="k">pointer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">bond</span><span class="p">(:),</span><span class="w"> </span><span class="n">angle</span><span class="p">(:),</span><span class="w"> </span><span class="n">dihedral</span><span class="p">(:)</span>
+<span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;bond&#39;</span><span class="p">,</span><span class="w">     </span><span class="n">bond</span><span class="p">)</span>
+<span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;angle&#39;</span><span class="p">,</span><span class="w">    </span><span class="n">angle</span><span class="p">)</span>
+<span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dihedral&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">dihedral</span><span class="p">)</span>
+</code></pre></div>
+
+<h4 id="nested-objects">Nested objects</h4>
+<p>When a <code>_kwargs</code> entry is an object that itself has a <code>_kwargs</code> attribute, <code>py2f()</code> recursively converts it. This allows unlimited nesting depth. On the Fortran side, retrieve the nested handle with <code>dictType%get</code> into a <code>type(PyType)</code> pointer, then convert it to its own <code>dictType</code> with <code>ptr2dict</code>.</p>
+<p>Python side:</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">GrandChild</span><span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">Structure</span><span class="p">):</span>
+    <span class="n">_kwargs</span> <span class="o">=</span> <span class="p">{</span> <span class="s1">&#39;natoms&#39;</span> <span class="p">:</span> <span class="mi">0</span> <span class="p">}</span>
+
+<span class="k">class</span> <span class="nc">Child</span><span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">Structure</span><span class="p">):</span>
+    <span class="n">_kwargs</span> <span class="o">=</span> <span class="p">{</span> <span class="s1">&#39;grandchild&#39;</span> <span class="p">:</span> <span class="n">GrandChild</span><span class="p">()</span> <span class="p">}</span>
+
+<span class="k">class</span> <span class="nc">Parent</span><span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">Structure</span><span class="p">):</span>
+    <span class="n">_kwargs</span> <span class="o">=</span> <span class="p">{</span> <span class="s1">&#39;child&#39;</span> <span class="p">:</span> <span class="n">Child</span><span class="p">()</span> <span class="p">}</span>
+
+<span class="n">parent</span> <span class="o">=</span> <span class="n">Parent</span><span class="p">()</span>
+<span class="n">parent</span><span class="o">.</span><span class="n">child</span><span class="o">.</span><span class="n">grandchild</span><span class="o">.</span><span class="n">natoms</span> <span class="o">=</span> <span class="mi">42</span>
+<span class="n">handle</span> <span class="o">=</span> <span class="n">dl_py2f</span><span class="o">.</span><span class="n">py2f</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+</code></pre></div>
+
+<p>Fortran side:</p>
+<div class="highlight"><pre><span></span><code><span class="k">type</span><span class="p">(</span><span class="n">dictType</span><span class="p">),</span><span class="w"> </span><span class="k">pointer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">PyObj</span><span class="p">,</span><span class="w"> </span><span class="n">ChildObj</span><span class="p">,</span><span class="w"> </span><span class="n">GrandChildObj</span>
+<span class="k">type</span><span class="p">(</span><span class="n">PyType</span><span class="p">),</span><span class="w">   </span><span class="k">pointer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">childPtr</span><span class="p">,</span><span class="w"> </span><span class="n">grandchildPtr</span>
+
+<span class="k">allocate</span><span class="p">(</span><span class="n">PyObj</span><span class="p">,</span><span class="w"> </span><span class="n">source</span><span class="o">=</span><span class="n">ptr2dict</span><span class="p">(</span><span class="n">objPtr</span><span class="p">))</span>
+
+<span class="c">! retrieve the nested child handle</span>
+<span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;child&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">childPtr</span><span class="p">)</span>
+<span class="k">allocate</span><span class="p">(</span><span class="n">ChildObj</span><span class="p">,</span><span class="w"> </span><span class="n">source</span><span class="o">=</span><span class="n">ptr2dict</span><span class="p">(</span><span class="n">childPtr</span><span class="p">))</span>
+
+<span class="c">! go one level deeper</span>
+<span class="k">call </span><span class="n">ChildObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;grandchild&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">grandchildPtr</span><span class="p">)</span>
+<span class="k">allocate</span><span class="p">(</span><span class="n">GrandChildObj</span><span class="p">,</span><span class="w"> </span><span class="n">source</span><span class="o">=</span><span class="n">ptr2dict</span><span class="p">(</span><span class="n">grandchildPtr</span><span class="p">))</span>
+
+<span class="k">call </span><span class="n">GrandChildObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;natoms&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">natoms</span><span class="p">)</span><span class="w">   </span><span class="c">! natoms = 42</span>
+
+<span class="c">! clean up each level</span>
+<span class="k">call </span><span class="n">GrandChildObj</span><span class="p">%</span><span class="n">finalise</span><span class="p">();</span><span class="w"> </span><span class="k">deallocate</span><span class="p">(</span><span class="n">GrandChildObj</span><span class="p">)</span>
+<span class="k">call </span><span class="n">ChildObj</span><span class="p">%</span><span class="n">finalise</span><span class="p">();</span><span class="w">      </span><span class="k">deallocate</span><span class="p">(</span><span class="n">ChildObj</span><span class="p">)</span>
+<span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">finalise</span><span class="p">();</span><span class="w">         </span><span class="k">deallocate</span><span class="p">(</span><span class="n">PyObj</span><span class="p">)</span>
+</code></pre></div>
+
+<p>Any object without a <code>_kwargs</code> attribute is silently skipped by <code>py2f()</code>.</p>
+<h4 id="scalars-and-mutability">Scalars and mutability</h4>
+<p>Python scalars (<code>int</code>, <code>float</code>, <code>bool</code>) in <code>_kwargs</code> are immutable objects. Once <code>py2f()</code> takes a snapshot, changing the Python attribute does not update the Fortran side, and Fortran cannot write back to a scalar either. There is currently no mechanism to make a true scalar mutable across the Python-Fortran boundary.</p>
+<p>The practical workaround is to use a <strong>one-element array</strong> instead of a scalar for any value that Fortran needs to modify:</p>
+<div class="highlight"><pre><span></span><code><span class="n">_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;energy&#39;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="c1"># mutable: one-element array</span>
+            <span class="s1">&#39;scale&#39;</span> <span class="p">:</span> <span class="mf">1.23456</span><span class="p">,</span>                             <span class="c1"># immutable: true scalar</span>
+          <span class="p">}</span>
+</code></pre></div>
+
+<p>On the Fortran side, <code>energy</code> is a 1D array of length 1 and can be read and written like any other array. <code>scale</code> is a read-only snapshot.</p>
+<h4 id="the-size-setter-and-_mega-resizing">The <code>size</code> setter and <code>_mega</code> resizing</h4>
+<p>A common pattern is a <code>size</code> (or <code>natoms</code>) property that controls <code>_mega.shape[0]</code>, the number of rows shared by all fields in <code>_mega</code>, so that all fields (coordinates, tags, charges, etc.) are resized together:</p>
+<div class="highlight"><pre><span></span><code><span class="nd">@property</span>
+<span class="k">def</span> <span class="nf">size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mega</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="nd">@size</span><span class="o">.</span><span class="n">setter</span>
+<span class="k">def</span> <span class="nf">size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mega</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">dt</span> <span class="o">=</span> <span class="n">dl_py2f</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">nputils</span><span class="o">.</span><span class="n">getDTypeFromObj</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>  <span class="c1"># see section 3.5</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mega</span> <span class="o">=</span> <span class="n">dl_py2f</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">nputils</span><span class="o">.</span><span class="n">RecArray</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">val</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dt</span><span class="p">)</span>
+</code></pre></div>
+
+<p>The following example brings together the features described above. Note that <code>c</code> is an independent array not listed in <code>_fields</code>, it is passed to Fortran but is not part of <code>_mega</code> and can have any shape:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">ctypes</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">from</span> <span class="nn">dl_py2f</span>               <span class="kn">import</span> <span class="n">py2f</span>
+<span class="kn">from</span> <span class="nn">dl_py2f.utils</span>         <span class="kn">import</span> <span class="n">objutils</span>
+<span class="kn">from</span> <span class="nn">dl_py2f.utils.nputils</span> <span class="kn">import</span> <span class="n">RecArray</span>
+
+<span class="k">def</span> <span class="nf">callback</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="n">callback</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">energy</span><span class="p">[:]</span> <span class="o">*=</span> <span class="mf">1.1</span>
+    <span class="n">callback</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">forces</span><span class="p">[:]</span> <span class="o">*=</span> <span class="mf">1.0</span>
+    <span class="k">return</span> <span class="mi">0</span>
+
+<span class="k">class</span> <span class="nc">MyApp</span><span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">Structure</span><span class="p">):</span>
+    <span class="n">_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;natoms&#39;</span>  <span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="s1">&#39;energy&#39;</span>  <span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span> <span class="mi">1</span><span class="p">,</span>    <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+                <span class="s1">&#39;forces&#39;</span>  <span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+                <span class="s1">&#39;coords&#39;</span>  <span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+                <span class="s1">&#39;tags&#39;</span>    <span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span> <span class="mi">1</span><span class="p">,</span>    <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span>
+                <span class="s1">&#39;callback&#39;</span><span class="p">:</span> <span class="n">callback</span><span class="p">,</span>
+                <span class="s1">&#39;c&#39;</span>       <span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span> <span class="mi">5</span><span class="p">,</span>    <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span>   <span class="c1"># independent from _mega</span>
+                <span class="s1">&#39;zmatrix&#39;</span> <span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span> <span class="mi">1</span><span class="p">,</span>    <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">dtype</span><span class="p">([</span>
+                            <span class="p">(</span><span class="s1">&#39;j&#39;</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;bond&#39;</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+                            <span class="p">(</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;angle&#39;</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+                            <span class="p">(</span><span class="s1">&#39;l&#39;</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;dihedral&#39;</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">)])),</span>
+              <span class="p">}</span>
+
+    <span class="n">_fields</span>     <span class="o">=</span> <span class="s1">&#39;energy&#39;</span><span class="p">,</span> <span class="s1">&#39;forces&#39;</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">,</span> <span class="s1">&#39;tags&#39;</span><span class="p">,</span> <span class="s1">&#39;zmatrix&#39;</span>   <span class="c1"># &#39;c&#39; is NOT here</span>
+    <span class="n">_priorities</span> <span class="o">=</span> <span class="s1">&#39;coords&#39;</span><span class="p">,</span> <span class="s1">&#39;tags&#39;</span>
+    <span class="n">_init</span>       <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;_kwargs&#39;</span><span class="p">,)</span>
+    <span class="n">_inherit</span>    <span class="o">=</span> <span class="p">()</span>
+    <span class="n">_internals</span>  <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">synons</span>      <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="nd">@objutils</span><span class="o">.</span><span class="n">init</span><span class="p">()</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">callback</span><span class="o">.</span><span class="n">obj</span> <span class="o">=</span> <span class="bp">self</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">MyApp</span><span class="p">()</span>
+<span class="n">app</span><span class="o">.</span><span class="n">natoms</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">app</span><span class="o">.</span><span class="n">coords</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">zmatrix</span><span class="p">[</span><span class="s1">&#39;bond&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.5</span>  <span class="c1"># or app.zmatrix.bond = 1.5</span>
+
+<span class="n">handle</span> <span class="o">=</span> <span class="n">py2f</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">byref</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="15-api-reference">1.5 API reference</h3>
+<h4 id="py2f-the-pythontofortran-conversion-function"><code>py2f</code> — the Python‑to‑Fortran conversion function</h4>
+<ul>
+<li><strong><code>py2f(obj, debug=0, byref=False)</code></strong>
+  Converts the object's <code>_kwargs</code> dictionary into a handle that Fortran can consume via <code>ptr2dict</code>. Each entry is automatically converted to the appropriate <code>ctypes</code> representation (see the type tables in <a href="#16-data-model">section 1.6</a>). The debug levels are:</li>
+<li><code>0</code> — silent.</li>
+<li><code>&gt; 2</code> — prints the object type and attribute summary.</li>
+<li><code>&gt; 4</code> — prints per‑field type and pointer details.</li>
+</ul>
+<p>Both <code>byref=False</code> (default) and <code>byref=True</code> produce a handle that can be passed to a Fortran <code>bind(c)</code> function. The difference is in what <code>py2f()</code> returns:</p>
+<ul>
+<li><code>byref=False</code> (default) — returns the <code>ctypes.Structure</code> instance. You can store it, inspect it, and pass it to Fortran directly (ctypes passes structures by reference automatically):
+    <code>python
+    handle = dl_py2f.py2f(app)
+    ierror = libapp.interface_example(handle)</code></li>
+<li><code>byref=True</code> — returns a <code>ctypes.byref()</code> pointer. This is a temporary object that cannot be stored or reused, so it is only suitable for immediate one-shot calls:
+    <code>python
+    ierror = libapp.interface_example(dl_py2f.py2f(app, byref=True))</code></li>
+</ul>
+<h4 id="ptr2dict-handle-to-dictionary-conversion"><code>ptr2dict</code> — handle-to-dictionary conversion</h4>
+<ul>
+<li><strong><code>ptr2dict(metaPtr) -&gt; dictType</code></strong> (Fortran)
+  Converts the handle received from Python into a <code>dictType</code>. This is the required first step on the Fortran side before any <code>%get</code> or <code>%set</code> calls. The caller must later <code>finalise</code> and <code>deallocate</code>.</li>
+</ul>
+<h4 id="dicttypefinalise-release-metadata"><code>dictType%finalise</code> — release metadata</h4>
+<ul>
+<li><strong><code>dictType%finalise()</code></strong>
+  Releases all Fortran‑side metadata (the linked‑list nodes) associated with the <code>dictType</code>. It never deallocates the underlying array data — ownership of that stays with Python (or with you, if you allocated your own buffers). Alias‑mode pointers obtained via <code>%get</code> with <code>readonly=.false.</code> remain valid after <code>finalise</code> because they point directly into Python memory, not into the <code>dictType</code> metadata. You should still <code>nullify</code> them once you are finished, but they are not immediately dangling.</li>
+</ul>
+<h4 id="dicttypeget-generic-getter-16-specific-procedures"><code>dictType%get</code> — generic getter (16 specific procedures)</h4>
+<p>The <code>get</code> generic resolves to one of the following based on the target argument's type and rank:</p>
+<table>
+<thead>
+<tr>
+<th>Specific procedure</th>
+<th>Target type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>getInt</code></td>
+<td><code>integer(4)</code></td>
+<td>Scalar, copy by value</td>
+</tr>
+<tr>
+<td><code>getIntCLong</code></td>
+<td><code>integer(8)</code> / <code>integer(c_long)</code></td>
+<td>Scalar, copy by value</td>
+</tr>
+<tr>
+<td><code>getReal</code></td>
+<td><code>real(4)</code> / <code>real(c_float)</code></td>
+<td>Scalar, copy by value</td>
+</tr>
+<tr>
+<td><code>getDouble</code></td>
+<td><code>real(8)</code> / <code>real(c_double)</code></td>
+<td>Scalar, copy by value</td>
+</tr>
+<tr>
+<td><code>getOneDimDbl</code></td>
+<td><code>real(8), pointer :: (:)</code></td>
+<td>1D double array; <code>readonly</code> arg</td>
+</tr>
+<tr>
+<td><code>getTwoDimDbl</code></td>
+<td><code>real(8), pointer :: (:,:)</code></td>
+<td>2D double array; <code>readonly</code> arg</td>
+</tr>
+<tr>
+<td><code>getOneDimLng</code></td>
+<td><code>integer(8), pointer :: (:)</code></td>
+<td>1D int64 array; <code>readonly</code> arg</td>
+</tr>
+<tr>
+<td><code>getTwoDimLng</code></td>
+<td><code>integer(8), pointer :: (:,:)</code></td>
+<td>2D int64 array; <code>readonly</code> arg</td>
+</tr>
+<tr>
+<td><code>getOneDimInt</code></td>
+<td><code>integer(4), pointer :: (:)</code></td>
+<td>1D int32 array; <code>readonly</code> arg</td>
+</tr>
+<tr>
+<td><code>getTwoDimInt</code></td>
+<td><code>integer(4), pointer :: (:,:)</code></td>
+<td>2D int32 array; <code>readonly</code> arg</td>
+</tr>
+<tr>
+<td><code>getChar</code></td>
+<td><code>character(len=:), pointer</code></td>
+<td>Character string, pointer to internal data</td>
+</tr>
+<tr>
+<td><code>getCCharArray</code></td>
+<td><code>character(len=1) :: (:)</code></td>
+<td>C‑style char array, copy by value</td>
+</tr>
+<tr>
+<td><code>getLogical</code></td>
+<td><code>logical</code></td>
+<td>Fortran logical, copy by value</td>
+</tr>
+<tr>
+<td><code>getCLogical</code></td>
+<td><code>logical(c_bool)</code></td>
+<td>C‑interoperable logical</td>
+</tr>
+<tr>
+<td><code>getPyPtr</code></td>
+<td><code>type(PyType), pointer</code></td>
+<td>Nested object handle</td>
+</tr>
+<tr>
+<td><code>getCFuncPtr</code></td>
+<td><code>type(c_funptr)</code></td>
+<td>Callback function pointer</td>
+</tr>
+</tbody>
+</table>
+<p>For array targets, the optional <code>readonly</code> argument (default <code>.false.</code>) controls aliasing: <code>.false.</code> yields a pointer into the Python buffer (zero‑copy); <code>.true.</code> copies the data into a Fortran‑allocated buffer.</p>
+<h4 id="dicttypeset-generic-setter-8-specific-procedures"><code>dictType%set</code> — generic setter (8 specific procedures)</h4>
+<table>
+<thead>
+<tr>
+<th>Specific procedure</th>
+<th>Value type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>setScalar</code></td>
+<td><code>class(*)</code></td>
+<td>Does not propagate to the Python side; effectively unusable. Use a one-element array instead</td>
+</tr>
+<tr>
+<td><code>setOneDimDbl</code></td>
+<td><code>real(8) :: (:)</code></td>
+<td>1D double array, copies to Python</td>
+</tr>
+<tr>
+<td><code>setTwoDimDbl</code></td>
+<td><code>real(8) :: (:,:)</code></td>
+<td>2D double array, copies to Python</td>
+</tr>
+<tr>
+<td><code>setOneDimLng</code></td>
+<td><code>integer(8) :: (:)</code></td>
+<td>1D int64 array, copies to Python</td>
+</tr>
+<tr>
+<td><code>setTwoDimLng</code></td>
+<td><code>integer(8) :: (:,:)</code></td>
+<td>2D int64 array, copies to Python</td>
+</tr>
+<tr>
+<td><code>setOneDimInt</code></td>
+<td><code>integer(4) :: (:)</code></td>
+<td>1D int32 array, copies to Python</td>
+</tr>
+<tr>
+<td><code>setTwoDimInt</code></td>
+<td><code>integer(4) :: (:,:)</code></td>
+<td>2D int32 array, copies to Python</td>
+</tr>
+<tr>
+<td><code>setCCharArray</code></td>
+<td><code>character(len=1) :: (:)</code></td>
+<td>C‑style char array</td>
+</tr>
+</tbody>
+</table>
+<p>Because Python scalars (<code>float</code>, <code>int</code>) are immutable, updating a scalar value from Fortran requires a one-element array combined with <code>%set</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="c">! Python float is immutable; use a one-element array + set</span>
+<span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;energy&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">onedimdbl</span><span class="p">,</span><span class="w"> </span><span class="n">readonly</span><span class="o">=</span><span class="p">.</span><span class="n">true</span><span class="p">.)</span>
+<span class="n">onedimdbl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">onedimdbl</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1.5</span>
+<span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;energy&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">onedimdbl</span><span class="p">)</span>
+</code></pre></div>
+
+<h4 id="introspection-routines">Introspection routines</h4>
+<ul>
+<li><strong><code>dictType%keys()</code></strong> — prints all keys to standard output. Useful for debugging. Will be renamed <code>%printKeys</code> in a future version.</li>
+<li><strong><code>dictType%enquireKey(key)</code></strong> — returns <code>.true.</code> if the key exists.</li>
+<li><strong><code>dictType%enquireShape(key)</code></strong> — returns an <code>integer :: shp(2)</code> array containing <code>[sizem, sizen]</code> for the stored entry.</li>
+<li><strong><code>dictType%enquireType(key)</code></strong> — returns the stored type string. int32 array types are not detected; use int64 arrays for reliable introspection.</li>
+</ul>
+<p>Example — querying the shape of a 2D array before allocating a local buffer:</p>
+<div class="highlight"><pre><span></span><code><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">shp</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">shp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">PyObj</span><span class="p">%</span><span class="n">enquireShape</span><span class="p">(</span><span class="s1">&#39;coords&#39;</span><span class="p">)</span>
+<span class="c">! shp(1) = number of columns, shp(2) = number of rows</span>
+</code></pre></div>
+
+<h3 id="16-data-model">1.6 Data model</h3>
+<p><code>py2f()</code> converts each entry in <code>_kwargs</code> according to its Python type. The two tables below list all supported types, grouped into Python types and NumPy arrays.</p>
+<h4 id="python-types">Python types</h4>
+<p>Python scalars and other built-in types are passed by value. They are immutable: changing the Python attribute after <code>py2f()</code> does not update the Fortran side, and Fortran cannot write back to them. To make a value writable from Fortran, use a one-element NumPy array instead (see <a href="#14-advanced-class-features">section 1.4</a>).</p>
+<table>
+<thead>
+<tr>
+<th>Python type</th>
+<th>Fortran receives</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>int</code></td>
+<td><code>INTEGER(8)</code> scalar</td>
+<td>Copy by value via <code>getIntCLong</code></td>
+</tr>
+<tr>
+<td><code>float</code></td>
+<td><code>REAL(8)</code> scalar</td>
+<td>Copy by value via <code>getDouble</code></td>
+</tr>
+<tr>
+<td><code>bool</code></td>
+<td><code>LOGICAL</code></td>
+<td>Via <code>c_bool</code>, copy by value</td>
+</tr>
+<tr>
+<td><code>str</code></td>
+<td><code>CHARACTER(len=:), pointer</code></td>
+<td>Truncated to 256 characters if longer; use <code>trim()</code> on the Fortran side to obtain the actual content</td>
+</tr>
+<tr>
+<td><code>list</code></td>
+<td><code>INTEGER(8)</code> array</td>
+<td>Converted to a NumPy array via <code>asarray</code>; if all elements are strings, joined with <code>;</code> and passed as a single <code>CHARACTER</code>; non-convertible lists are passed as <code>None</code></td>
+</tr>
+<tr>
+<td><code>tuple</code></td>
+<td><code>INTEGER(8)</code> array</td>
+<td>Same treatment as <code>list</code></td>
+</tr>
+<tr>
+<td><code>dict</code></td>
+<td>null <code>c_void_p</code></td>
+<td>Not passed to Fortran; treated as <code>None</code></td>
+</tr>
+<tr>
+<td><code>None</code></td>
+<td>null <code>c_void_p</code></td>
+<td>Placeholder; not accessible from Fortran</td>
+</tr>
+<tr>
+<td>callable</td>
+<td><code>c_funptr</code></td>
+<td>C function pointer; keep the Python callable alive; see <a href="#13-callback-functions">section 1.3</a></td>
+</tr>
+<tr>
+<td>nested object</td>
+<td><code>PyType</code></td>
+<td>Recursive <code>py2f()</code> conversion; any object with a <code>_kwargs</code> attribute qualifies; objects without <code>_kwargs</code> are silently skipped; see <a href="#14-advanced-class-features">section 1.4</a></td>
+</tr>
+</tbody>
+</table>
+<p>Any type not listed above is silently skipped by <code>py2f()</code>.</p>
+<h4 id="numpy-arrays">NumPy arrays</h4>
+<p>NumPy array entries are converted to <code>ndpointer</code> by <code>py2f()</code>. Fortran retrieves them via <code>dictType%get</code> as pointers (alias / lazy mode) or copies (safe mode with <code>readonly=.true.</code>). Because NumPy arrays are mutable containers, in‑place modifications on either side are visible to the other when aliased. Setting <code>readonly</code> on getters forces a copy, and mutating that copy will not affect the other side.</p>
+<table>
+<thead>
+<tr>
+<th>NumPy dtype</th>
+<th>Fortran receives</th>
+<th>Supported ranks</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>numpy.int64</code></td>
+<td><code>INTEGER(8)</code> array</td>
+<td>1, 2</td>
+<td>Recommended integer type</td>
+</tr>
+<tr>
+<td><code>numpy.int32</code></td>
+<td><code>INTEGER(4)</code> array</td>
+<td>1, 2</td>
+<td>Deprecated; prefer int64 (see below)</td>
+</tr>
+<tr>
+<td><code>numpy.float64</code></td>
+<td><code>REAL(8)</code> array</td>
+<td>1, 2</td>
+<td>Primary float type; zero‑copy when contiguous</td>
+</tr>
+<tr>
+<td><code>numpy.float32</code></td>
+<td><code>REAL(8)</code> array</td>
+<td>1, 2</td>
+<td>Pointer type declared as <code>c_double</code> by <code>py2f()</code>; ensure the source array is <code>float64</code> for correct results</td>
+</tr>
+<tr>
+<td><code>numpy.S</code> / char array</td>
+<td><code>CHARACTER</code> array</td>
+<td>1</td>
+<td>Due to 8-byte alignment, Fortran receives only the first character of each element; 2D character arrays are unsupported</td>
+</tr>
+<tr>
+<td>structured array (recarray / void)</td>
+<td>per‑field arrays</td>
+<td>1</td>
+<td>See below</td>
+</tr>
+<tr>
+<td>masked array (<code>MaskedArray</code>)</td>
+<td>per‑field arrays</td>
+<td>1</td>
+<td>See below</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Structured arrays.</strong> When <code>py2f()</code> encounters a <code>numpy.recarray</code> or void‑dtype array, it unpacks each named field into a separate Fortran array, each retrievable by name via <code>dictType%get</code>. For example, a Z‑matrix with fields <code>j</code>, <code>bond</code>, <code>k</code>, <code>angle</code>, <code>l</code>, <code>dihedral</code> becomes six individual 1D arrays on the Fortran side. On the Python side, populate sub-fields with dictionary-style access:</p>
+<div class="highlight"><pre><span></span><code><span class="n">my_app</span><span class="o">.</span><span class="n">zmatrix</span><span class="p">[</span><span class="s1">&#39;bond&#39;</span><span class="p">]</span>  <span class="o">=</span> <span class="mf">1.5</span>   <span class="c1"># or my_app.zmatrix.bond = 1.5</span>
+<span class="n">my_app</span><span class="o">.</span><span class="n">zmatrix</span><span class="p">[</span><span class="s1">&#39;angle&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">90.0</span>  <span class="c1"># or my_app.zmatrix.angle = 90.0</span>
+</code></pre></div>
+
+<p><strong>Masked arrays.</strong> When the value is a <code>numpy.ma.MaskedArray</code>, the data portion is extracted via <code>.torecords()['_data']</code> and treated as a structured array. Mask information is passed alongside: for each field, a <code>LOGICAL</code> flag indicates whether it belongs to the mask.</p>
+<p>Other unrecognised dtypes cause the field to be skipped with a warning.</p>
+<p><strong>int32 deprecation note.</strong> The <code>get</code>/<code>set</code> generics retain their int32‑specific procedures, but prefer <code>int64</code> (<code>numpy.int64</code> / <code>INTEGER(8)</code>) for new code. The int32 <code>set</code> procedures (<code>setOneDimInt</code>, <code>setTwoDimInt</code>) write into int64 storage internally, which may cause unexpected implicit conversion. int32 paths receive less testing and may be removed in future releases.</p>
+<p><strong>Contiguity and strides.</strong>
+<code>py2f()</code> passes the raw memory address of the NumPy array (via <code>.ctypes.data</code>) without checking strides or contiguity. The developer must ensure arrays are contiguous before calling <code>py2f()</code>; non-contiguous slices or views will result in Fortran reading incorrect data. When using <code>_mega</code>, every field in <code>_fields</code> must use 8‑byte aligned dtypes to keep the <code>recarray</code> layout stable across C and Fortran.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">numpy</span>
+
+<span class="n">a</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+
+<span class="c1"># WRONG: a[:, ::2] is non-contiguous; Fortran sees garbage</span>
+<span class="n">app</span><span class="o">.</span><span class="n">coords</span> <span class="o">=</span> <span class="n">a</span><span class="p">[:,</span> <span class="p">::</span><span class="mi">2</span><span class="p">]</span>
+
+<span class="c1"># RIGHT: make a contiguous copy first</span>
+<span class="n">app</span><span class="o">.</span><span class="n">coords</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">a</span><span class="p">[:,</span> <span class="p">::</span><span class="mi">2</span><span class="p">])</span>
+</code></pre></div>
+
+<p><strong>Copy semantics</strong></p>
+<table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>readonly=.false.</code> (default)</td>
+<td>Fortran receives an alias pointer into the NumPy buffer (zero‑copy); changes are reflected on the Python side immediately</td>
+</tr>
+<tr>
+<td><code>readonly=.true.</code> on <code>get</code></td>
+<td>Fortran receives its own copy; you must call <code>%set</code> to push changes back to Python</td>
+</tr>
+</tbody>
+</table>
+<h3 id="17-memory-ownership">1.7 Memory ownership</h3>
+<p>In the Python-to-Fortran direction, Python owns all NumPy arrays and scalar objects; Fortran receives either aliases (zero‑copy pointers) or copies depending on the <code>readonly</code> flag. DL_PY2F never frees Python‑owned memory. The caller must keep the Python object and its NumPy backing arrays alive for the entire Fortran call because DL_PY2F does not extend their lifetime. Fortran‑side <code>dictType</code> handles point into Python buffers — dropping them (via <code>finalise</code> + <code>deallocate</code>) releases only the Fortran metadata, not the underlying data. Callback function pointers are stored by Fortran but owned by Python; the caller must keep the Python callable alive.</p>
+<p><strong>Ownership matrix</strong></p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Data movement</th>
+<th>Who owns the buffer after the call</th>
+<th>How to release on Fortran side</th>
+<th>Notes on visibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ptr2dict(objPtr)</code></td>
+<td>None (all entries alias Python)</td>
+<td>Python</td>
+<td><code>finalise(); deallocate(dict)</code></td>
+<td>Default mode; never deallocate aliased buffers in Fortran</td>
+</tr>
+<tr>
+<td><code>dictType%get(key, array, readonly=.false.)</code></td>
+<td>None (alias)</td>
+<td>Python (NumPy)</td>
+<td><code>nullify(array)</code> after use</td>
+<td>Mutations in Fortran reflect immediately in Python</td>
+</tr>
+<tr>
+<td><code>dictType%get(key, array, readonly=.true.)</code></td>
+<td>Copy Python → Fortran</td>
+<td>Fortran (caller)</td>
+<td><code>deallocate(array)</code></td>
+<td>No write‑back unless followed by <code>%set</code></td>
+</tr>
+<tr>
+<td><code>dictType%get(key, scalar)</code></td>
+<td>Copy by value</td>
+<td>Fortran (local variable)</td>
+<td>Automatic (local)</td>
+<td>Scalars are independent copies</td>
+</tr>
+<tr>
+<td><code>dictType%set(key, array)</code></td>
+<td>Copy Fortran → Python</td>
+<td>Python (NumPy)</td>
+<td>None</td>
+<td>Overwrites the NumPy array contents</td>
+</tr>
+</tbody>
+</table>
+<p>Note that <code>finalise</code> nullifies all pointers inside the <code>dictType</code>, but any local Fortran pointer variables that were obtained via <code>%get</code> with <code>readonly=.false.</code> still point into the NumPy memory:</p>
+<div class="highlight"><pre><span></span><code><span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;coords&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">twodimdbl</span><span class="p">)</span><span class="w">  </span><span class="c">! twodimdbl points to NumPy buffer</span>
+
+<span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">finalise</span><span class="p">()</span><span class="w">                </span><span class="c">! nullifies dictType internals</span>
+<span class="k">deallocate</span><span class="p">(</span><span class="n">PyObj</span><span class="p">)</span>
+
+<span class="c">! twodimdbl is a local variable, still pointing to the NumPy array</span>
+<span class="n">twodimdbl</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="mi">99</span><span class="mf">9.9999999</span><span class="w">       </span><span class="c">! this works but is dangerous</span>
+</code></pre></div>
+
+<p>This is technically valid but dangerous — the developer should <code>nullify</code> local pointers after <code>finalise</code> to avoid accidentally writing to Python memory after the intended interaction is complete.</p>
+<h2 id="part-2-fortran-to-python-interoperability">Part 2 — Fortran-to-Python interoperability</h2>
+<p>Fortran-to-Python interoperability is for applications that already have data and logic in Fortran and want to access them from Python, for example reading module variables, modifying derived-type fields, or driving a Fortran library from a Python script. No changes to the Fortran source code are needed; DL_PY2F works by loading the compiled <code>.so</code> and parsing gfortran's <code>.mod</code> files at runtime. This path is currently gfortran-only.</p>
+<h3 id="21-getting-started">2.1 Getting started</h3>
+<p>Load the Fortran shared library, point to the directory containing the <code>.mod</code> files, and access Fortran variables with Python dot syntax:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">dl_py2f</span>
+
+<span class="n">lib</span> <span class="o">=</span> <span class="n">dl_py2f</span><span class="o">.</span><span class="n">DL_DL</span><span class="p">(</span><span class="s1">&#39;/path/to/libexample.so&#39;</span><span class="p">)</span>
+<span class="n">lib</span><span class="o">.</span><span class="n">moddir</span> <span class="o">=</span> <span class="s1">&#39;/path/to/modules&#39;</span>
+
+<span class="c1"># read a module-level scalar</span>
+<span class="n">energy</span> <span class="o">=</span> <span class="n">lib</span><span class="o">.</span><span class="n">modules</span><span class="o">.</span><span class="n">yourmodule</span><span class="o">.</span><span class="n">var01_of_real</span>
+
+<span class="c1"># write to a module-level variable</span>
+<span class="n">lib</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="s1">&#39;var01_of_real&#39;</span><span class="p">,</span> <span class="mf">3.14</span><span class="p">,</span> <span class="n">module</span><span class="o">=</span><span class="s1">&#39;yourmodule&#39;</span><span class="p">)</span>
+
+<span class="c1"># access a derived-type instance</span>
+<span class="n">dt</span> <span class="o">=</span> <span class="n">lib</span><span class="o">.</span><span class="n">getValue</span><span class="p">(</span><span class="s1">&#39;var_of_t04&#39;</span><span class="p">,</span> <span class="n">module</span><span class="o">=</span><span class="s1">&#39;yourmodule&#39;</span><span class="p">)</span>
+<span class="n">dt</span><span class="o">.</span><span class="n">cvar01</span> <span class="o">=</span> <span class="s1">&#39;hello&#39;</span>
+
+<span class="c1"># access nested arrays of derived types</span>
+<span class="n">dt</span><span class="o">.</span><span class="n">t2ar02</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">t1ar01</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rvar01</span> <span class="o">=</span> <span class="mf">3.41</span>
+</code></pre></div>
+
+<p>All access goes directly into Fortran memory, there are no copies. Writes take effect immediately on the Fortran side. Python objects must not outlive the Fortran allocation; if Fortran later <code>deallocate</code>s an array, the Python view becomes invalid.</p>
+<h3 id="22-data-model">2.2 Data model</h3>
+<h4 id="supported-intrinsic-types">Supported intrinsic types</h4>
+<table>
+<thead>
+<tr>
+<th>Fortran type</th>
+<th>Python exposure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>INTEGER(4)</code></td>
+<td><code>int</code> or <code>numpy.int32</code></td>
+</tr>
+<tr>
+<td><code>INTEGER(8)</code></td>
+<td><code>int</code> or <code>numpy.int64</code></td>
+</tr>
+<tr>
+<td><code>REAL(4)</code></td>
+<td><code>numpy.float32</code> (read/write; may copy)</td>
+</tr>
+<tr>
+<td><code>REAL(8)</code></td>
+<td><code>numpy.float64</code></td>
+</tr>
+<tr>
+<td><code>COMPLEX(4)</code></td>
+<td><code>c_complex4</code> struct with <code>re</code> and <code>im</code> fields (<code>c_float</code>)</td>
+</tr>
+<tr>
+<td><code>COMPLEX(8)</code></td>
+<td><code>c_complex8</code> struct with <code>re</code> and <code>im</code> fields (<code>c_double</code>)</td>
+</tr>
+<tr>
+<td><code>LOGICAL</code></td>
+<td><code>bool</code> (via <code>c_bool</code>)</td>
+</tr>
+<tr>
+<td><code>CHARACTER</code></td>
+<td><code>str</code> or NumPy <code>S</code></td>
+</tr>
+<tr>
+<td>derived type</td>
+<td><code>DL_DT</code> proxy with dotted field access</td>
+</tr>
+</tbody>
+</table>
+<p><code>c_complex4</code> and <code>c_complex8</code> are <code>ctypes.Structure</code> subclasses. Access the real and imaginary parts as <code>val.re</code> and <code>val.im</code>.</p>
+<h4 id="supported-array-ranks">Supported array ranks</h4>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Supported rank</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>INTEGER / REAL</td>
+<td>Any rank. Shape and strides are read from the gfortran array descriptor</td>
+</tr>
+<tr>
+<td>COMPLEX</td>
+<td>Any rank</td>
+</tr>
+<tr>
+<td>LOGICAL</td>
+<td>Scalar only (rank 0)</td>
+</tr>
+<tr>
+<td>CHARACTER</td>
+<td>Scalar and 1D. Two‑dimensional character arrays are unsupported</td>
+</tr>
+<tr>
+<td>Derived type</td>
+<td>Any depth. Arrays of derived types at any rank are accessible through module parsing</td>
+</tr>
+</tbody>
+</table>
+<p>Rank information is extracted from <code>.mod</code> metadata and the gfortran array descriptor at runtime, so there is no compile‑time rank limit for numeric types.</p>
+<h4 id="supported-fortran-attributes">Supported Fortran attributes</h4>
+<p>Variables and array members with the <code>allocatable</code> or <code>pointer</code> attribute are fully supported, including deferred-length characters (<code>character(len=:), allocatable</code> or <code>character(len=:), pointer</code>). For <code>pointer</code> variables, DL_PY2F dereferences the pointer automatically and exposes the target. Pointers must be initialised (e.g., <code>=&gt; null()</code>) before DL_PY2F accesses them; uninitialised pointers may cause undefined behaviour.</p>
+<h4 id="linked-lists">Linked lists</h4>
+<p>Fortran derived types that contain a <code>pointer</code> member pointing to the same type (i.e., a linked-list node) are fully supported. DL_PY2F dereferences each link lazily — the next node is constructed only when the pointer member is accessed in Python. The entire chain can be traversed by following the pointer member repeatedly:</p>
+<div class="highlight"><pre><span></span><code><span class="n">node</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">head</span>
+<span class="k">while</span> <span class="n">node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">next</span>    <span class="c1"># follows the pointer to the next node</span>
+</code></pre></div>
+
+<p>Traversal stops automatically when a null or unassociated pointer is encountered. This works for arbitrarily deep chains with no limit on the number of nodes.</p>
+<h4 id="arrays-contiguity-and-strides">Arrays, contiguity, and strides</h4>
+<p>DL_PY2F reads strides and shape from <code>.mod</code> metadata and the gfortran array descriptor, then constructs NumPy views that mirror the Fortran memory layout with <code>copy=False</code>. No copies are made.</p>
+<p>Because Fortran uses column-major (Fortran order) and NumPy defaults to row-major (C order), the dimensions of the array appear reversed on the Python side. For example, a Fortran array declared as <code>real(kind=8) :: a(3,4)</code> appears as a NumPy array with shape <code>(4,3)</code>. Additionally, Fortran arrays are 1-indexed while NumPy arrays are 0-indexed.</p>
+<p>The resulting views (both numeric arrays and arrays of derived types) support standard NumPy indexing, including slicing, negative indices, fancy indexing, <code>Ellipsis</code> (<code>...</code>), and <code>None</code> (newaxis). For example:</p>
+<div class="highlight"><pre><span></span><code><span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">dt</span><span class="o">.</span><span class="n">t2ar02</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">elem</span><span class="o">.</span><span class="n">ivar04</span><span class="p">)</span>
+</code></pre></div>
+
+<p>For deferred (allocatable or pointer) arrays, DL_PY2F uses the <code>.mod</code> metadata to locate the array descriptor within the shared library's data segment, then reads the descriptor at runtime to determine the current shape, strides, and bounds. Matching NumPy views are constructed automatically when you access the array with Python dot syntax.</p>
+<h4 id="memory-ownership">Memory ownership</h4>
+<p>In the Fortran-to-Python direction, the ownership model is the reverse of the Python-to-Fortran direction (<a href="#17-memory-ownership">section 1.7</a>): Fortran owns all variables and arrays, and Python receives thin views that point directly into the Fortran data segment. These views take two forms:</p>
+<ul>
+<li><strong>Numeric arrays</strong> are exposed as NumPy arrays constructed with <code>copy=False</code>.</li>
+<li><strong>Derived types</strong> are exposed as <code>DL_DT</code> proxy objects (see <a href="#24-api-reference">section 2.4</a>).</li>
+</ul>
+<p>Dropping a Python view or <code>DL_DT</code> object does not free Fortran memory. However, if Fortran deallocates the underlying storage or the shared library is unloaded, the Python view becomes invalid. In practice the <code>.so</code> stays loaded for the lifetime of the process, so views remain valid as long as Fortran does not deallocate. DL_PY2F never allocates or frees Fortran memory.</p>
+<p><strong>Unsupported cases.</strong> Two‑dimensional <code>CHARACTER</code> arrays, non‑contiguous Fortran layouts that cannot be described from <code>.mod</code> metadata, and compiler‑specific kinds beyond those listed above.</p>
+<h3 id="23-initialisation-and-teardown">2.3 Initialisation and teardown</h3>
+<p>The loading sequence is shown in <a href="#21-getting-started">section 2.1</a>. Additional notes:</p>
+<ul>
+<li>Loading a library and parsing modules can be called multiple times on the same instance without side effects; repeated calls reuse the cached metadata. To force re-parsing, use <code>parseAllModules(..., overwrite=True)</code>.</li>
+<li>Multiple <code>DL_DL</code> instances for different libraries can coexist in the same process.</li>
+<li>There is no mandatory teardown beyond normal Python garbage collection. The <code>.so</code> stays loaded for the lifetime of the process. Fortran finalisation remains Fortran's responsibility.</li>
+</ul>
+<h3 id="24-api-reference">2.4 API reference</h3>
+<h4 id="dl_dl-sharedlibrary-loader">DL_DL — shared‑library loader</h4>
+<ul>
+<li>
+<p><strong><code>DL_DL(fullpath_to_lib, mode=RTLD_GLOBAL, debug=False)</code></strong>
+  Loads a Fortran <code>.so</code> and creates a binding context. <code>DL_DL</code> inherits from <code>ctypes.CDLL</code>, so all standard CDLL methods are available. The <code>mode</code> argument controls symbol visibility (default <code>RTLD_GLOBAL</code> makes symbols available to subsequently loaded libraries). It fails if the library is missing or if symbols cannot be resolved.</p>
+</li>
+<li>
+<p><strong><code>dl.symbols</code></strong> (property)
+  Returns a list of exported symbol names. Internal Fortran helper symbols (copy, deallocate, vtab, etc.) are filtered out automatically.</p>
+</li>
+<li>
+<p><strong><code>dl.modulenames</code></strong> (property)
+  Extracts unique Fortran module names from the symbol table.</p>
+</li>
+<li>
+<p><strong><code>dl.modules</code></strong> (property)
+  Returns a dictionary-like object supporting attribute-style access to parsed Fortran modules (e.g., <code>dl.modules.my_mod.my_var</code>). Parsing is lazy: the first access triggers the parse of all <code>.mod</code> files registered via <code>moddir</code>.</p>
+</li>
+<li>
+<p><strong><code>dl.moddir</code></strong> (property / setter)
+  Registers one or more directories containing <code>.mod</code> files. No ownership is transferred. If the path does not exist, a warning is printed but no exception is raised. Fortran submodule files (<code>.smod</code>) are not tested and may not be supported.</p>
+</li>
+<li>
+<p><strong><code>dl.searchSymbol(*keywords)</code></strong>
+  Case‑insensitive multi‑keyword search over the symbol table. Returns all symbols whose names contain every keyword.</p>
+</li>
+<li>
+<p><strong><code>dl.parseModule(modpath, padding=True, debug=False)</code></strong>
+  Parses a single gfortran <code>.mod</code> file (gzip‑compressed). Returns a dictionary with per‑variable entries describing their type, shape, and layout. The <code>padding</code> argument controls whether struct‑alignment padding is applied; the default <code>True</code> is correct for most cases and should not normally be changed.</p>
+</li>
+<li>
+<p><strong><code>dl.parseAllModules(moddir, recursive=True, padding=True, overwrite=False)</code></strong>
+  Walks a directory tree for <code>.mod</code> files and calls <code>parseModule</code> on each. Results are merged into <code>dl.modules</code>. Setting <code>overwrite=True</code> replaces previously parsed entries.</p>
+</li>
+<li>
+<p><strong><code>dl.getValue(symbol, ctype=c_int, shape=(), module='', return_ctype=False, debug=False)</code></strong>
+  Retrieves a variable, array, or derived‑type handle. Returns a view rather than owning the memory. Supports <code>%</code>‑separated member access paths for derived‑type fields (e.g., <code>'my_type%coords'</code>). It fails if the symbol is not found or the type or layout is unsupported.</p>
+</li>
+<li>
+<p><strong><code>dl.setValue(symbol, value, module='', debug=False)</code></strong>
+  Writes a value into a Fortran variable, mutating Fortran state directly. It fails on type or shape mismatches or when the target is read‑only.</p>
+</li>
+</ul>
+<p>Example:
+  <code>python
+  v = lib.getValue('var01_of_real', float, module='yourmodule')
+  lib.setValue('var01_of_real', 3.14, module='yourmodule')</code></p>
+<h4 id="bytelevel-setters-static-methods-on-dl_dl">Byte‑level setters (static methods on <code>DL_DL</code>)</h4>
+<p>These static methods write a value directly into Fortran memory at a given address:</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Target type</th>
+<th>Width</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DL_DL.setInt(entity, val)</code></td>
+<td><code>c_int</code></td>
+<td>4 B</td>
+</tr>
+<tr>
+<td><code>DL_DL.setLong(entity, val)</code></td>
+<td><code>c_long</code></td>
+<td>8 B</td>
+</tr>
+<tr>
+<td><code>DL_DL.setChar(addr, length, val)</code></td>
+<td><code>c_char</code></td>
+<td>variable</td>
+</tr>
+<tr>
+<td><code>DL_DL.setBool(entity, val)</code></td>
+<td><code>c_bool</code></td>
+<td>1 B</td>
+</tr>
+<tr>
+<td><code>DL_DL.setFloat(entity, val)</code></td>
+<td><code>c_float</code></td>
+<td>4 B</td>
+</tr>
+<tr>
+<td><code>DL_DL.setDouble(entity, val)</code></td>
+<td><code>c_double</code></td>
+<td>8 B</td>
+</tr>
+</tbody>
+</table>
+<h4 id="dl_dt-derivedtype-proxy">DL_DT — derived‑type proxy</h4>
+<p><code>DL_DT</code> is a Python proxy for a Fortran derived‑type instance. It does not own the Fortran memory; it provides read and write access to the fields of the type via Python's dot syntax. Given the following Fortran module:</p>
+<div class="highlight"><pre><span></span><code><span class="k">module </span><span class="n">yourModule</span>
+
+<span class="w">    </span><span class="k">type </span><span class="n">type_01</span>
+<span class="w">        </span><span class="kt">real</span><span class="p">(</span><span class="nb">kind</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">rvar01</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0</span>
+<span class="w">    </span><span class="k">endtype </span><span class="n">type_01</span>
+
+<span class="w">    </span><span class="k">type </span><span class="n">type_02</span>
+<span class="w">        </span><span class="kt">integer</span><span class="w">         </span><span class="kd">::</span><span class="w"> </span><span class="n">ivar04</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1004</span>
+<span class="w">        </span><span class="k">type</span><span class="p">(</span><span class="n">type_01</span><span class="p">)</span><span class="w">   </span><span class="kd">::</span><span class="w"> </span><span class="n">t1ar01</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="w">        </span><span class="kt">character</span><span class="p">(</span><span class="nb">len</span><span class="o">=</span><span class="mi">25</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">cvar01</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;char 01&#39;</span>
+<span class="w">    </span><span class="k">endtype </span><span class="n">type_02</span>
+
+<span class="w">    </span><span class="k">type </span><span class="n">type_04</span>
+<span class="w">        </span><span class="kt">character</span><span class="p">(</span><span class="nb">len</span><span class="o">=</span><span class="mi">25</span><span class="p">)</span><span class="w">          </span><span class="kd">::</span><span class="w"> </span><span class="n">cvar01</span>
+<span class="w">        </span><span class="kt">integer</span><span class="p">(</span><span class="nb">kind</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span><span class="w">            </span><span class="kd">::</span><span class="w"> </span><span class="n">iarr02</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span>
+<span class="w">        </span><span class="k">type</span><span class="p">(</span><span class="n">type_02</span><span class="p">),</span><span class="w"> </span><span class="k">allocatable</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">t2ar02</span><span class="p">(:,:)</span>
+<span class="w">    </span><span class="k">endtype </span><span class="n">type_04</span>
+
+<span class="w">    </span><span class="k">type</span><span class="p">(</span><span class="n">type_04</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">var_of_t04</span>
+
+<span class="k">endmodule </span><span class="n">yourModule</span>
+</code></pre></div>
+
+<p>you can access its fields from Python as follows:</p>
+<div class="highlight"><pre><span></span><code><span class="n">dt</span> <span class="o">=</span> <span class="n">lib</span><span class="o">.</span><span class="n">getValue</span><span class="p">(</span><span class="s1">&#39;var_of_t04&#39;</span><span class="p">,</span> <span class="n">module</span><span class="o">=</span><span class="s1">&#39;yourmodule&#39;</span><span class="p">)</span>
+
+<span class="c1"># read and write scalar fields</span>
+<span class="n">dt</span><span class="o">.</span><span class="n">cvar01</span> <span class="o">=</span> <span class="s1">&#39;dl_py2f&#39;</span>
+
+<span class="c1"># access multi-dimensional arrays</span>
+<span class="n">dt</span><span class="o">.</span><span class="n">iarr02</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="mi">123</span>
+
+<span class="c1"># navigate nested derived types</span>
+<span class="n">dt</span><span class="o">.</span><span class="n">t2ar02</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">t1ar01</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rvar01</span> <span class="o">=</span> <span class="mf">3.41</span>
+
+<span class="c1"># iterate over arrays of derived types</span>
+<span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">dt</span><span class="o">.</span><span class="n">t2ar02</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">elem</span><span class="o">.</span><span class="n">ivar04</span><span class="p">)</span>
+</code></pre></div>
+
+<p>Key behaviours:</p>
+<ul>
+<li><strong>Lazy and cached.</strong> Nested derived‑type members are constructed on first access. Accessing the same member repeatedly returns the same proxy object without constructing a new one.</li>
+<li><strong>Arrays of derived types</strong> support multi‑dimensional indexing, iteration, <code>len()</code>, and properties <code>shape</code>, <code>ndim</code>, <code>dtype</code>, <code>size</code>, <code>T</code>, and <code>__array__</code>. Python‑style slicing (negative indices, <code>Ellipsis</code>, <code>None</code>) is also supported.</li>
+<li><strong>Pointer members</strong> are dereferenced automatically. Linked-list structures (where a pointer member points to the same type) can be traversed by accessing the pointer member repeatedly (e.g., <code>node.next.next</code>); traversal stops when a null or unassociated pointer is encountered.</li>
+<li><strong><code>dt.setValue(name, value)</code></strong> — sets a member value by name, dispatching to the appropriate byte‑level setter based on the member's type.</li>
+</ul>
+<h2 id="part-3-shared-reference">Part 3 — Shared reference</h2>
+<h3 id="31-error-handling-and-diagnostics">3.1 Error handling and diagnostics</h3>
+<p><strong>Python-to-Fortran errors</strong></p>
+<ul>
+<li><em>Fortran side:</em> Requesting a key that does not exist terminates the process for scalar getters and callback getters (Fortran has no exception mechanism). Nested‑object getters (<code>getPyPtr</code>) and query routines (<code>enquireShape</code>, <code>enquireType</code>) print a warning but do not terminate. This inconsistent behaviour will be improved in a future version.</li>
+<li><em>Python side:</em> In <code>py2f()</code>, an unsupported type in <code>_kwargs</code> prints a message to stdout and the field is skipped.</li>
+</ul>
+<p><strong>Fortran-to-Python errors</strong></p>
+<ul>
+<li><em>Python side:</em> <code>DL_DL</code> raises <code>RuntimeError</code> when a symbol is not found.</li>
+</ul>
+<p><strong>Diagnostic tools</strong></p>
+<ul>
+<li>Use <code>dictType%keys()</code> to list all stored keys (Python-to-Fortran path).</li>
+<li>Use <code>enquireShape</code> to confirm array dimensions before calling <code>get</code> (Python-to-Fortran path).</li>
+<li>Use <code>enquireType</code> to inspect the stored type string; note that int32 array types are not detected (Python-to-Fortran path).</li>
+<li>Set <code>debug &gt; 2</code> in <code>py2f()</code> to trace the conversion process (Python-to-Fortran path).</li>
+</ul>
+<h3 id="32-compatibility-and-limitations">3.2 Compatibility and limitations</h3>
+<p><strong>Compiler support</strong></p>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>gfortran</th>
+<th>ifort / ifx</th>
+<th>flang</th>
+<th>nvfortran</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Python-to-Fortran</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Fortran-to-Python</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<p>The Fortran-to-Python path requires <code>.mod</code> files generated by gfortran. Intel, Flang, and nvfortran module formats are not supported.</p>
+<p><strong>Toolchain and dependency requirements</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Tools &amp; Libraries</th>
+<th style="text-align: left;">Min. version</th>
+<th style="text-align: left;">Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">g++/gfortran</td>
+<td style="text-align: left;">11</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">OR icpc/ifort</td>
+<td style="text-align: left;">17</td>
+<td style="text-align: left;">Python-to-Fortran only</td>
+</tr>
+<tr>
+<td style="text-align: left;">OR icpx/ifx</td>
+<td style="text-align: left;">2024</td>
+<td style="text-align: left;">Python-to-Fortran only</td>
+</tr>
+<tr>
+<td style="text-align: left;">OR clang++/flang</td>
+<td style="text-align: left;">22</td>
+<td style="text-align: left;">Python-to-Fortran only</td>
+</tr>
+<tr>
+<td style="text-align: left;">OR nvc++/nvfortran</td>
+<td style="text-align: left;">26.1</td>
+<td style="text-align: left;">Python-to-Fortran only</td>
+</tr>
+<tr>
+<td style="text-align: left;">cmake</td>
+<td style="text-align: left;">3.16</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">python3-dev</td>
+<td style="text-align: left;">3.8</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">python3-numpy</td>
+<td style="text-align: left;">1.21.5</td>
+<td style="text-align: left;"></td>
+</tr>
+</tbody>
+</table>
+<p>The package names above are Ubuntu-based; they may vary on other operating systems.</p>
+<p><strong>Installation</strong>
+See <a href="#getting-dl_py2f">Getting DL_PY2F</a> for instructions on installing from source, Debian PPA, or PyPI.</p>
+<p><strong>Runtime requirements</strong></p>
+<ul>
+<li>NumPy ≥ 1.21.5. Older versions may lack the <code>__array_interface__</code> fields needed for zero‑copy. Zero‑copy is a best‑effort feature.</li>
+<li>MPI: DL_PY2F itself never calls <code>MPI_Init</code> or <code>MPI_Finalize</code>; see <a href="#33-mpi-multi-instance-usage">section 3.3</a>.</li>
+</ul>
+<p><strong>Known limitations</strong></p>
+<ul>
+<li><strong>Character arrays.</strong> Due to 8-byte alignment, only the first character of each element in a <code>numpy.S</code> array reaches Fortran. 2D character arrays are not supported.</li>
+<li><strong>int32 partially tested.</strong> The int32 paths remain functional but receive less testing than int64. Prefer int64 for new code.</li>
+<li><strong>Not thread‑safe.</strong> The internal data structures (e.g., the <code>dictType</code> linked list on the Fortran side, the struct cache on the Python side) have no locking. If multiple threads access the same <code>dictType</code> handle or call <code>py2f()</code> concurrently, data corruption or crashes can occur. All access to shared handles must be serialised by the application developer. This is a common limitation of Fortran data structures in general, as the language has no built-in concurrency primitives such as mutexes.</li>
+<li><strong>Callback exceptions.</strong> If a Python exception is raised inside a callback, it must be caught within the callback itself. An uncaught exception cannot propagate back through Fortran and will crash the program.</li>
+<li><strong>Complex types.</strong> Supported on the Fortran-to-Python path via struct wrappers (<code>c_complex4</code>, <code>c_complex8</code>). Complex arrays are not yet supported on the Python-to-Fortran path but will be added in a future version.</li>
+<li><strong>Unknown dtypes.</strong> Record and void dtypes (structured arrays) are mapped to <code>REAL(8)</code> views; other unrecognised dtypes cause the field to be skipped with a warning.</li>
+<li><strong>Strided views.</strong> <code>py2f()</code> passes the raw memory address without checking strides. Non‑contiguous NumPy views will produce incorrect data on the Fortran side; ensure arrays are contiguous before calling <code>py2f()</code>.</li>
+<li><strong>Fortran-to-Python path is gfortran‑only.</strong> Intel, Flang, and nvfortran <code>.mod</code> formats are not supported.</li>
+<li><strong>Scalar getter leak.</strong> The scalar getters (<code>getInt</code>, <code>getIntCLong</code>, <code>getReal</code>, <code>getDouble</code>, <code>getLogical</code>, <code>getCLogical</code>, <code>getChar</code>) leak a small amount of memory per call due to a workaround for a gfortran limitation. The leak is almost negligible: each call leaks roughly 32–64 bytes, so even an MD simulation that invokes scalar getters one million times would accumulate only about 30–60 MB, which is insignificant compared to the memory footprint of a typical simulation.</li>
+</ul>
+<h3 id="33-mpi-multi-instance-usage">3.3 MPI / multi-instance usage</h3>
+<p>DL_PY2F itself does not call <code>MPI_Init</code> or <code>MPI_Finalize</code>, nor does it manage MPI communicators. MPI lifecycle and communicator management are entirely the application developer's responsibility. Two patterns are supported, and the choice between them depends on the trade-off between simplicity and memory efficiency.</p>
+<h4 id="model-a-one-python-interpreter-per-mpi-rank">Model A — one Python interpreter per MPI rank</h4>
+<p>In this model every MPI rank launches its own Python interpreter and loads the same Fortran shared library independently. Each rank has its own copy of the Python object, its own <code>py2f()</code> handle, and its own <code>dictType</code> on the Fortran side. Each rank's DL_PY2F state and buffers are independent; cross-rank data exchange is handled by the application developer via MPI as usual.</p>
+<p>This is the simplest approach: there are no cross-rank pointer hazards, no shared-state coordination, and the standard DL_PY2F workflow (<a href="#11-getting-started">sections 1.1</a>–<a href="#12-workflow">1.2</a>) applies on each rank without modification. The cost is that Python start-up and memory usage scale with the number of ranks. Launch with:</p>
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>mpirun<span class="w"> </span>-np<span class="w"> </span><span class="m">2</span><span class="w"> </span>python3<span class="w"> </span>user_script.py
+</code></pre></div>
+
+<p>A minimal Fortran interface for this model:</p>
+<div class="highlight"><pre><span></span><code><span class="kt">integer</span><span class="p">(</span><span class="kt">c_int</span><span class="p">)</span><span class="w"> </span><span class="k">function </span><span class="n">interface_app</span><span class="p">(</span><span class="n">objPtr</span><span class="p">)</span><span class="w"> </span><span class="k">bind</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+
+<span class="w">    </span><span class="k">use </span><span class="nb">iso_c_binding</span>
+<span class="nb">    </span><span class="k">use </span><span class="n">mpi</span>
+<span class="w">    </span><span class="k">use </span><span class="n">DL_PY2F</span><span class="p">,</span><span class="w"> </span><span class="k">only</span><span class="p">:</span><span class="w"> </span><span class="n">PyType</span><span class="p">,</span><span class="w"> </span><span class="n">dictType</span><span class="p">,</span><span class="w"> </span><span class="n">ptr2dict</span>
+
+<span class="w">    </span><span class="k">type</span><span class="p">(</span><span class="n">PyType</span><span class="p">)</span><span class="w">           </span><span class="p">,</span><span class="w"> </span><span class="k">intent</span><span class="p">(</span><span class="n">in</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">objPtr</span>
+<span class="w">    </span><span class="k">type</span><span class="p">(</span><span class="n">dictType</span><span class="p">),</span><span class="w"> </span><span class="k">pointer</span><span class="w">             </span><span class="kd">::</span><span class="w"> </span><span class="n">PyObj</span>
+<span class="w">    </span><span class="kt">real</span><span class="p">(</span><span class="nb">kind</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span><span class="w">  </span><span class="p">,</span><span class="w"> </span><span class="k">pointer</span><span class="w">             </span><span class="kd">::</span><span class="w"> </span><span class="n">forces</span><span class="p">(:,:)</span>
+<span class="w">    </span><span class="kt">integer</span><span class="w">                             </span><span class="kd">::</span><span class="w"> </span><span class="n">ierror</span>
+
+<span class="w">    </span><span class="c">! initialise MPI</span>
+<span class="w">    </span><span class="k">call </span><span class="n">MPI_INIT</span><span class="p">(</span><span class="n">ierror</span><span class="p">)</span>
+
+<span class="w">    </span><span class="c">! convert handle and alias forces array</span>
+<span class="w">    </span><span class="k">allocate</span><span class="p">(</span><span class="n">PyObj</span><span class="p">,</span><span class="w"> </span><span class="n">source</span><span class="o">=</span><span class="n">ptr2dict</span><span class="p">(</span><span class="n">objPtr</span><span class="p">))</span>
+<span class="w">    </span><span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;forces&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">forces</span><span class="p">)</span>
+
+<span class="w">    </span><span class="k">call </span><span class="n">do_work</span><span class="p">(</span><span class="n">forces</span><span class="p">)</span>
+
+<span class="w">    </span><span class="c">! teardown</span>
+<span class="w">    </span><span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">finalise</span><span class="p">()</span>
+<span class="w">    </span><span class="k">deallocate</span><span class="p">(</span><span class="n">PyObj</span><span class="p">)</span>
+<span class="w">    </span><span class="k">nullify</span><span class="p">(</span><span class="n">forces</span><span class="p">)</span>
+
+<span class="w">    </span><span class="k">call </span><span class="n">MPI_FINALIZE</span><span class="p">(</span><span class="n">ierror</span><span class="p">)</span>
+
+<span class="k">endfunction </span><span class="n">interface_app</span>
+</code></pre></div>
+
+<p>Each rank has its own independent <code>py2f()</code> handle and <code>dictType</code>. In this example <code>MPI_INIT</code> and <code>MPI_FINALIZE</code> are placed inside the interface function for simplicity, but they can equally be handled elsewhere (e.g., via <code>mpi4py</code> on the Python side, or in the existing Fortran codebase). Cross-rank communication is handled via standard MPI calls as usual.</p>
+<h4 id="model-b-single-python-interpreter-with-mpi-distribution">Model B — single Python interpreter with MPI distribution</h4>
+<p>In this model only rank 0 runs the Python interpreter. A compiled binary (<code>app.x</code>) embeds the Python interpreter on rank 0 and runs a pure MPI replica loop on all other ranks. The key mechanism is a C function-pointer broadcast: rank 0 registers a Fortran wrapper function via <code>c_funloc</code>, stores the pointer in a C-level global, and broadcasts it to all ranks so that every rank enters the same Fortran wrapper simultaneously.</p>
+<p>This saves memory because Python runs on only one rank. This model also extends to support taskfarming parallelism, where each workgroup has its own Python interpreter and MPI ranks, as used in ChemShell. The trade-off is that the developer must coordinate the broadcast explicitly: never call the wrapper directly on rank 0 without broadcasting first, and if multiple wrappers are needed, a more elaborate dispatch mechanism is required (e.g., a registry mapping task IDs to function pointers, as used in ChemShell). Launch with:</p>
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>mpirun<span class="w"> </span>-np<span class="w"> </span><span class="m">2</span><span class="w"> </span>app.x<span class="w"> </span>user_script.py
+</code></pre></div>
+
+<p>A typical implementation involves three source files in addition to the application's Fortran code. In this example the MPI operations are placed in C for simplicity, but they can equally be implemented in Fortran:</p>
+<div class="highlight"><pre><span></span><code>my_project/
+├── main.c         # C main program (embeds Python on rank 0)
+├── parallel.c     # C helper for function-pointer broadcast
+├── app.f90        # Fortran module: registration, interface, wrapper
+├── my_code/       # my existing Fortran application code
+├── dl_py2f/       # DL_PY2F library
+├── CMakeLists.txt # builds app.x binary
+└── user_script.py # Python entry point (runs on rank 0 only)
+</code></pre></div>
+
+<p>The C main program initialises Python on rank 0, runs the user script, and coordinates the broadcast:</p>
+<p><strong>main.c</strong></p>
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">argc</span><span class="p">,</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">**</span><span class="n">argv</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="c1">// initialise MPI first (all ranks)</span>
+<span class="w">    </span><span class="n">MPI_Init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">argc</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">argv</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">rank</span><span class="p">;</span>
+<span class="w">    </span><span class="n">MPI_Comm_rank</span><span class="p">(</span><span class="n">MPI_COMM_WORLD</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">rank</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// register the Fortran wrapper (all ranks)</span>
+<span class="w">    </span><span class="k">extern</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">register_app</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+<span class="w">    </span><span class="n">register_app</span><span class="p">();</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">rank</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// root: start Python, run the user script</span>
+<span class="w">        </span><span class="n">Py_Initialize</span><span class="p">();</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">argc</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="n">PyRun_SimpleFile</span><span class="p">(</span><span class="n">fopen</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="w"> </span><span class="s">&quot;r&quot;</span><span class="p">),</span><span class="w"> </span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+
+<span class="w">        </span><span class="c1">// signal replicas to stop</span>
+<span class="w">        </span><span class="n">parallel_c_end_replicas</span><span class="p">();</span>
+
+<span class="w">        </span><span class="n">Py_Finalize</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// replicas: wait for broadcasts from root</span>
+<span class="w">        </span><span class="n">parallel_c_run_replicas</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">MPI_Finalize</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>The Fortran module registers the wrapper at startup, provides the <code>bind(c)</code> entry point that Python calls via ctypes, and defines the wrapper that all ranks execute after the broadcast:</p>
+<p><strong>app.f90</strong></p>
+<div class="highlight"><pre><span></span><code><span class="k">module </span><span class="n">AppModule</span>
+
+<span class="w">    </span><span class="k">use </span><span class="nb">iso_c_binding</span>
+<span class="nb">    </span><span class="k">implicit none</span>
+
+<span class="w">    </span><span class="c">! C functions defined in parallel.c</span>
+<span class="w">    </span><span class="k">interface</span>
+<span class="k">        </span><span class="kt">integer</span><span class="p">(</span><span class="kt">c_int</span><span class="p">)</span><span class="w"> </span><span class="k">function </span><span class="n">parallel_c_exec_root</span><span class="p">()</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">            </span><span class="k">bind</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;parallel_c_exec_root&#39;</span><span class="p">)</span>
+<span class="w">        </span><span class="k">endfunction </span><span class="n">parallel_c_exec_root</span>
+
+<span class="w">        </span><span class="kt">integer</span><span class="p">(</span><span class="kt">c_int</span><span class="p">)</span><span class="w"> </span><span class="k">function </span><span class="n">parallel_c_get_comm</span><span class="p">()</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">            </span><span class="k">bind</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;parallel_c_get_comm&#39;</span><span class="p">)</span>
+<span class="w">        </span><span class="k">endfunction </span><span class="n">parallel_c_get_comm</span>
+
+<span class="w">        </span><span class="k">subroutine </span><span class="n">parallel_c_register</span><span class="p">(</span><span class="n">func</span><span class="p">)</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">            </span><span class="k">bind</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;parallel_c_register&#39;</span><span class="p">)</span>
+<span class="w">            </span><span class="k">use </span><span class="nb">iso_c_binding</span>
+<span class="nb">            </span><span class="k">type</span><span class="p">(</span><span class="kt">c_funptr</span><span class="p">),</span><span class="w"> </span><span class="k">value</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">func</span>
+<span class="w">        </span><span class="k">endsubroutine </span><span class="n">parallel_c_register</span>
+<span class="w">    </span><span class="k">endinterface</span>
+
+<span class="k">    contains</span>
+
+<span class="w">    </span><span class="c">! called from Python via ctypes; triggers broadcast + wrapper</span>
+<span class="w">    </span><span class="k">subroutine </span><span class="n">interface_app</span><span class="p">()</span><span class="w"> </span><span class="k">bind</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+<span class="w">        </span><span class="kt">integer</span><span class="p">(</span><span class="kt">c_int</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">ierror</span>
+<span class="w">        </span><span class="n">ierror</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parallel_c_exec_root</span><span class="p">()</span>
+<span class="w">    </span><span class="k">endsubroutine </span><span class="n">interface_app</span>
+
+<span class="w">    </span><span class="c">! executed on ALL ranks after broadcast</span>
+<span class="w">    </span><span class="k">subroutine </span><span class="n">wrapper_app</span><span class="p">()</span>
+<span class="w">        </span><span class="k">use </span><span class="n">mpi</span>
+<span class="w">        </span><span class="kt">integer</span><span class="p">(</span><span class="kt">c_int</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">comm_world</span>
+<span class="w">        </span><span class="n">comm_world</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parallel_c_get_comm</span><span class="p">()</span>
+<span class="w">        </span><span class="k">call </span><span class="n">actual_work</span><span class="p">(</span><span class="n">comm_world</span><span class="p">)</span>
+<span class="w">    </span><span class="k">endsubroutine </span><span class="n">wrapper_app</span>
+
+<span class="w">    </span><span class="c">! called once at startup; stores wrapper_app pointer in C</span>
+<span class="w">    </span><span class="k">subroutine </span><span class="n">register_app</span><span class="p">()</span><span class="w"> </span><span class="k">bind</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;register_app&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="k">use </span><span class="nb">iso_c_binding</span>
+<span class="nb">        </span><span class="k">type</span><span class="p">(</span><span class="kt">c_funptr</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">wrap_pointer</span>
+<span class="w">        </span><span class="n">wrap_pointer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">c_funloc</span><span class="p">(</span><span class="n">wrapper_app</span><span class="p">)</span>
+<span class="w">        </span><span class="k">call </span><span class="n">parallel_c_register</span><span class="p">(</span><span class="n">wrap_pointer</span><span class="p">)</span>
+<span class="w">    </span><span class="k">endsubroutine </span><span class="n">register_app</span>
+
+<span class="k">endmodule </span><span class="n">AppModule</span>
+</code></pre></div>
+
+<p>The C helper manages the function-pointer broadcast between root and replicas:</p>
+<p><strong>parallel.c</strong></p>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;mpi.h&gt;</span>
+
+<span class="c1">// file-scope global holding the wrapper function pointer</span>
+<span class="k">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">func_ptr</span><span class="p">)(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+
+<span class="c1">// called from Fortran register_app to store the pointer</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">parallel_c_register</span><span class="p">(</span><span class="kt">void</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">func</span><span class="p">)(</span><span class="kt">void</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">func_ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">func</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+
+<span class="c1">// broadcast func_ptr from root to all replicas</span>
+<span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">parallel_c_broadcast</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">MPI_Bcast</span><span class="p">(</span><span class="o">&amp;</span><span class="n">func_ptr</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">func_ptr</span><span class="p">),</span><span class="w"> </span><span class="n">MPI_BYTE</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">MPI_COMM_WORLD</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">func_ptr</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mi">-1</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// root: broadcast pointer then call wrapper (called from Python via ctypes)</span>
+<span class="kt">int</span><span class="w"> </span><span class="nf">parallel_c_exec_root</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">parallel_c_broadcast</span><span class="p">();</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">func_ptr</span><span class="p">)</span><span class="w"> </span><span class="n">func_ptr</span><span class="p">();</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// root: broadcast NULL to signal replicas to exit</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">parallel_c_end_replicas</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">func_ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+<span class="w">    </span><span class="n">parallel_c_broadcast</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="c1">// replicas: loop waiting for broadcasts; exit when NULL is received</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">parallel_c_run_replicas</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">parallel_c_broadcast</span><span class="p">();</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">func_ptr</span><span class="p">)</span><span class="w"> </span><span class="k">break</span><span class="p">;</span>
+<span class="w">        </span><span class="n">func_ptr</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="n">MPI_Comm</span><span class="w"> </span><span class="nf">parallel_c_get_comm</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">MPI_COMM_WORLD</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+
+<p>The following diagram illustrates the complete execution sequence for Model B. All ranks initialise MPI and register the wrapper together. Then root starts Python and runs the user script, while replicas enter a loop waiting for broadcasts. Each time Python calls <code>interface_app()</code>, root broadcasts the wrapper pointer and all ranks execute it. The replicas remain in the loop, ready for the next broadcast, so <code>interface_app()</code> can be called any number of times. Root signals replicas to exit the loop by broadcasting a null pointer (<code>end_replicas</code>).</p>
+<p><strong>Model B sequence</strong>: Legend: <code>[C]</code> = C code, <code>[F]</code> = Fortran code, <code>[Py]</code> = Python interpreter</p>
+<div class="highlight"><pre><span></span><code>    ROOT (rank 0)                          REPLICAS (rank ≠ 0)
+         │                                        │
+ ┌───────▼────────────────────────────────────────▼───────────┐
+ │ [C]   MPI_Init()                                           │
+ │ [C→F] register_app()   (c_funloc → func_ptr = wrapper_app) │
+ └───────┬────────────────────────────────────────┬───────────┘
+         │                                        │
+ ┌───────▼───────────────────────┐        ┌───────▼──────────────────┐
+ │ [C]   Py_Initialize()         │        │ [C] run_replicas()       │
+ │ [Py]  PyRun_SimpleFile(...)   │        │     MPI_Bcast            │
+ │   └► [F] interface_app()      │        │      │ (blocking wait)   │
+ │       └► [C] exec_root()      │        │      │                   │
+ │           MPI_Bcast ──────────┼─ sync ─┼──────┘                   │
+ │           func_ptr()          │        │   func_ptr()             │
+ │ [F]       └► wrapper_app()    │        │ [F]  └► wrapper_app()    │
+ │               └► actual_work()│        │         └► actual_work() │
+ └───────┬───────────────────────┘        └──────────┬───────────────┘
+         │                                           │
+ ┌───────▼───────────────────────┐        ┌──────────▼──────────────┐
+ │ [C]   end_replicas()          │        │ (exit run_replicas)     │
+ │       Py_Finalize()           │        └──────────┬──────────────┘
+ └───────┬───────────────────────┘                   │
+         │                                           │
+ ┌───────▼───────────────────────────────────────────▼──────┐
+ │ [C]   MPI_Finalize()                                     │
+ └──────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h4 id="general-notes">General notes</h4>
+<ul>
+<li><strong>Multiple wrappers.</strong> For more complex scenarios involving multiple applications or repeated invocations, a more elaborate coordination mechanism is needed. For example, ChemShell uses a linked-list registry mapping application IDs to function pointers, broadcasts the task ID instead of the pointer itself, keeps the replica loop running indefinitely, and provides an explicit exit signal to terminate it.</li>
+<li><strong>MPI lifecycle.</strong> DL_PY2F does not virtualise MPI communicators, nor does it call <code>MPI_Init</code> or <code>MPI_Finalize</code>. The timing of handle creation and destruction is entirely the application's responsibility.</li>
+<li><strong>Thread safety.</strong> DL_PY2F contains no locks. When using MPI with multithreading, all access to shared handles must be serialised by the application developer.</li>
+<li><strong>Quick launch.</strong> Model A: <code>mpirun -np 2 python3 user_script.py</code>. Model B: <code>mpirun -np 2 app.x user_script.py</code>. Note that the <code>main.c</code> example above passes <code>argv[1]</code> directly to <code>PyRun_SimpleFile</code>; in production, the developer should add proper command-line argument handling.</li>
+</ul>
+<h3 id="34-common-pitfalls-and-reminders">3.4 Common pitfalls and reminders</h3>
+<p><strong>Python-to-Fortran pitfalls</strong></p>
+<ul>
+<li>Aliased arrays fetched with <code>readonly=.false.</code> must never be <code>deallocate</code>d on the Fortran side; use <code>nullify</code> only. See <a href="#17-memory-ownership">section 1.7</a> for the full ownership matrix.</li>
+<li>When using <code>py2f</code>, ensure <code>_kwargs</code> entries use supported types (see <a href="#16-data-model">section 1.6</a>). Unsupported types are silently skipped.</li>
+<li>Scalars (<code>int</code>, <code>float</code>, <code>bool</code>) in <code>_kwargs</code> are immutable and cannot be written back from Fortran. Use a one-element array instead for any value that Fortran needs to modify (see <a href="#14-advanced-class-features">section 1.4</a>).</li>
+<li>With nvfortran, integer and real arrays retrieved via <code>%get</code> with the default <code>readonly=.false.</code> may produce corrupt data due to a compiler bug with non-contiguous pointer arrays. The workaround is to use <code>readonly=.true.</code> (safe mode) and then <code>%set</code> to write changes back. Use the C preprocessor <code>#ifdef __NVCOMPILER</code> guard to apply this selectively:</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="cp">#ifdef __NVCOMPILER</span>
+<span class="c">! nvfortran workaround: force a copy with readonly=.true.</span>
+<span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;tags&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">tags</span><span class="p">,</span><span class="w"> </span><span class="n">readonly</span><span class="o">=</span><span class="p">.</span><span class="n">true</span><span class="p">.)</span>
+<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tags</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">100</span>
+<span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;tags&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">tags</span><span class="p">)</span>
+<span class="cp">#else</span>
+<span class="c">! gfortran/ifort/ifx/flang: direct read/write access</span>
+<span class="k">call </span><span class="n">PyObj</span><span class="p">%</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;tags&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">tags</span><span class="p">)</span>
+<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tags</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">100</span>
+<span class="cp">#endif</span>
+</code></pre></div>
+
+<p><strong>Fortran-to-Python pitfalls</strong></p>
+<ul>
+<li>On the Fortran-to-Python path, <code>DL_DT</code> proxies are cached; dropping all Python references invalidates the cache entry, not the Fortran memory.</li>
+</ul>
+<p><strong>General</strong></p>
+<ul>
+<li>Always keep the owning Python object alive for as long as any Fortran pointer, callback, or aliased array may be used. DL_PY2F does not extend lifetimes.</li>
+<li>If the existing Fortran codebase has memory leaks, they will accumulate on every call to the interface function. This is not a DL_PY2F issue, but it can become critical in applications that call the interface many times (e.g., molecular dynamics), especially under MPI where each rank leaks independently.</li>
+<li>A single process can use DL_PY2F with multiple Fortran shared libraries simultaneously (e.g., multiple <code>DL_DL</code> instances or multiple <code>py2f()</code> handles for different objects), provided the Fortran libraries do not have conflicting symbols.</li>
+</ul>
+<h3 id="35-utility-modules-dl_py2futils">3.5 Utility modules (<code>dl_py2f.utils</code>)</h3>
+<p>DL_PY2F ships a set of utility modules under <code>dl_py2f.utils</code>. The modules listed below are those used by the library itself or expected to be useful to application developers. Import them as, for example, <code>from dl_py2f.utils import objutils</code>.</p>
+<h4 id="objutils-object-initialisation"><code>objutils</code> — object initialisation</h4>
+<ul>
+<li><strong><code>@init(inherit=(), init=(), priorities=(), inheritfrom=None)</code></strong> — decorator for <code>__init__</code> methods. Automates attribute inheritance from base classes and initialisation from <code>_kwargs</code> / <code>_internals</code> dictionaries. See <a href="#14-advanced-class-features">section 1.4</a> for advanced class features.</li>
+<li><strong><code>inheritAttrs(obj, inherit, inheritfrom)</code></strong> — merges sequence and dict attributes from base classes into <code>obj</code>.</li>
+<li><strong><code>initAttrs(obj, init, priorities)</code></strong> — processes each attribute dictionary listed in <code>init</code>, respecting <code>priorities</code> ordering. Delegates to property setters where defined.</li>
+<li><strong><code>checkType(obj, cls, info, chksubcls)</code></strong> — checks or converts <code>obj</code> to an instance of <code>cls</code>. Raises <code>TypeError</code> on failure.</li>
+<li><strong><code>getDeepCopy(obj)</code></strong> — returns a deep copy of <code>obj</code>, handling NumPy arrays and nested structures.</li>
+<li><strong><code>getType(obj)</code></strong> — returns the type of <code>obj</code> as a string, distinguishing NumPy arrays, ctypes objects, and plain Python types.</li>
+<li><strong><code>obj2dict(obj)</code></strong> — converts an object's attributes to a dictionary.</li>
+<li><strong><code>setAttr(obj, attr, val)</code></strong> — sets a possibly nested attribute (e.g., <code>'child.coords'</code>) on <code>obj</code>.</li>
+<li><strong><code>getAttr(obj, attrname)</code></strong> — retrieves a possibly nested attribute from <code>obj</code>.</li>
+</ul>
+<h4 id="nputils-numpy-helpers"><code>nputils</code> — NumPy helpers</h4>
+<ul>
+<li><strong><code>RecArray</code></strong> — a <code>numpy.recarray</code> subclass used as the backing store for <code>_mega</code>. Key methods:</li>
+<li><code>expand(N, axis=0)</code> — resizes the array to <code>N</code> elements, copying the first element into new slots.</li>
+<li><code>setField(buff, field=None, factor=1.0)</code> — writes values into a named field in place, with optional scaling.</li>
+<li><code>getDtype(field)</code> — returns the dtype of a named field.</li>
+<li><strong><code>SymArray</code></strong> — a <code>numpy.ndarray</code> subclass for symmetric matrices; assignments to <code>(i,j)</code> are automatically mirrored to <code>(j,i)</code>.</li>
+<li><strong><code>getDTypeFromObj(obj, dictname='_kwargs')</code></strong> — constructs a <code>numpy.dtype</code> from the fields of a data‑class object. Used when building <code>_mega</code>.</li>
+<li><strong><code>setField(a, buffer)</code></strong> — standalone function; writes <code>buffer</code> into array <code>a</code> in place.</li>
+<li><strong><code>bytes2str(arr)</code></strong> — converts a NumPy byte‑string array to a list of Python strings.</li>
+<li><strong><code>tolist(arr)</code></strong> — like <code>ndarray.tolist()</code> but converts byte strings to <code>str</code>.</li>
+</ul>
+<h4 id="modutils-sharedlibrary-loading"><code>modutils</code> — shared‑library loading</h4>
+<ul>
+<li><strong><code>getSharedLib(modname, location, mode=RTLD_GLOBAL, debug=0)</code></strong> — loads a shared library (<code>.so</code>) via <code>ctypes.CDLL</code>. Returns the library handle or <code>None</code> on failure.</li>
+<li><strong><code>getLinkedLib(modname, location, mode=RTLD_GLOBAL, is_linked=False)</code></strong> — loads a shared library only if it is already linked into the process.</li>
+<li><strong><code>isLinked(modname, location)</code></strong> — returns <code>True</code> if the named library is linked. This works by loading the <code>.so</code> and calling an <code>isLinked()</code> function that must be compiled into it. The application developer must include a minimal Fortran file (e.g., <code>linked.f90</code>) in their shared library:
+  <code>fortran
+  integer(c_int) function isLinked() result(linked) bind(c)
+      use iso_c_binding
+      linked = 1
+  endfunction isLinked</code></li>
+<li><strong><code>importModule(modname, filepath, relative_dir='.', suppress_warning=True)</code></strong> — dynamically imports a Python module from a file path.</li>
+</ul>
+<h4 id="fileutils-file-operations"><code>fileutils</code> — file operations</h4>
+<ul>
+<li><strong><code>archiveFile(filename, dir='.', copy=False, suffix='.OLD')</code></strong> — moves (or copies if <code>copy=True</code>) a file to <code>filename.OLD</code> (or the given suffix). Overwrites the destination silently if it already exists.</li>
+<li><strong><code>archiveDir(dirname, suffix='.OLD', mkdir=True)</code></strong> — moves a directory to <code>dirname.OLD</code>. Overwrites the destination silently if it already exists. If <code>mkdir=True</code>, recreates the original directory after moving.</li>
+<li><strong><code>file2text(filename, case='input')</code></strong> — reads a file and returns its contents as a string, optionally converting case.</li>
+<li><strong><code>getChoppedMasks(filename, section_key)</code></strong> — extracts named sections from a text file delimited by <code>section_key</code> markers.</li>
+</ul>
+<h4 id="miscutils-miscellaneous-helpers"><code>miscutils</code> — miscellaneous helpers</h4>
+<ul>
+<li><strong><code>getCaller(levels=1)</code></strong> — returns the name and location of the calling function, useful for diagnostic messages.</li>
+<li><strong><code>addWeakRef(obj)</code></strong> — attaches a weak‑reference callback to <code>obj</code> for finalisation tracking.</li>
+<li><strong><code>runSysCmd(syscmd, stdinp='', stdout='', stderr='', shell=True)</code></strong> — executes a shell command via <code>subprocess</code> and returns its output.</li>
+</ul>
+<h4 id="strutils-string-helpers"><code>strutils</code> — string helpers</h4>
+<ul>
+<li><strong><code>str2num(s)</code></strong> — parses a numeric string into <code>int</code>, <code>float</code>, or a NumPy array.</li>
+<li><strong><code>bytes2str(b)</code></strong> — decodes a <code>bytes</code> object to <code>str</code>.</li>
+<li><strong><code>str2bytes(s)</code></strong> — encodes a <code>str</code> to <code>bytes</code>.</li>
+<li><strong><code>inOrEq(s, ref)</code></strong> — case‑insensitive membership or equality test.</li>
+</ul>
+<h4 id="dictutils-dictionary-helpers"><code>dictutils</code> — dictionary helpers</h4>
+<ul>
+<li><strong><code>getDictEntry(dictObj, *args)</code></strong> — retrieves a value from a nested dictionary by following the chain of keys.</li>
+<li><strong><code>hasDictEntry(dictObj, key1, key2=None)</code></strong> — tests whether a nested dictionary contains the given key path.</li>
+<li><strong><code>getSortedKeys(dictObj, order=None)</code></strong> — returns dictionary keys sorted by a priority ordering, then alphabetically.</li>
+<li><strong><code>mergeDicts(d1, d2)</code></strong> — recursively merges d2 into d1; array values are appended rather than replaced.</li>
+<li><strong><code>getValue(d, key, case_sensitive=True, raiseError=True)</code></strong> — retrieves a value with optional case‑insensitive key matching.</li>
+<li><strong><code>isKeyOf(d, key, case_sensitive=True)</code></strong> — tests whether a key exists in the dictionary, with optional case insensitivity.</li>
+</ul>
+<h4 id="iterutils-iteration-and-flattening-helpers"><code>iterutils</code> — iteration and flattening helpers</h4>
+<ul>
+<li><strong><code>getFlattened(iter, unique=True)</code></strong> — flattens nested lists and tuples into a single list, optionally removing duplicates.</li>
+<li><strong><code>getFlattenedIter(iter, sort=True)</code></strong> — flattens nested iterables using <code>itertools.chain</code>, with optional deduplication.</li>
+<li><strong><code>findMapped(iter, mapping, case_sensitive=True)</code></strong> — finds elements of an iterable that appear as keys in a mapping.</li>
+</ul>
+<h4 id="ctypeutils-ctypes-byte-conversion"><code>ctypeutils</code> — ctypes byte conversion</h4>
+<p>Low‑level converters used internally by the Fortran-to-Python path (<code>DL_DL.setValue</code>). Application code rarely needs these directly.</p>
+<ul>
+<li><strong><code>int2intarray(i)</code></strong>, <strong><code>long2intarray(l)</code></strong>, <strong><code>float2intarray(f)</code></strong>, <strong><code>double2intarray(d)</code></strong>, <strong><code>bool2intarray(b)</code></strong> — convert a Python scalar to a ctypes‑compatible byte array for writing into Fortran memory at a given address.</li>
+</ul>
+<h4 id="colours-ansi-terminal-colour-constants"><code>colours</code> — ANSI terminal colour constants</h4>
+<p>Provides named ANSI escape‑sequence constants (e.g., <code>_R</code> for red, <code>_G</code> for green, <code>CLR_</code> for reset) used internally by DL_PY2F for coloured debug output. Application code rarely needs these directly.</p>
+</body>
+</html>
