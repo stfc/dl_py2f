@@ -21,6 +21,10 @@ Applications using `DL_PY2F` should cite:
 
 You Lu and Thomas W. Keal, *Journal of Open Source Software*, in preparation
 
+## Documentation
+
+A comprehensive [Reference Manual](REFERENCE_MANUAL.md) is available, covering installation, usage, supported data types, MPI patterns, and the full API.
+
 ## Project status
 
 The Python-to-Fortran interoperability has been comprehensively tested using GNU, Intel, and Flang/Clang++ compilers. It also works with NVIDIA HPC compilers although currently arrays must be retrieved and altered in the "safe mode" (`readonly=.true.`) due to a bug in nvfortran.
