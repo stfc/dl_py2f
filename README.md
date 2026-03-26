@@ -29,7 +29,7 @@ A comprehensive [Reference Manual](REFERENCE_MANUAL.md) is available, covering i
 
 The Python-to-Fortran interoperability has been comprehensively tested using GNU, Intel, and Flang/Clang++ compilers. It also works with NVIDIA HPC compilers although currently arrays must be retrieved and altered in the "safe mode" (`readonly=.true.`) due to a bug in nvfortran.
 
-:warning: **Warning:** However, the method for Fortran-to-Python interoperability is still undergoing testing and validation, and is currently limited to use with the GNU compiler **gfortran**, as the proprietary .mod file format used by the Intel compiler or other compilers' .mod format is not yet supported.
+:warning: **Warning:** However, the method for Fortran-to-Python interoperability is still undergoing testing and validation, and is currently limited to use with the GNU compiler **gfortran** and the NVIDIA HPC compiler **nvfortran**, as the proprietary .mod file format used by the Intel compiler or other compilers' .mod format is not yet supported.
 
 # Getting started
 
@@ -50,9 +50,9 @@ The Python-to-Fortran interoperability has been comprehensively tested using GNU
 :bulb: The above package names are based on Ubuntu Linux. They may vary on other
        operating systems.
 
-:warning: The Fortran-to-Python method does **NOT** yet work with the Intel, Flang/Clang++, or NVIDIA compilers.[^a]
+:warning: The Fortran-to-Python method does **NOT** yet work with the Intel or Flang/Clang++ compilers.[^a]
 
-[^a]: Intel's proprietary .mod file format is unpublished and unsupported. Support for Flang/Clang++ and NVIDIA compilers is yet to be implemented.
+[^a]: Intel's proprietary .mod file format is unpublished and unsupported. Support for Flang/Clang++ is yet to be implemented.
 
 ## Using and testing `DL_PY2F`
 
@@ -90,7 +90,7 @@ or NVIDIA HPC compilers
 
 `export FC=nvfortran; export CXX=nvc++`
 
-:warning: Please keep in mind that only the Python-to-Fortran interoperability works with non-GNU compilers.
+:warning: Please keep in mind that only the Python-to-Fortran interoperability works with Intel and Flang/Clang++ compilers. Both directions work with GNU and NVIDIA compilers.
 
 `$ python3 -m venv .venv`
 

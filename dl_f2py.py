@@ -426,6 +426,32 @@ class DL_DT(_SimpleCData):
             self._lib_dl_py2f = utils.modutils.getLinkedLib('dl_py2f', files(__package__), is_linked=True) \
                              or utils.modutils.getLinkedLib('dl_py2f', libpath.libpath, is_linked=True)
             return self._lib_dl_py2f
+    def _read_deferred(self, offset, ndims, expected_esize):
+        addr = self.__address__ + offset
+        nread = max(5 + ndims*3, 12 + 4*ndims + 2)
+        desc = [c_long.from_address(addr + i*8).value for i in range(nread)]
+        if not desc[0]:
+            return 0, 0, (), []
+        if desc[5] == expected_esize and desc[3] == ndims:
+            base  = desc[0]
+            esize = desc[5]
+            bounds = []
+            for k in range(ndims):
+                lb = desc[12 + 4*k]
+                ub = desc[13 + 4*k] if k == 0 else desc[12 + 4*k + 3]
+                bounds.append((lb, ub))
+            shape = tuple(ub - lb + 1 for lb, ub in bounds)
+            lbuff = [base, 0, esize, 0, 0, 0]
+            for lb, ub in bounds:
+                lbuff.extend([lb, ub, 1])
+        else:
+            lbuff = desc[:5 + ndims*3]
+            base  = lbuff[0]
+            esize = lbuff[2]
+            lbounds = lbuff[6::3]
+            ubounds = lbuff[7::3]
+            shape = tuple(ubounds[x] - lbounds[x] + 1 for x in range(ndims))
+        return base, esize, shape, lbuff
     def __init__(self,
                  address      :int,
                  dict_dt      :dict,
@@ -435,7 +461,7 @@ class DL_DT(_SimpleCData):
                  return_ctype :bool = False,
                  debug        :bool = False):
         if type(dict_dt) is not dict or not dict_dt.get('_is_derived', False):
-            raise RuntimeError(' >>> DL_F2PY ERROR: Argument dict_dt must be a dict containing information of data structure of a Fortran derived type', flush=True)
+            raise RuntimeError(' >>> DL_F2PY ERROR: Argument dict_dt must be a dict containing information of data structure of a Fortran derived type')
         self._dict_dt       = dict_dt
         self._derived_types = derived_types
         self._caller        = caller
@@ -453,16 +479,10 @@ class DL_DT(_SimpleCData):
                     if v.get('_is_deferred', False):
                         offset = v['_offset']
                         ndims = v['_ndims']
-                        address = c_ulong.from_address(self.__address__+offset).value
-                        __address__ = self.__address__ + offset
-                        lbuff = [ c_long.from_address(__address__+i*8).value for i in range(5+ndims*3) ]
-                        lbounds = lbuff[6::3]
-                        ubounds = lbuff[7::3]
-                        shape = tuple(ubounds[x]-lbounds[x] for x in range(ndims))
-                        if any([x <= 0 for x in shape]) or not lbuff[0]:
+                        address, _es, shape, lbuff = self._read_deferred(offset, ndims, v.get('_size_chunk', 0))
+                        if not lbuff or not lbuff[0] or any(x <= 0 for x in shape):
                             setattr(self, k, c_void_p(None))
                             continue
-                        shape = tuple(x+1 for x in shape)
                         _is_allocated = True
                         if lbuff[2] != v['_size_chunk']:
                             _is_allocated = False
@@ -527,14 +547,9 @@ class DL_DT(_SimpleCData):
                 else:
                     if v.get('_is_deferred', False):
                         offset = v['_offset']
-                        address = c_ulong.from_address(self.__address__+offset).value
                         ndims = v['_ndims']
-                        __address__ = self.__address__ + offset
-                        lbuff = [ c_long.from_address(__address__+i*8).value for i in range(5+ndims*3) ]
-                        lbounds = lbuff[6::3]
-                        ubounds = lbuff[7::3]
-                        shape = tuple(ubounds[x]-lbounds[x]+1 for x in range(ndims))
-                        if any([x <= 0 for x in shape]) or not lbuff[0]:
+                        address, _es, shape, lbuff = self._read_deferred(offset, ndims, sizeof(v['_type']))
+                        if not lbuff or not lbuff[0] or any(x <= 0 for x in shape):
                             setattr(self, k, c_void_p(None))
                             continue
                         if lbuff[2] != sizeof(v['_type']):
@@ -812,6 +827,7 @@ class DL_DL(CDLL):
         inst._fullpath_to_lib = fullpath_to_lib
         inst._derived_types = {}
         inst._instances_derived_types = {}
+        inst._type_header_cache = {}
         return inst
     def __getattr__(self, name):
         if name in [ '_moddir', '_modules', '_lib_dl_py2f' ]:
@@ -920,17 +936,40 @@ class DL_DL(CDLL):
     def getModuleSymbols(self, module):
         symbols_all = self.symbols
         return [ s for s in symbols_all if module.strip().lower() in s.lower() ]
+    def _type_header(self, module, type_name):
+        key = (module, type_name)
+        if key in self._type_header_cache:
+            return self._type_header_cache[key]
+        ld_sym = f'{module}${type_name}$$td$ld'
+        try:
+            ld_addr = addressof(c_byte.in_dll(self, ld_sym))
+            ld = (c_int * 24).from_address(ld_addr)
+            hdr = ld[0] + ld[22]
+        except:
+            hdr = 0
+        self._type_header_cache[key] = hdr
+        return hdr
     def getSymbolOfModule(self, symbol, module):
         if module:
             symbols_module = self.getModuleSymbols(module)
             lbuff = [ s for s in symbols_module if s.lower().rstrip('_').endswith('_'+symbol.strip().lower()) ]
             if len(lbuff) == 0:
-                raise RuntimeError(f' >>> DL_PY2F ERROR: Module {module} does not have symbol "{symbol}"\n', flush=True)
+                try:
+                    mod = getattr(self.modules, module)
+                except:
+                    mod = {}
+                dbuff = mod.get(symbol, {})
+                block_sym = dbuff.get('_block_symbol', '')
+                if block_sym:
+                    return block_sym
+                if dbuff.get('_is_const'):
+                    return None
+                raise RuntimeError(f' >>> DL_PY2F ERROR: Module {module} does not have symbol "{symbol}"')
             elif len(lbuff) == 1:
                 return lbuff[0]
             else:
                 sbuff  = f' >>> DL_PY2F ERROR: Module {module} has more than one symbols containing string "{symbol}":'
-                sbuff += '\n                    ', ' '.join(lbuff)
+                sbuff += '\n                    ' + ' '.join(lbuff)
                 raise RuntimeError(sbuff)
         else:
             return symbol
@@ -955,9 +994,20 @@ class DL_DL(CDLL):
             dbuff = mod.get(symbol, {})
         except UnboundLocalError:
             dbuff = {}
+        if fullname_symbol is None and dbuff.get('_is_const'):
+            val = dbuff.get('_value', None)
+            if return_ctype:
+                ct = dbuff.get('_type', ctype)
+                return ct(val) if val is not None and not isinstance(ct, str) else val
+            return val
         ctype = dbuff.get('_type', ctype)
         shape = dbuff.get('_dim' , shape)
-        entity = ctype.in_dll(self, fullname_symbol)
+        block_sym = dbuff.get('_block_symbol', fullname_symbol)
+        block_off = dbuff.get('_block_offset', 0)
+        _hdr = self._type_header(module, derived_type) if derived_type else 0
+        base_addr = addressof(c_byte.in_dll(self, block_sym)) + block_off
+        _ct = ctype if not isinstance(ctype, str) else c_byte
+        entity = _ct.from_address(base_addr)
         if shape != ():
             if dbuff.get('_is_deferred', False):
                 if dbuff.get('_is_char', False):
@@ -982,7 +1032,7 @@ class DL_DL(CDLL):
             accessor_key = (module, symbol_original)
             accessor = _accessor_cache.get(accessor_key)
         if derived_type in self._derived_types.get(module, {}):
-            entity = DL_DT(addressof(entity),
+            entity = DL_DT(addressof(entity) + _hdr,
                            self._derived_types[module][derived_type],
                            self._derived_types[module],
                            caller=fullname_symbol,
@@ -1121,11 +1171,27 @@ class DL_DL(CDLL):
         return mods
     def parseModule(self, modpath, padding=True, debug=False):
         import gzip
+        from os import path
+        if not path.isfile(modpath):
+            return
+        try:
+            with gzip.open(modpath) as fp:
+                fp.read()
+            return self._parseModuleGNU(modpath, padding=padding, debug=debug)
+        except:
+            pass
+        try:
+            with open(modpath, 'r') as fp:
+                if fp.readline().startswith('V'):
+                    return self._parseModuleNV(modpath, padding=padding, debug=debug)
+        except:
+            pass
+        return
+    def _parseModuleGNU(self, modpath, padding=True, debug=False):
+        import gzip
         from time  import time
         from math  import prod
         from os    import path
-        if not path.isfile(modpath):
-            return
         fortran_internals = [ '__vtab_', '__vtype_', '__def_init_', '__copy_', '__final_', '__convert' ]
         basename = utils.fileutils.getBaseName(path.basename(modpath))
         def _printSummary(_dbuff):
@@ -1225,11 +1291,6 @@ class DL_DL(CDLL):
         dbuff = self._DL_MOD(self, {'_name':basename})
         indices2entries = {}
         _instances_derived_types = {}
-        try:
-            fp = gzip.open(modpath)
-            fp.read()
-        except:
-            return
         with gzip.open(modpath) as mod, open(f'._dl_py2f_{basename}.txt', 'w') as fp:
             sbuff = ' '.join(mod.read().decode().replace('()', '').replace('\'\'', '').split())
             fp.write('DL_PY2F\nLegend to hierarchies:\n')
@@ -2003,6 +2064,421 @@ class DL_DL(CDLL):
         if debug:
             _printSummary(dbuff)
         dbuff.update({'_filename':modpath})
+        object.__setattr__(self.modules, dbuff['_name'], dbuff)
+        return dbuff
+    def _parseModuleNV(self, modpath, padding=True, debug=False):
+        from os    import path
+        from math  import prod
+        basename = utils.fileutils.getBaseName(path.basename(modpath))
+        NV_DTYPES        = {6: c_int, 7: c_long, 9: c_float, 10: c_double, 18: c_bool}
+        NV_DTYPE_SIZES   = {6: 4, 7: 8, 9: 4, 10: 8, 18: 4}
+        NV_DEFERRED_FLAG = 0x10000000
+        NV_POINTER_FLAG  = 0x00001000
+        NV_COMPILER_FLAG = 0x40000000
+        NV_ALLOC_FLAG    = 0x00200000
+        NV_DTYPES[52]    = c_char_p
+        NV_DTYPE_SIZES[52] = 8
+        NV_ATTR_POINTER  = 0x14
+        NV_ATTR_ALLOC    = 0x40
+        NV_ATTR_TARGET   = 0x08
+        def _is_internal(name):
+            return ('$' in name or name.startswith('._') or name.startswith('z_b_')
+                    or name.startswith('z_c_') or name.startswith(f'_{basename}$')
+                    or name.startswith(f'{basename}$'))
+        with open(modpath, 'r') as fp:
+            raw_lines = fp.readlines()
+        header  = raw_lines[0].strip()
+        version = header.split()[0]
+        src_file = raw_lines[1].strip().split()[1] if len(raw_lines) > 1 else ''
+        d_recs, s_recs, a_recs = {}, {}, {}
+        i = 0
+        while i < len(raw_lines):
+            ln = raw_lines[i].strip()
+            if ln.startswith('D '):
+                parts = ln.split()
+                d_id  = int(parts[1])
+                d_cls = int(parts[2])
+                cont  = []
+                j = i + 1
+                while j < len(raw_lines) and raw_lines[j].startswith(' '):
+                    cont.append([int(x) for x in raw_lines[j].split()])
+                    j += 1
+                rec = {'id'   : d_id,
+                       'cls'  : d_cls,
+                       'parts': parts,
+                       'cont' : cont}
+                if d_cls == 26:
+                    rec['first_mem'] = int(parts[3])
+                    rec['size']      = int(parts[4])
+                    rec['type_sym']  = int(parts[5])
+                elif d_cls == 23:
+                    rec['elem']     = int(parts[3])
+                    rec['ndims']    = int(parts[4])
+                    rec['deferred'] = int(parts[7]) == 1 if len(parts) > 7 else False
+                elif d_cls == 22:
+                    rec['target'] = int(parts[3])
+                elif d_cls == 20:
+                    rec['target'] = int(parts[3])
+                d_recs[d_id] = rec
+                i = j
+                continue
+            elif ln.startswith('S '):
+                parts = ln.split()
+                if len(parts) < 13:
+                    i += 1
+                    continue
+                s_id  = int(parts[1])
+                s_cls = int(parts[2])
+                name  = parts[-1]
+                flags_str = parts[10]
+                try:
+                    flags = int(flags_str, 16)
+                except ValueError:
+                    flags = int(flags_str) if flags_str.lstrip('-').isdigit() else 0
+                try:
+                    attr = int(parts[11], 16) if parts[11] != 'A' else 0
+                except (ValueError, IndexError):
+                    attr = 0
+                rec = {'id'   : s_id,
+                       'cls'  : s_cls,
+                       'dtype': int(parts[6]),
+                       'next' : int(parts[7]),
+                       'scope': int(parts[8]),
+                       'flags': flags,
+                       'attr' : attr,
+                       'f3'   : int(parts[3]),
+                       'name' : name,
+                       'parts': parts}
+                if s_cls in (5, 6, 7, 8):
+                    rec['offset'] = int(parts[23])
+                if s_cls == 5 and len(parts) > 26:
+                    rec['owner_d'] = int(parts[26])
+                if s_cls == 3 and len(parts) > 27:
+                    try:    rec['value'] = int(parts[27])
+                    except: rec['value'] = 0
+                if len(parts) > 41:
+                    rec['prev']   = int(parts[38])
+                    rec['self']   = int(parts[39])
+                    rec['mod_id'] = int(parts[41])
+                s_recs[s_id] = rec
+            elif ln.startswith('A '):
+                parts = ln.split()
+                a_id  = int(parts[1])
+                a_cls = int(parts[2])
+                if a_id not in a_recs:
+                    rec = {'id' : a_id,
+                           'cls': a_cls}
+                    if a_cls == 2 and len(parts) > 7:
+                        rec['s_ref'] = int(parts[7])
+                    a_recs[a_id] = rec
+            i += 1
+        def _a_val(a_id):
+            if a_id == 0:
+                return 1
+            a = a_recs.get(a_id)
+            if a and a['cls'] == 2:
+                sr = s_recs.get(a.get('s_ref', -1))
+                if sr and sr['cls'] == 3:
+                    return sr.get('value', None)
+            return None
+        def _resolve_char_len(d_id):
+            d = d_recs.get(d_id)
+            if not d:
+                return 0
+            if d['cls'] == 20:
+                v = _a_val(d['target'])
+                if v is not None and 1 <= v <= 100000:
+                    return v
+                d2 = d_recs.get(d['target'])
+                if d2 and d2['cls'] == 20:
+                    return _resolve_char_len(d2['id'])
+            return 0
+        def _resolve(dtype_ref, _depth=0):
+            if _depth > 10:
+                return None
+            if dtype_ref in NV_DTYPES:
+                return {'ctype'      : NV_DTYPES[dtype_ref],
+                        'size'       : NV_DTYPE_SIZES[dtype_ref],
+                        'is_derived' : False,
+                        'derived'    :'',
+                        'ndims'      : 0,
+                        'dim'        : None,
+                        'is_deferred': False,
+                        'is_char'    : dtype_ref in (52, 127),
+                        'char_len'   : 0 if dtype_ref == 52 else (1 if dtype_ref == 127 else 0)}
+            d = d_recs.get(dtype_ref)
+            if not d:
+                clen = _resolve_char_len(dtype_ref) if dtype_ref > 100 else 0
+                if clen:
+                    return {'ctype'      : c_char_p,
+                            'size'       : clen,
+                            'is_derived' : False,
+                            'derived'    : '',
+                            'ndims'      : 0,
+                            'dim'        : None,
+                            'is_deferred': False,
+                            'is_char'    : True,
+                            'char_len'   : clen}
+                return None
+            if d['cls'] == 26:
+                ts = s_recs.get(d['type_sym'])
+                tn = ts['name'].lower() if ts else f'dtype_{dtype_ref}'
+                return {'ctype'      : tn,
+                        'size'       : d['size'],
+                        'is_derived' : True,
+                        'derived'    : tn,
+                        'ndims'      : 0,
+                        'dim'        : None,
+                        'is_deferred': False,
+                        'is_char'    : False,
+                        'char_len'   : 0}
+            if d['cls'] == 23:
+                ei = _resolve(d['elem'], _depth+1)
+                if not ei:
+                    clen = _resolve_char_len(d['elem'])
+                    if clen:
+                        ei = {'ctype'      : c_char_p,
+                              'size'       : clen,
+                              'is_derived' : False,
+                              'derived'    :'',
+                              'ndims'      : 0,
+                              'dim'        : None,
+                              'is_deferred': False,
+                              'is_char'    : True,
+                              'char_len'   : clen}
+                    else:
+                        return None
+                ndims = d['ndims']
+                is_def = d.get('deferred', False)
+                dim = None
+                if not is_def and d['cont']:
+                    dims = []
+                    for cl in d['cont']:
+                        if len(cl) >= 2:
+                            lb = _a_val(cl[0])
+                            ub = _a_val(cl[1])
+                            if lb is not None and ub is not None:
+                                dims.append(ub - lb + 1)
+                            else:
+                                dims = None
+                                break
+                    if dims and len(dims) == ndims:
+                        dim = tuple(dims)
+                r = dict(ei)
+                r['ndims'] = ndims
+                r['dim'] = dim
+                r['is_deferred'] = is_def
+                return r
+            if d['cls'] == 22:
+                return _resolve(d['target'], _depth+1)
+            if d['cls'] == 20:
+                clen = _resolve_char_len(dtype_ref)
+                if clen:
+                    return {'ctype'      : c_char_p,
+                            'size'       : clen,
+                            'is_derived' : False,
+                            'derived'    : '',
+                            'ndims'      : 0,
+                            'dim'        : None,
+                            'is_deferred': False,
+                            'is_char'    : True,
+                            'char_len'   : clen}
+                return _resolve(d['target'], _depth+1)
+            return None
+        dbuff = self._DL_MOD(self, {'_name': basename})
+        dbuff['_title'] = f'NVFORTRAN module {version} created from {src_file}'
+        mod_sym = None
+        for s in s_recs.values():
+            if s['cls'] == 24:
+                mod_sym = s
+                break
+        mod_id = mod_sym['id'] if mod_sym else 624
+        types2ids, ids2types, types2sizes = {}, {}, {}
+        for sid, s in s_recs.items():
+            if s['cls'] != 25:
+                continue
+            tname = s['name'].lower()
+            d = d_recs.get(s['dtype'])
+            if not d or d['cls'] != 26:
+                continue
+            types2ids[tname]   = sid
+            ids2types[sid]     = tname
+            types2sizes[tname] = d['size']
+            entry = {'_index'     : sid,
+                     '_is_derived': True,
+                     '_type_id'   : sid,
+                     '_size_chunk': d['size']}
+            cur = d['first_mem']
+            visited = set()
+            while cur and cur in s_recs and cur not in visited:
+                visited.add(cur)
+                m = s_recs[cur]
+                mn = m['name'].lower()
+                nxt = m['next']
+                if _is_internal(mn) or m['cls'] in (8, 22, 11):
+                    cur = nxt if nxt != 1 else 0
+                    continue
+                di = _resolve(m['dtype'])
+                if not di:
+                    cur = nxt if nxt != 1 else 0
+                    continue
+                fl       = m.get('flags', 0)
+                at       = m.get('attr', 0)
+                is_ptr   = (at & NV_ATTR_POINTER) == NV_ATTR_POINTER or bool(fl & NV_POINTER_FLAG)
+                is_alloc = bool(at & NV_ATTR_ALLOC) and not is_ptr
+                is_def   = bool(fl & NV_DEFERRED_FLAG)
+                is_deferred_char = (di['ctype'] == c_char_p and di['char_len'] == 0
+                                    and m.get('dtype') == 52)
+                mem = {'_index' : m['id'],
+                       '_offset': m.get('offset', 0)}
+                if di['is_char']:
+                    mem['_is_char'] = True
+                    mem['_type']    = c_char_p
+                    if is_deferred_char or di['char_len'] == 0:
+                        mem['_is_deferred_char'] = True
+                        mem['_length'] = 0
+                        mem['_size']   = 8
+                        mem['_stride'] = 8
+                    else:
+                        mem['_length'] = di['char_len']
+                        mem['_size']   = di['char_len']
+                        mem['_stride'] = di['char_len']
+                    mem['_nbytes'] = mem['_size']
+                elif di['is_derived']:
+                    mem['_type']       = di['derived']
+                    mem['_is_derived'] = True
+                    mem['_type_id']    = types2ids.get(di['derived'], 0)
+                    mem['_size']       = di['size']
+                    mem['_stride']     = 8
+                    mem['_size_chunk'] = di['size']
+                else:
+                    mem['_type']   = di['ctype']
+                    mem['_size']   = di['size']
+                    mem['_stride'] = di['size']
+                    mem['_nbytes'] = di['size']
+
+                if di['ndims'] or is_def:
+                    nd = di['ndims'] or (1 if is_def else 0)
+                    mem['_ndims'] = nd
+                    if di.get('dim'):
+                        mem['_dim'] = di['dim']
+                    if is_def or di.get('is_deferred'):
+                        mem['_is_deferred'] = True
+                if is_ptr:
+                    mem['_is_pointer'] = True
+                if is_alloc:
+                    mem['_is_deferred'] = True
+                if is_def and not is_ptr:
+                    mem['_is_deferred'] = True
+                entry[mn] = mem
+                cur = nxt if nxt != 1 else 0
+            dbuff[tname] = entry
+        def _nv_block_info(s_rec):
+            parts = s_rec.get('parts', [])
+            if len(parts) <= 30:
+                return None, 0
+            block_id = int(parts[30]) if parts[30] != '0' else 0
+            if not block_id:
+                vn = s_rec['name'].lower()
+                for cs in s_recs.values():
+                    if cs['name'].lower() == vn + '$p' and len(cs.get('parts',[])) > 30:
+                        bid = int(cs['parts'][30]) if cs['parts'][30] != '0' else 0
+                        if bid:
+                            b = s_recs.get(bid)
+                            if b and b['cls'] == 11:
+                                return b['name'].replace('$','_')+'_', cs.get('offset',0)
+                return None, 0
+            blk = s_recs.get(block_id)
+            if not blk or blk['cls'] != 11:
+                return None, 0
+            blk_name = blk['name'].replace('$', '_') + '_'
+            sub_off = s_rec.get('offset', 0)
+            return blk_name, sub_off
+        _inst_dt = {}
+        for sid, s in s_recs.items():
+            if s['cls'] in (6, 7) and s['scope'] == mod_id:
+                vn = s['name'].lower()
+                if _is_internal(vn):
+                    continue
+                di = _resolve(s['dtype'])
+                if not di:
+                    continue
+                e = {'_index': sid, '_is_var': True}
+                if di['is_derived']:
+                    e['_type']       = di['derived']
+                    _inst_dt[vn]     = di['derived']
+                    e['_size_chunk'] = di['size']
+                elif di['is_char']:
+                    e['_type']    = c_char_p
+                    e['_is_char'] = True
+                    e['_length']  = di['char_len']
+                else:
+                    e['_type'] = di['ctype']
+                fl = s.get('flags', 0)
+                at = s.get('attr', 0)
+                if (at & NV_ATTR_POINTER) == NV_ATTR_POINTER or (fl & NV_POINTER_FLAG):
+                    e['_is_pointer'] = True
+                if (at & NV_ATTR_TARGET) == NV_ATTR_TARGET:
+                    e['_is_target'] = True
+                if di['ndims']:
+                    e['_ndims'] = di['ndims']
+                    if di.get('dim'):
+                        e['_dim'] = di['dim']
+                    if di.get('is_deferred') or (fl & NV_DEFERRED_FLAG):
+                        e['_is_deferred'] = True
+                blk_sym, blk_off = _nv_block_info(s)
+                if blk_sym:
+                    e['_block_symbol'] = blk_sym
+                    e['_block_offset'] = blk_off
+                dbuff[vn] = e
+            elif s['cls'] == 16 and s['scope'] == mod_id:
+                vn = s['name'].lower()
+                if _is_internal(vn):
+                    continue
+                di = _resolve(s['dtype'])
+                if not di:
+                    continue
+                e = {'_index': sid, '_is_const': True}
+                if di['is_char']:
+                    e['_type'] = c_char_p
+                    e['_is_char'] = True
+                    e['_length'] = di['char_len']
+                else:
+                    e['_type'] = di['ctype']
+                if di['ndims']:
+                    e['_ndims'] = di['ndims']
+                    if di.get('dim'):
+                        e['_dim'] = di['dim']
+                dbuff[vn] = e
+        for k, v in dbuff.items():
+            if not isinstance(v, dict):
+                continue
+            if v.get('_is_derived'):
+                for kk, vv in v.items():
+                    if isinstance(vv, dict) and vv.get('_is_derived'):
+                        dn = vv.get('_type', '')
+                        if isinstance(dn, str) and dn in dbuff:
+                            vv['_size_chunk'] = dbuff[dn].get('_size_chunk', vv.get('_size', 8))
+        self._instances_derived_types.update({basename: _inst_dt})
+        dt = {k: v for k, v in dbuff.items() if isinstance(v, dict) and v.get('_is_derived')}
+        self._derived_types.update({basename: dt})
+        if debug:
+            _printSummary = lambda _d: None
+            print(f'\n {"*"*72}')
+            print(f' Module \'{basename}\' parsed from nvfortran {version}')
+            print(f' {"*"*72}')
+            print(f' File: {path.abspath(modpath)}')
+            for k, v in _d.items():
+                if isinstance(v, dict):
+                    print(f'\n Entry "{k}":')
+                    for kk, vv in v.items():
+                        if kk.startswith('_'):
+                            print(f'     {kk:20s}: {vv}')
+                        elif isinstance(vv, dict):
+                            print(f'     {kk}:')
+                            for kkk, vvv in vv.items():
+                                print(f'         {kkk:17s}: {vvv}')
+        dbuff.update({'_filename': modpath})
         object.__setattr__(self.modules, dbuff['_name'], dbuff)
         return dbuff
     def __printSbuff(self, s, sbuff=-1, depth=-1, entry='', debug=False):
