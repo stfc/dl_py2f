@@ -1,4 +1,4 @@
-# DL_PY2F — Reference Manual (v1.1.9)
+# DL_PY2F — Reference Manual (v1.2.0)
 
 *21 March 2026*
 
