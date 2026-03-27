@@ -427,12 +427,15 @@ class DL_DT(_SimpleCData):
                              or utils.modutils.getLinkedLib('dl_py2f', libpath.libpath, is_linked=True)
             return self._lib_dl_py2f
     def _read_deferred(self, offset, ndims, expected_esize):
-        addr = self.__address__ + offset
-        nread = max(5 + ndims*3, 12 + 4*ndims + 2)
-        desc = [c_long.from_address(addr + i*8).value for i in range(nread)]
+        addr  = self.__address__ + offset
+        nread = max(6, 5 + ndims*3)
+        desc  = [c_long.from_address(addr + i*8).value for i in range(nread)]
         if not desc[0]:
             return 0, 0, (), []
         if desc[5] == expected_esize and desc[3] == ndims:
+            nv_need = 12 + 4*ndims + 2
+            if nv_need > nread:
+                desc += [c_long.from_address(addr + i*8).value for i in range(nread, nv_need)]
             base  = desc[0]
             esize = desc[5]
             bounds = []
@@ -2070,8 +2073,8 @@ class DL_DL(CDLL):
         from os    import path
         from math  import prod
         basename = utils.fileutils.getBaseName(path.basename(modpath))
-        NV_DTYPES        = {6: c_int, 7: c_long, 9: c_float, 10: c_double, 18: c_bool}
-        NV_DTYPE_SIZES   = {6: 4, 7: 8, 9: 4, 10: 8, 18: 4}
+        NV_DTYPES        = {6: c_int, 7: c_long, 9: c_float, 10: c_double, 18: c_bool, 19: c_bool}
+        NV_DTYPE_SIZES   = {6: 4, 7: 8, 9: 4, 10: 8, 18: 4, 19: 8}
         NV_DEFERRED_FLAG = 0x10000000
         NV_POINTER_FLAG  = 0x00001000
         NV_COMPILER_FLAG = 0x40000000
