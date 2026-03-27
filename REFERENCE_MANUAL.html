@@ -266,13 +266,13 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <p><code>DL_PY2F</code> is an open-source library for creating modern Python interfaces and NumPy-based data structures around existing Fortran applications, giving both sides direct access to the same data without copies where possible. It has been used in production to drive <a href="https://chemshell.org">ChemShell</a>. This document is the reference for application developers using <code>DL_PY2F</code>, covering how to set up and use the library, supported data types and array ranks, memory ownership, MPI patterns, and known limitations.</p>
 <p>DL_PY2F provides two interoperability directions:</p>
 <p><strong>Python-to-Fortran (primary, production ready).</strong> You define your data in a Python class, and Fortran accesses it by name through a dictionary-like interface (<code>dictType</code>). Zero‑copy is used wherever possible. The Python side loads the compiled Fortran <code>.so</code> via <code>ctypes.CDLL</code>; the Fortran side uses DL_PY2F's source-level API (<code>use DL_PY2F</code>, <code>dictType</code>, <code>get</code>/<code>set</code>). The library never edits or regenerates Fortran sources, nor does it generate Python wrapper code (unlike tools such as F2PY).</p>
-<p><strong>Fortran-to-Python (beta, gfortran‑only).</strong> Python loads an existing Fortran <code>.so</code> and parses <code>.mod</code> metadata to expose module variables, procedures, and derived types with dot syntax, without any changes to the Fortran source. Intel, Flang, and nvfortran module formats are not supported yet.</p>
+<p><strong>Fortran-to-Python (beta, gfortran and nvfortran).</strong> Python loads an existing Fortran <code>.so</code> and parses <code>.mod</code> metadata to expose module variables, procedures, and derived types with dot syntax, without any changes to the Fortran source. Intel and Flang module formats are not supported yet.</p>
 <p>The reference is organised into three parts: Part 1 covers Python-to-Fortran interoperability, Part 2 covers Fortran-to-Python interoperability, and Part 3 collects material shared by both directions (MPI, errors, compatibility, pitfalls). Application developers working in only one direction can read the relevant part without wading through the other.</p>
 <h3 id="licence">Licence</h3>
 <p>DL_PY2F is open source and released under the <a href="https://www.gnu.org/licenses/lgpl-3.0.en.html">GNU Lesser General Public License v3.0</a> (LGPLv3).</p>
 <h3 id="getting-dl_py2f">Getting DL_PY2F</h3>
 <p>DL_PY2F can be obtained in three ways. In all cases the result is a shared library <code>libdl_py2f.so</code> and a Fortran module file <code>dl_py2f.mod</code> that your application links against at buildtime, plus a Python package <code>dl_py2f</code> that you import at runtime.</p>
-<p>The Fortran-to-Python path requires gfortran because it parses gfortran's <code>.mod</code> file format. The Python-to-Fortran path works with all listed compilers. See <a href="#32-compatibility-and-limitations">section 3.2</a> for the full compiler compatibility matrix and minimum version requirements.</p>
+<p>The Fortran-to-Python path requires gfortran or nvfortran because it parses their <code>.mod</code> file formats. The Python-to-Fortran path works with all listed compilers. See <a href="#32-compatibility-and-limitations">section 3.2</a> for the full compiler compatibility matrix and minimum version requirements.</p>
 <h4 id="method-1-from-source-recommended">Method 1: from source (recommended)</h4>
 <p>Clone the DL_PY2F repository into your application's source tree and build it together with your code using CMake. This is the most flexible approach because it compiles DL_PY2F with the same compiler and compiler options as your application. Since DL_PY2F is licensed under LGPLv3, application developers are free to redistribute it alongside their own projects.</p>
 <p><strong>Project structure.</strong> A recommended layout for a DL_PY2F-based project is:</p>
@@ -320,7 +320,7 @@ $<span class="w"> </span><span class="nb">export</span><span class="w"> </span><
 $<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">FC</span><span class="o">=</span>ifx<span class="p">;</span><span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">CXX</span><span class="o">=</span>icpx
 <span class="c1"># OR Flang/Clang++ (Python-to-Fortran only)</span>
 $<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">FC</span><span class="o">=</span>flang<span class="p">;</span><span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">CXX</span><span class="o">=</span>clang++
-<span class="c1"># OR NVIDIA HPC (Python-to-Fortran only)</span>
+<span class="c1"># OR NVIDIA HPC</span>
 $<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">FC</span><span class="o">=</span>nvfortran<span class="p">;</span><span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">CXX</span><span class="o">=</span>nvc++
 </code></pre></div>
 
@@ -1267,7 +1267,7 @@ Attributes that live only on the Python side. When <code>_internals</code> is li
 
 <p>This is technically valid but dangerous — the developer should <code>nullify</code> local pointers after <code>finalise</code> to avoid accidentally writing to Python memory after the intended interaction is complete.</p>
 <h2 id="part-2-fortran-to-python-interoperability">Part 2 — Fortran-to-Python interoperability</h2>
-<p>Fortran-to-Python interoperability is for applications that already have data and logic in Fortran and want to access them from Python, for example reading module variables, modifying derived-type fields, or driving a Fortran library from a Python script. No changes to the Fortran source code are needed; DL_PY2F works by loading the compiled <code>.so</code> and parsing gfortran's <code>.mod</code> files at runtime. This path is currently gfortran-only.</p>
+<p>Fortran-to-Python interoperability is for applications that already have data and logic in Fortran and want to access them from Python, for example reading module variables, modifying derived-type fields, or driving a Fortran library from a Python script. No changes to the Fortran source code are needed; DL_PY2F works by loading the compiled <code>.so</code> and parsing <code>.mod</code> files at runtime. This path currently supports gfortran and nvfortran.</p>
 <h3 id="21-getting-started">2.1 Getting started</h3>
 <p>Load the Fortran shared library, point to the directory containing the <code>.mod</code> files, and access Fortran variables with Python dot syntax:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">dl_py2f</span>
@@ -1350,7 +1350,7 @@ Attributes that live only on the Python side. When <code>_internals</code> is li
 <tbody>
 <tr>
 <td>INTEGER / REAL</td>
-<td>Any rank. Shape and strides are read from the gfortran array descriptor</td>
+<td>Any rank. Shape and strides are read from the compiler's array descriptor</td>
 </tr>
 <tr>
 <td>COMPLEX</td>
@@ -1370,7 +1370,7 @@ Attributes that live only on the Python side. When <code>_internals</code> is li
 </tr>
 </tbody>
 </table>
-<p>Rank information is extracted from <code>.mod</code> metadata and the gfortran array descriptor at runtime, so there is no compile‑time rank limit for numeric types.</p>
+<p>Rank information is extracted from <code>.mod</code> metadata and the compiler's array descriptor at runtime, so there is no compile‑time rank limit for numeric types.</p>
 <h4 id="supported-fortran-attributes">Supported Fortran attributes</h4>
 <p>Variables and array members with the <code>allocatable</code> or <code>pointer</code> attribute are fully supported, including deferred-length characters (<code>character(len=:), allocatable</code> or <code>character(len=:), pointer</code>). For <code>pointer</code> variables, DL_PY2F dereferences the pointer automatically and exposes the target. Pointers must be initialised (e.g., <code>=&gt; null()</code>) before DL_PY2F accesses them; uninitialised pointers may cause undefined behaviour.</p>
 <h4 id="linked-lists">Linked lists</h4>
@@ -1383,7 +1383,7 @@ Attributes that live only on the Python side. When <code>_internals</code> is li
 
 <p>Traversal stops automatically when a null or unassociated pointer is encountered. This works for arbitrarily deep chains with no limit on the number of nodes.</p>
 <h4 id="arrays-contiguity-and-strides">Arrays, contiguity, and strides</h4>
-<p>DL_PY2F reads strides and shape from <code>.mod</code> metadata and the gfortran array descriptor, then constructs NumPy views that mirror the Fortran memory layout with <code>copy=False</code>. No copies are made.</p>
+<p>DL_PY2F reads strides and shape from <code>.mod</code> metadata and the compiler's array descriptor, then constructs NumPy views that mirror the Fortran memory layout with <code>copy=False</code>. No copies are made.</p>
 <p>Because Fortran uses column-major (Fortran order) and NumPy defaults to row-major (C order), the dimensions of the array appear reversed on the Python side. For example, a Fortran array declared as <code>real(kind=8) :: a(3,4)</code> appears as a NumPy array with shape <code>(4,3)</code>. Additionally, Fortran arrays are 1-indexed while NumPy arrays are 0-indexed.</p>
 <p>The resulting views (both numeric arrays and arrays of derived types) support standard NumPy indexing, including slicing, negative indices, fancy indexing, <code>Ellipsis</code> (<code>...</code>), and <code>None</code> (newaxis). For example:</p>
 <div class="highlight"><pre><span></span><code><span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">dt</span><span class="o">.</span><span class="n">t2ar02</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]:</span>
@@ -1435,7 +1435,7 @@ Attributes that live only on the Python side. When <code>_internals</code> is li
 </li>
 <li>
 <p><strong><code>dl.parseModule(modpath, padding=True, debug=False)</code></strong>
-  Parses a single gfortran <code>.mod</code> file (gzip‑compressed). Returns a dictionary with per‑variable entries describing their type, shape, and layout. The <code>padding</code> argument controls whether struct‑alignment padding is applied; the default <code>True</code> is correct for most cases and should not normally be changed.</p>
+  Parses a single <code>.mod</code> file (gfortran gzip format or nvfortran V35 ASCII format; auto‑detected). Returns a dictionary with per‑variable entries describing their type, shape, and layout. The <code>padding</code> argument controls whether struct‑alignment padding is applied; the default <code>True</code> is correct for most cases and should not normally be changed.</p>
 </li>
 <li>
 <p><strong><code>dl.parseAllModules(moddir, recursive=True, padding=True, overwrite=False)</code></strong>
@@ -1589,11 +1589,11 @@ Attributes that live only on the Python side. When <code>_internals</code> is li
 <td>Yes</td>
 <td>No</td>
 <td>No</td>
-<td>No</td>
+<td>Yes</td>
 </tr>
 </tbody>
 </table>
-<p>The Fortran-to-Python path requires <code>.mod</code> files generated by gfortran. Intel, Flang, and nvfortran module formats are not supported.</p>
+<p>The Fortran-to-Python path requires <code>.mod</code> files generated by gfortran or nvfortran. Intel and Flang module formats are not supported.</p>
 <p><strong>Toolchain and dependency requirements</strong></p>
 <table>
 <thead>
@@ -1627,7 +1627,7 @@ Attributes that live only on the Python side. When <code>_internals</code> is li
 <tr>
 <td style="text-align: left;">OR nvc++/nvfortran</td>
 <td style="text-align: left;">26.1</td>
-<td style="text-align: left;">Python-to-Fortran only</td>
+<td style="text-align: left;"></td>
 </tr>
 <tr>
 <td style="text-align: left;">cmake</td>
@@ -1663,7 +1663,7 @@ See <a href="#getting-dl_py2f">Getting DL_PY2F</a> for instructions on installin
 <li><strong>Complex types.</strong> Supported on the Fortran-to-Python path via struct wrappers (<code>c_complex4</code>, <code>c_complex8</code>). Complex arrays are not yet supported on the Python-to-Fortran path but will be added in a future version.</li>
 <li><strong>Unknown dtypes.</strong> Record and void dtypes (structured arrays) are mapped to <code>REAL(8)</code> views; other unrecognised dtypes cause the field to be skipped with a warning.</li>
 <li><strong>Strided views.</strong> <code>py2f()</code> passes the raw memory address without checking strides. Non‑contiguous NumPy views will produce incorrect data on the Fortran side; ensure arrays are contiguous before calling <code>py2f()</code>.</li>
-<li><strong>Fortran-to-Python path is gfortran‑only.</strong> Intel, Flang, and nvfortran <code>.mod</code> formats are not supported.</li>
+<li><strong>Fortran-to-Python path supports gfortran and nvfortran only.</strong> Intel and Flang <code>.mod</code> formats are not supported.</li>
 <li><strong>Scalar getter leak.</strong> The scalar getters (<code>getInt</code>, <code>getIntCLong</code>, <code>getReal</code>, <code>getDouble</code>, <code>getLogical</code>, <code>getCLogical</code>, <code>getChar</code>) leak a small amount of memory per call due to a workaround for a gfortran limitation. The leak is almost negligible: each call leaks roughly 32–64 bytes, so even an MD simulation that invokes scalar getters one million times would accumulate only about 30–60 MB, which is insignificant compared to the memory footprint of a typical simulation.</li>
 </ul>
 <h3 id="33-mpi-multi-instance-usage">3.3 MPI / multi-instance usage</h3>
