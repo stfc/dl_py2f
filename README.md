@@ -42,7 +42,7 @@ The Python-to-Fortran interoperability has been comprehensively tested using GNU
 | OR icpc/ifort                 | 17           | :warning: |
 | OR icpx/ifx                   | 2024         | :warning: |
 | OR clang++/flang              | 22           | :warning: |
-| OR nvc++/nvfortran            | 26.1         | :warning: |
+| OR nvc++/nvfortran            | 26.1         |      |
 | cmake                         | 3.16         |      |
 | python3-dev                   | 3.8          |      |
 | python3-numpy                 | 1.21.5       |      |
