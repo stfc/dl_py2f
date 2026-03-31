@@ -1,4 +1,4 @@
-# DL_PY2F — Reference Manual (v1.2.0)
+# DL_PY2F — Reference Manual (v1.3.0)
 
 *21 March 2026*
 
@@ -10,7 +10,7 @@ DL_PY2F provides two interoperability directions:
 
 **Python-to-Fortran (primary, production ready).** You define your data in a Python class, and Fortran accesses it by name through a dictionary-like interface (`dictType`). Zero‑copy is used wherever possible. The Python side loads the compiled Fortran `.so` via `ctypes.CDLL`; the Fortran side uses DL_PY2F's source-level API (`use DL_PY2F`, `dictType`, `get`/`set`). The library never edits or regenerates Fortran sources, nor does it generate Python wrapper code (unlike tools such as F2PY).
 
-**Fortran-to-Python (beta, gfortran and nvfortran).** Python loads an existing Fortran `.so` and parses `.mod` metadata to expose module variables, procedures, and derived types with dot syntax, without any changes to the Fortran source. Intel and Flang module formats are not supported yet.
+**Fortran-to-Python (beta, gfortran, Flang, and nvfortran).** Python loads an existing Fortran `.so` and parses `.mod` metadata to expose module variables, procedures, and derived types with dot syntax, without any changes to the Fortran source. The Intel `.mod` format is not supported yet.
 
 The reference is organised into three parts: Part 1 covers Python-to-Fortran interoperability, Part 2 covers Fortran-to-Python interoperability, and Part 3 collects material shared by both directions (MPI, errors, compatibility, pitfalls). Application developers working in only one direction can read the relevant part without wading through the other.
 
@@ -22,7 +22,7 @@ DL_PY2F is open source and released under the [GNU Lesser General Public License
 
 DL_PY2F can be obtained in three ways. In all cases the result is a shared library `libdl_py2f.so` and a Fortran module file `dl_py2f.mod` that your application links against at buildtime, plus a Python package `dl_py2f` that you import at runtime.
 
-The Fortran-to-Python path requires gfortran or nvfortran because it parses their `.mod` file formats. The Python-to-Fortran path works with all listed compilers. See [section 3.2](#32-compatibility-and-limitations) for the full compiler compatibility matrix and minimum version requirements.
+The Fortran-to-Python path requires gfortran, Flang, or nvfortran because it parses their `.mod` file formats. The Python-to-Fortran path works with all listed compilers. See [section 3.2](#32-compatibility-and-limitations) for the full compiler compatibility matrix and minimum version requirements.
 
 #### Method 1: from source (recommended)
 
@@ -75,7 +75,7 @@ A separate user script is not strictly required. For simpler projects you can de
 $ export FC=gfortran; export CXX=g++
 # OR Intel (Python-to-Fortran only)
 $ export FC=ifx; export CXX=icpx
-# OR Flang/Clang++ (Python-to-Fortran only)
+# OR Flang/Clang++
 $ export FC=flang; export CXX=clang++
 # OR NVIDIA HPC
 $ export FC=nvfortran; export CXX=nvc++
@@ -867,7 +867,7 @@ This is technically valid but dangerous — the developer should `nullify` local
 
 ## Part 2 — Fortran-to-Python interoperability
 
-Fortran-to-Python interoperability is for applications that already have data and logic in Fortran and want to access them from Python, for example reading module variables, modifying derived-type fields, or driving a Fortran library from a Python script. No changes to the Fortran source code are needed; DL_PY2F works by loading the compiled `.so` and parsing `.mod` files at runtime. This path currently supports gfortran and nvfortran.
+Fortran-to-Python interoperability is for applications that already have data and logic in Fortran and want to access them from Python, for example reading module variables, modifying derived-type fields, or driving a Fortran library from a Python script. No changes to the Fortran source code are needed; DL_PY2F works by loading the compiled `.so` and parsing `.mod` files at runtime. This path currently supports gfortran, Flang, and nvfortran.
 
 ### 2.1 Getting started
 
@@ -995,7 +995,7 @@ The loading sequence is shown in [section 2.1](#21-getting-started). Additional 
   Case‑insensitive multi‑keyword search over the symbol table. Returns all symbols whose names contain every keyword.
 
 - **`dl.parseModule(modpath, padding=True, debug=False)`**
-  Parses a single `.mod` file (gfortran gzip format or nvfortran V35 ASCII format; auto‑detected). Returns a dictionary with per‑variable entries describing their type, shape, and layout. The `padding` argument controls whether struct‑alignment padding is applied; the default `True` is correct for most cases and should not normally be changed.
+  Parses a single `.mod` file (gfortran gzip format, Flang text format, or nvfortran V35 ASCII format; auto‑detected). Returns a dictionary with per‑variable entries describing their type, shape, and layout. The `padding` argument controls whether struct‑alignment padding is applied; the default `True` is correct for most cases and should not normally be changed.
 
 - **`dl.parseAllModules(moddir, recursive=True, padding=True, overwrite=False)`**
   Walks a directory tree for `.mod` files and calls `parseModule` on each. Results are merged into `dl.modules`. Setting `overwrite=True` replaces previously parsed entries.
@@ -1104,9 +1104,9 @@ Key behaviours:
 | Path                   | gfortran | ifort / ifx | flang  | nvfortran |
 |------------------------|----------|-------------|--------|-----------|
 | Python-to-Fortran      | Yes      | Yes         | Yes    | Yes       |
-| Fortran-to-Python      | Yes      | No          | No     | Yes       |
+| Fortran-to-Python      | Yes      | No          | Yes    | Yes       |
 
-The Fortran-to-Python path requires `.mod` files generated by gfortran or nvfortran. Intel and Flang module formats are not supported.
+The Fortran-to-Python path requires `.mod` files generated by gfortran, Flang, or nvfortran. The Intel `.mod` format is not supported.
 
 **Toolchain and dependency requirements**
 
@@ -1115,7 +1115,7 @@ The Fortran-to-Python path requires `.mod` files generated by gfortran or nvfort
 | g++/gfortran                  | 11           |                               |
 | OR icpc/ifort                 | 17           | Python-to-Fortran only                      |
 | OR icpx/ifx                   | 2024         | Python-to-Fortran only                      |
-| OR clang++/flang              | 22           | Python-to-Fortran only                      |
+| OR clang++/flang              | 22           |                                             |
 | OR nvc++/nvfortran            | 26.1         |                               |
 | cmake                         | 3.16         |                               |
 | python3-dev                   | 3.8          |                               |
@@ -1140,7 +1140,7 @@ See [Getting DL_PY2F](#getting-dl_py2f) for instructions on installing from sour
 - **Complex types.** Supported on the Fortran-to-Python path via struct wrappers (`c_complex4`, `c_complex8`). Complex arrays are not yet supported on the Python-to-Fortran path but will be added in a future version.
 - **Unknown dtypes.** Record and void dtypes (structured arrays) are mapped to `REAL(8)` views; other unrecognised dtypes cause the field to be skipped with a warning.
 - **Strided views.** `py2f()` passes the raw memory address without checking strides. Non‑contiguous NumPy views will produce incorrect data on the Fortran side; ensure arrays are contiguous before calling `py2f()`.
-- **Fortran-to-Python path supports gfortran and nvfortran only.** Intel and Flang `.mod` formats are not supported.
+- **Fortran-to-Python path supports gfortran, Flang, and nvfortran.** The Intel `.mod` format is not supported.
 - **Scalar getter leak.** The scalar getters (`getInt`, `getIntCLong`, `getReal`, `getDouble`, `getLogical`, `getCLogical`, `getChar`) leak a small amount of memory per call due to a workaround for a gfortran limitation. The leak is almost negligible: each call leaks roughly 32–64 bytes, so even an MD simulation that invokes scalar getters one million times would accumulate only about 30–60 MB, which is insignificant compared to the memory footprint of a typical simulation.
 
 ### 3.3 MPI / multi-instance usage

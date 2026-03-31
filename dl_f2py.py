@@ -35,6 +35,27 @@ from .         import libpath
 from .utils    import colours as _clr
 _accessor_cache = {}
 _DL_CACHE = WeakValueDictionary()
+_GNU_DESC_SPEC  = { 'esize_pos'    : 2,
+                    'dim_start'    : 6,
+                    'dim_stride'   : 3,
+                    'lb_off'       : 0,
+                    'nread_base'   : 5,
+                    'nread_per_dim': 3,
+                    'shape_fn'     : lambda d, s, dd, k: d[s+k*dd+1] - d[s+k*dd] + 1 }
+_LLVM_DESC_SPEC = { 'esize_pos'    : 1,
+                    'dim_start'    : 3,
+                    'dim_stride'   : 3,
+                    'lb_off'       : 0,
+                    'nread_base'   : 3,
+                    'nread_per_dim': 3,
+                    'shape_fn'     : lambda d, s, dd, k: d[s+k*dd+1] }
+_NV_DESC_SPEC   = { 'esize_pos'    : 5,
+                    'dim_start'    : 12,
+                    'dim_stride'   : 4,
+                    'lb_off'       : 0,
+                    'nread_base'   : 14,
+                    'nread_per_dim': 4,
+                    'shape_fn'     : lambda d, s, dd, k: (d[s+k*dd+1] if k==0 else d[s+k*dd+3]) - d[s+k*dd] + 1 }
 class c_complex8(Structure):
     _fields_ = [('re', c_double), ('im', c_double)]
 class c_complex4(Structure):
@@ -427,33 +448,29 @@ class DL_DT(_SimpleCData):
                              or utils.modutils.getLinkedLib('dl_py2f', libpath.libpath, is_linked=True)
             return self._lib_dl_py2f
     def _read_deferred(self, offset, ndims, expected_esize):
-        addr  = self.__address__ + offset
-        nread = max(6, 5 + ndims*3)
-        desc  = [c_long.from_address(addr + i*8).value for i in range(nread)]
+        spec = self._desc_spec
+        addr = self.__address__ + offset
+        ndims_pos = spec.get('ndims_pos')
+        if ndims_pos is not None:
+            _peek = max(ndims_pos + 1, spec['nread_base'])
+            _desc_peek = [c_long.from_address(addr + i*8).value for i in range(_peek)]
+            if _desc_peek[0]:
+                ndims = _desc_peek[ndims_pos]
+        nread = spec['nread_base'] + ndims * spec['nread_per_dim']
+        desc = [c_long.from_address(addr + i*8).value for i in range(nread)]
         if not desc[0]:
             return 0, 0, (), []
-        if desc[5] == expected_esize and desc[3] == ndims:
-            nv_need = 12 + 4*ndims + 2
-            if nv_need > nread:
-                desc += [c_long.from_address(addr + i*8).value for i in range(nread, nv_need)]
-            base  = desc[0]
-            esize = desc[5]
-            bounds = []
-            for k in range(ndims):
-                lb = desc[12 + 4*k]
-                ub = desc[13 + 4*k] if k == 0 else desc[12 + 4*k + 3]
-                bounds.append((lb, ub))
-            shape = tuple(ub - lb + 1 for lb, ub in bounds)
-            lbuff = [base, 0, esize, 0, 0, 0]
-            for lb, ub in bounds:
-                lbuff.extend([lb, ub, 1])
-        else:
-            lbuff = desc[:5 + ndims*3]
-            base  = lbuff[0]
-            esize = lbuff[2]
-            lbounds = lbuff[6::3]
-            ubounds = lbuff[7::3]
-            shape = tuple(ubounds[x] - lbounds[x] + 1 for x in range(ndims))
+        base  = desc[0]
+        esize = desc[spec['esize_pos']]
+        ds    = spec['dim_start']
+        dd    = spec['dim_stride']
+        shape_fn = spec['shape_fn']
+        shape = tuple(shape_fn(desc, ds, dd, k) for k in range(ndims))
+        lbuff = [base, 0, esize, 0, 0, 0]
+        lb_off = spec.get('lb_off', 0)
+        for k in range(ndims):
+            lb = desc[ds + k*dd + lb_off]
+            lbuff.extend([lb, lb + shape[k] - 1, 1])
         return base, esize, shape, lbuff
     def __init__(self,
                  address      :int,
@@ -467,6 +484,7 @@ class DL_DT(_SimpleCData):
             raise RuntimeError(' >>> DL_F2PY ERROR: Argument dict_dt must be a dict containing information of data structure of a Fortran derived type')
         self._dict_dt       = dict_dt
         self._derived_types = derived_types
+        self._desc_spec     = dict_dt.get('_desc_spec', _GNU_DESC_SPEC)
         self._caller        = caller
         self._return_ctype  = return_ctype
         self._debug         = debug
@@ -955,7 +973,8 @@ class DL_DL(CDLL):
     def getSymbolOfModule(self, symbol, module):
         if module:
             symbols_module = self.getModuleSymbols(module)
-            lbuff = [ s for s in symbols_module if s.lower().rstrip('_').endswith('_'+symbol.strip().lower()) ]
+            _target = symbol.strip().lower()
+            lbuff = [ s for s in symbols_module if s.lower().rstrip('_').endswith(_target) ]
             if len(lbuff) == 0:
                 try:
                     mod = getattr(self.modules, module)
@@ -967,6 +986,14 @@ class DL_DL(CDLL):
                     return block_sym
                 if dbuff.get('_is_const'):
                     return None
+                for _pat in [f'__{module}_MOD_{_target}',
+                             f'{module}_mp_{_target}_',
+                             f'_QM{module}E{_target}']:
+                    try:
+                        c_byte.in_dll(self, _pat)
+                        return _pat
+                    except:
+                        pass
                 raise RuntimeError(f' >>> DL_PY2F ERROR: Module {module} does not have symbol "{symbol}"')
             elif len(lbuff) == 1:
                 return lbuff[0]
@@ -997,19 +1024,36 @@ class DL_DL(CDLL):
             dbuff = mod.get(symbol, {})
         except UnboundLocalError:
             dbuff = {}
-        if fullname_symbol is None and dbuff.get('_is_const'):
+        if dbuff.get('_is_const'):
             val = dbuff.get('_value', None)
-            if return_ctype:
-                ct = dbuff.get('_type', ctype)
-                return ct(val) if val is not None and not isinstance(ct, str) else val
-            return val
+            if val is not None:
+                if return_ctype:
+                    ct = dbuff.get('_type', ctype)
+                    return ct(val) if not isinstance(ct, str) else val
+                return val
+            if fullname_symbol is None:
+                return val
+            _addr = addressof(c_byte.in_dll(self, fullname_symbol))
+            if dbuff.get('_is_char'):
+                _len = dbuff.get('_length', 1)
+                return (c_char * _len).from_address(_addr).value.decode()
+            _ct = dbuff.get('_type', ctype)
+            _ct = selectcases.get(_ct, _ct)
+            if dbuff.get('_dim'):
+                _shape = dbuff['_dim']
+                typestr = typestrs.get(_ct, 'i4')
+                abuff = DL_DT._wrapper()
+                abuff.__array_interface__ = {'shape':_shape[::-1], 'data':(_addr, False), 'typestr': f'<{typestr}'}
+                return array(abuff, copy=False)
+            entity = _ct.from_address(_addr)
+            return entity.value if not return_ctype else entity
         ctype = dbuff.get('_type', ctype)
         shape = dbuff.get('_dim' , shape)
         block_sym = dbuff.get('_block_symbol', fullname_symbol)
         block_off = dbuff.get('_block_offset', 0)
         _hdr = self._type_header(module, derived_type) if derived_type else 0
         base_addr = addressof(c_byte.in_dll(self, block_sym)) + block_off
-        _ct = ctype if not isinstance(ctype, str) else c_byte
+        _ct = ctype if not isinstance(ctype, str) and ctype != c_char_p else c_byte
         entity = _ct.from_address(base_addr)
         if shape != ():
             if dbuff.get('_is_deferred', False):
@@ -1071,13 +1115,18 @@ class DL_DL(CDLL):
         if module.strip():
             mod = getattr(self.modules, module)
             if symbol in mod:
-                try:
-                    ctype = mod[symbol]['_type']
-                except KeyError:
-                    print(f' >>> ERROR: The data type of symbol {symbol} in module {module} is not defined! Please contact {_clr.__email__}.')
+                ctype = mod[symbol].get('_type', ctype)
                 if mod[symbol].get('_is_pointer', False):
+                    try:
+                        _ptr = c_ulong.in_dll(self, fullname_symbol).value
+                    except:
+                        return None
+                    if not _ptr:
+                        return None
+                    if '_type' not in mod[symbol]:
+                        return None
                     if return_ctype:
-                        return ctype.from_address(c_ulong.in_dll(self, fullname_symbol).value)
+                        return ctype.from_address(_ptr)
                     else:
                         return ctype.from_address(c_ulong.in_dll(self, fullname_symbol).value).value
                 else:
@@ -1093,12 +1142,16 @@ class DL_DL(CDLL):
         if module.strip():
             mod = getattr(self.modules, module)
             if symbol in mod:
-                try:
-                    ctype = mod[symbol]['_type']
-                    entity = self.getValue(symbol, ctype, module=module, return_ctype=True, debug=debug)
-                    setters.get(type(entity), self.setInt)(entity, value)
-                except KeyError:
-                    print(f' >>> ERROR: The data type of symbol {symbol} in module {module} is not defined! Please contact {_clr.__email__}.')
+                _entry = mod[symbol]
+                ctype  = _entry.get('_type', c_int)
+                if isinstance(ctype, str):
+                    ctype = c_int
+                if ctype == c_int and isinstance(value, float):
+                    ctype = c_double
+                if _entry.get('_is_pointer') and '_type' not in _entry:
+                    return
+                entity = self.getValue(symbol, ctype, module=module, return_ctype=True, debug=debug)
+                setters.get(type(entity), self.setInt)(entity, value)
         return
     @staticmethod
     def setInt(entity, value):
@@ -1184,9 +1237,12 @@ class DL_DL(CDLL):
         except:
             pass
         try:
-            with open(modpath, 'r') as fp:
-                if fp.readline().startswith('V'):
+            with open(modpath, 'r', encoding='utf-8-sig') as fp:
+                first = fp.readline().strip()
+                if first.startswith('V'):
                     return self._parseModuleNV(modpath, padding=padding, debug=debug)
+                if first.startswith('!mod$'):
+                    return self._parseModuleLLVM(modpath, padding=padding, debug=debug)
         except:
             pass
         return
@@ -2069,21 +2125,343 @@ class DL_DL(CDLL):
         dbuff.update({'_filename':modpath})
         object.__setattr__(self.modules, dbuff['_name'], dbuff)
         return dbuff
+    def _parseModuleLLVM(self, modpath, padding=True, debug=False):
+        import re
+        from os   import path
+        from math import prod
+        basename = utils.fileutils.getBaseName(path.basename(modpath))
+        LLVM_TYPES = { 'integer(4)' : (c_int,    4),
+                       'integer(8)' : (c_long,   8),
+                       'real(4)'    : (c_float,  4),
+                       'real(8)'    : (c_double, 8),
+                       'logical(4)' : (c_bool,   4),
+                       'logical(8)' : (c_bool,   8) }
+        DESC_BASE = 24
+        DESC_PER_DIM = 24
+        DESC_ADDENDUM = 16
+        def _desc_size(ndims, is_derived=False):
+            sz = DESC_BASE + ndims * DESC_PER_DIM
+            if is_derived:
+                sz += DESC_ADDENDUM
+            return sz
+        def _align(offset, alignment):
+            r = offset % alignment
+            return offset + (alignment - r) if r else offset
+        def _parse_dims(dim_str):
+            dims = []
+            for d in dim_str.split(','):
+                d = d.strip()
+                if d == ':':
+                    return None
+                if ':' in d:
+                    parts = d.split(':')
+                    try:
+                        lb = int(parts[0].split('_')[0])
+                        ub = int(parts[1].split('_')[0])
+                        dims.append(ub - lb + 1)
+                    except ValueError:
+                        return None
+                else:
+                    return None
+            return tuple(dims) if dims else None
+        with open(modpath, 'r', encoding='utf-8-sig') as fp:
+            lines = fp.readlines()
+        dbuff = self._DL_MOD(self, {'_name': basename})
+        dbuff['_title'] = f'Flang module from {lines[0].strip()}'
+        types2ids   = {}
+        ids2types   = {}
+        types2sizes = {}
+        type_defs   = {}
+        _inst_dt    = {}
+        in_type     = None
+        type_members = []
+        re_decl = re.compile(
+            r'^(?:type\((\w+)\)|(\w+\(\d+\)))'
+            r'((?:,\w+(?:\([^)]*\))?)*)'
+            r'::'
+            r'(\w+)'
+            r'(?:\(([^)]*)\))?'
+            r'(?:=>NULL\(\))?'
+            r'(?:=.*)?$'
+        )
+        re_char = re.compile(
+            r'^character\((\d+)_\d+,\d+\)'
+            r'((?:,\w+(?:\([^)]*\))?)*)'
+            r'::'
+            r'(\w+)'
+            r'(?:\(([^)]*)\))?'
+            r'(?:=>NULL\(\))?'
+            r'(?:=.*)?$'
+        )
+        re_char_deferred = re.compile(
+            r'^character\(:,\d+\)'
+            r'((?:,\w+)*)'
+            r'::'
+            r'(\w+)'
+        )
+        module_vars = []
+        for line in lines[1:]:
+            line = line.strip()
+            if not line or line.startswith('!') or line.startswith('intrinsic') or line.startswith('private'):
+                continue
+            if line.startswith('contains') and in_type:
+                continue
+            if line.startswith('procedure') or line.startswith('generic'):
+                continue
+            if line.startswith('type,') or line.startswith('type ::'):
+                tname = line.split('::')[-1].strip().lower()
+                in_type = tname
+                type_members = []
+                continue
+            if line == 'end type':
+                if in_type and type_members:
+                    type_defs[in_type] = type_members
+                in_type = None
+                type_members = []
+                continue
+            if line.startswith('module ') or line.startswith('end'):
+                continue
+            m_char_def = re_char_deferred.match(line)
+            if m_char_def:
+                attrs_str = m_char_def.group(1)
+                name = m_char_def.group(2).lower()
+                is_ptr = ',pointer' in attrs_str
+                is_alloc = ',allocatable' in attrs_str
+                mem = { 'name'            : name,
+                        'ctype'           : c_char_p,
+                        'size'            : 0,
+                        'kind'            : 1,
+                        'is_char'         : True,
+                        'is_deferred_char': True,
+                        'char_len'        : 0,
+                        'ndims'           : 0,
+                        'dim'             : None,
+                        'is_pointer'      : is_ptr,
+                        'is_deferred'     : is_ptr or is_alloc,
+                        'is_derived'      : False,
+                        'derived'         : '',
+                        'is_target'       : False
+                      }
+                after_name = line.split('::')[1] if '::' in line else ''
+                if '(:' in after_name:
+                    ndims = after_name.split('(')[1].split(')')[0].count(':')
+                    mem['ndims'] = ndims
+                    mem['is_deferred'] = True
+                if in_type:
+                    type_members.append(mem)
+                else:
+                    module_vars.append(mem)
+                continue
+            m_char = re_char.match(line)
+            if m_char:
+                char_len = int(m_char.group(1))
+                attrs_str = m_char.group(2)
+                name = m_char.group(3).lower()
+                dim_str = m_char.group(4)
+                is_ptr = ',pointer' in attrs_str
+                is_alloc = ',allocatable' in attrs_str
+                is_target = ',target' in attrs_str
+                is_param = ',parameter' in attrs_str
+                dim = _parse_dims(dim_str) if dim_str else None
+                ndims = len(dim) if dim else (dim_str.count(':') if dim_str and ':' in dim_str else 0)
+                is_deferred = is_alloc or is_ptr if ndims else False
+                mem = { 'name'            : name,
+                        'ctype'           : c_char_p,
+                        'size'            : char_len,
+                        'kind'            : 1,
+                        'is_char'         : True,
+                        'is_deferred_char': False,
+                        'char_len'        : char_len,
+                        'ndims'           : ndims,
+                        'dim'             : dim,
+                        'is_pointer'      : is_ptr,
+                        'is_deferred'     : is_deferred,
+                        'is_derived'      : False,
+                        'derived'         : '',
+                        'is_target'       : is_target,
+                        'is_const'        : is_param
+                       }
+                if in_type:
+                    type_members.append(mem)
+                else:
+                    module_vars.append(mem)
+                continue
+            m = re_decl.match(line)
+            if m:
+                derived_name = (m.group(1) or '').lower()
+                prim_type = (m.group(2) or '').lower()
+                attrs_str = m.group(3) or ''
+                name = m.group(4).lower()
+                dim_str = m.group(5)
+                is_ptr = ',pointer' in attrs_str
+                is_alloc = ',allocatable' in attrs_str
+                is_target = ',target' in attrs_str
+                is_param = ',parameter' in attrs_str
+                is_save = ',save' in attrs_str
+                dim = _parse_dims(dim_str) if dim_str else None
+                ndims = len(dim) if dim else (dim_str.count(':') if dim_str and ':' in dim_str else 0)
+                is_deferred = (is_alloc or is_ptr) if ndims else False
+                if derived_name:
+                    ctype = derived_name
+                    sz = types2sizes.get(derived_name, 8)
+                    is_derived = True
+                elif prim_type in LLVM_TYPES:
+                    ctype, sz = LLVM_TYPES[prim_type]
+                    is_derived = False
+                    derived_name = ''
+                else:
+                    continue
+                mem = { 'name'       : name,
+                        'ctype'      : ctype,
+                        'size'       : sz,
+                        'kind'       : sz,
+                        'is_char'    : False,
+                        'char_len'   : 0,
+                        'ndims'      : ndims,
+                        'dim'        : dim,
+                        'is_pointer' : is_ptr,
+                        'is_deferred': is_deferred or (is_ptr and not dim and is_derived),
+                        'is_derived' : is_derived,
+                        'derived'    : derived_name,
+                        'is_target'  : is_target,
+                        'is_const'   : is_param
+                      }
+                if is_ptr and not ndims and not is_derived:
+                    mem['is_deferred'] = False
+                if in_type:
+                    type_members.append(mem)
+                else:
+                    module_vars.append(mem)
+                continue
+        for tname, members in type_defs.items():
+            offset = 0
+            entry = { '_is_derived': True,
+                      '_type_id'   : id(tname),
+                      '_desc_spec' : _LLVM_DESC_SPEC
+                    }
+            for mem in members:
+                name = mem['name']
+                if mem['is_deferred'] or (mem['is_pointer'] and not mem['ndims']):
+                    _der = mem.get('is_derived', False)
+                    if mem['is_pointer'] and not mem['ndims']:
+                        msz = _desc_size(0, is_derived=_der)
+                    else:
+                        msz = _desc_size(mem['ndims'], is_derived=_der)
+                    align = 8
+                elif mem['is_char'] and not mem['is_deferred_char']:
+                    msz = mem['char_len']
+                    if mem['ndims'] and mem['dim']:
+                        msz *= prod(mem['dim'])
+                    align = 1
+                elif mem['is_derived']:
+                    chunk = types2sizes.get(mem['derived'], 8)
+                    msz = chunk
+                    if mem['ndims'] and mem['dim']:
+                        msz *= prod(mem['dim'])
+                    align = min(8, chunk) if chunk else 8
+                else:
+                    msz = mem['size']
+                    if mem['ndims'] and mem['dim']:
+                        msz *= prod(mem['dim'])
+                    align = min(8, mem['size'])
+                offset = _align(offset, align)
+                d = {'_offset': offset}
+                if mem['is_char']:
+                    d['_is_char'] = True
+                    d['_type'] = c_char_p
+                    d['_length'] = mem['char_len']
+                    d['_size'] = mem.get('size', mem['char_len'])
+                    d['_stride'] = mem.get('size', mem['char_len'])
+                    if mem.get('is_deferred_char'):
+                        d['_is_deferred_char'] = True
+                        d['_size'] = 8
+                        d['_stride'] = 8
+                elif mem['is_derived']:
+                    d['_type'] = mem['derived']
+                    d['_is_derived'] = True
+                    d['_type_id'] = types2ids.get(mem['derived'], 0)
+                    d['_size'] = mem['size']
+                    d['_stride'] = 8
+                    d['_size_chunk'] = types2sizes.get(mem['derived'], mem['size'])
+                else:
+                    d['_type'] = mem['ctype']
+                    d['_size'] = mem['size']
+                    d['_stride'] = mem['size']
+                    d['_nbytes'] = mem['size']
+                if mem['ndims']:
+                    d['_ndims'] = mem['ndims']
+                    if mem['dim']:
+                        d['_dim'] = mem['dim']
+                    if mem['is_deferred']:
+                        d['_is_deferred'] = True
+                if mem['is_pointer']:
+                    d['_is_pointer'] = True
+                if mem.get('is_deferred') and not mem.get('is_pointer'):
+                    d['_is_deferred'] = True
+                entry[name] = d
+                offset += msz
+            total = _align(offset, 8)
+            entry['_size_chunk'] = total
+            types2sizes[tname] = total
+            types2ids[tname] = id(tname)
+            ids2types[id(tname)] = tname
+            dbuff[tname] = entry
+        for mem in module_vars:
+            name = mem['name']
+            e = {'_index': 0}
+            if mem.get('is_const'):
+                e['_is_const'] = True
+            else:
+                e['_is_var'] = True
+            if mem['is_derived']:
+                e['_type'] = mem['derived']
+                _inst_dt[name] = mem['derived']
+                e['_size_chunk'] = types2sizes.get(mem['derived'], 0)
+            elif mem['is_char']:
+                e['_type'] = c_char_p
+                e['_is_char'] = True
+                e['_length'] = mem['char_len']
+            else:
+                e['_type'] = mem['ctype']
+            if mem['is_pointer']:
+                e['_is_pointer'] = True
+            if mem['is_target']:
+                e['_is_target'] = True
+            if mem['ndims']:
+                e['_ndims'] = mem['ndims']
+                if mem['dim']:
+                    e['_dim'] = mem['dim']
+                if mem['is_deferred']:
+                    e['_is_deferred'] = True
+            dbuff[name] = e
+        for k, v in dbuff.items():
+            if isinstance(v, dict) and v.get('_is_derived'):
+                for kk, vv in v.items():
+                    if isinstance(vv, dict) and vv.get('_is_derived'):
+                        dn = vv.get('_type', '')
+                        if isinstance(dn, str) and dn in dbuff:
+                            vv['_size_chunk'] = dbuff[dn].get('_size_chunk', vv.get('_size', 8))
+        self._instances_derived_types.update({basename: _inst_dt})
+        dt = {k: v for k, v in dbuff.items() if isinstance(v, dict) and v.get('_is_derived')}
+        self._derived_types.update({basename: dt})
+        dbuff.update({'_filename': modpath})
+        object.__setattr__(self.modules, dbuff['_name'], dbuff)
+        return dbuff
     def _parseModuleNV(self, modpath, padding=True, debug=False):
         from os    import path
         from math  import prod
         basename = utils.fileutils.getBaseName(path.basename(modpath))
-        NV_DTYPES        = {6: c_int, 7: c_long, 9: c_float, 10: c_double, 18: c_bool, 19: c_bool}
-        NV_DTYPE_SIZES   = {6: 4, 7: 8, 9: 4, 10: 8, 18: 4, 19: 8}
-        NV_DEFERRED_FLAG = 0x10000000
-        NV_POINTER_FLAG  = 0x00001000
-        NV_COMPILER_FLAG = 0x40000000
-        NV_ALLOC_FLAG    = 0x00200000
-        NV_DTYPES[52]    = c_char_p
+        NV_DTYPES          = {6: c_int, 7: c_long, 9: c_float, 10: c_double, 18: c_bool, 19: c_bool}
+        NV_DTYPE_SIZES     = {6: 4, 7: 8, 9: 4, 10: 8, 18: 4, 19: 8}
+        NV_DEFERRED_FLAG   = 0x10000000
+        NV_POINTER_FLAG    = 0x00001000
+        NV_COMPILER_FLAG   = 0x40000000
+        NV_ALLOC_FLAG      = 0x00200000
+        NV_DTYPES[52]      = c_char_p
         NV_DTYPE_SIZES[52] = 8
-        NV_ATTR_POINTER  = 0x14
-        NV_ATTR_ALLOC    = 0x40
-        NV_ATTR_TARGET   = 0x08
+        NV_ATTR_POINTER    = 0x14
+        NV_ATTR_ALLOC      = 0x40
+        NV_ATTR_TARGET     = 0x08
         def _is_internal(name):
             return ('$' in name or name.startswith('._') or name.startswith('z_b_')
                     or name.startswith('z_c_') or name.startswith(f'_{basename}$')
@@ -2142,16 +2520,17 @@ class DL_DL(CDLL):
                     attr = int(parts[11], 16) if parts[11] != 'A' else 0
                 except (ValueError, IndexError):
                     attr = 0
-                rec = {'id'   : s_id,
-                       'cls'  : s_cls,
-                       'dtype': int(parts[6]),
-                       'next' : int(parts[7]),
-                       'scope': int(parts[8]),
-                       'flags': flags,
-                       'attr' : attr,
-                       'f3'   : int(parts[3]),
-                       'name' : name,
-                       'parts': parts}
+                rec = { 'id'   : s_id,
+                        'cls'  : s_cls,
+                        'dtype': int(parts[6]),
+                        'next' : int(parts[7]),
+                        'scope': int(parts[8]),
+                        'flags': flags,
+                        'attr' : attr,
+                        'f3'   : int(parts[3]),
+                        'name' : name,
+                        'parts': parts
+                       }
                 if s_cls in (5, 6, 7, 8):
                     rec['offset'] = int(parts[23])
                 if s_cls == 5 and len(parts) > 26:
@@ -2200,55 +2579,59 @@ class DL_DL(CDLL):
             if _depth > 10:
                 return None
             if dtype_ref in NV_DTYPES:
-                return {'ctype'      : NV_DTYPES[dtype_ref],
-                        'size'       : NV_DTYPE_SIZES[dtype_ref],
-                        'is_derived' : False,
-                        'derived'    :'',
-                        'ndims'      : 0,
-                        'dim'        : None,
-                        'is_deferred': False,
-                        'is_char'    : dtype_ref in (52, 127),
-                        'char_len'   : 0 if dtype_ref == 52 else (1 if dtype_ref == 127 else 0)}
+                return { 'ctype'      : NV_DTYPES[dtype_ref],
+                         'size'       : NV_DTYPE_SIZES[dtype_ref],
+                         'is_derived' : False,
+                         'derived'    :'',
+                         'ndims'      : 0,
+                         'dim'        : None,
+                         'is_deferred': False,
+                         'is_char'    : dtype_ref in (52, 127),
+                         'char_len'   : 0 if dtype_ref == 52 else (1 if dtype_ref == 127 else 0)
+                       }
             d = d_recs.get(dtype_ref)
             if not d:
                 clen = _resolve_char_len(dtype_ref) if dtype_ref > 100 else 0
                 if clen:
-                    return {'ctype'      : c_char_p,
-                            'size'       : clen,
-                            'is_derived' : False,
-                            'derived'    : '',
-                            'ndims'      : 0,
-                            'dim'        : None,
-                            'is_deferred': False,
-                            'is_char'    : True,
-                            'char_len'   : clen}
+                    return { 'ctype'      : c_char_p,
+                             'size'       : clen,
+                             'is_derived' : False,
+                             'derived'    : '',
+                             'ndims'      : 0,
+                             'dim'        : None,
+                             'is_deferred': False,
+                             'is_char'    : True,
+                             'char_len'   : clen
+                            }
                 return None
             if d['cls'] == 26:
                 ts = s_recs.get(d['type_sym'])
                 tn = ts['name'].lower() if ts else f'dtype_{dtype_ref}'
-                return {'ctype'      : tn,
-                        'size'       : d['size'],
-                        'is_derived' : True,
-                        'derived'    : tn,
-                        'ndims'      : 0,
-                        'dim'        : None,
-                        'is_deferred': False,
-                        'is_char'    : False,
-                        'char_len'   : 0}
+                return { 'ctype'      : tn,
+                         'size'       : d['size'],
+                         'is_derived' : True,
+                         'derived'    : tn,
+                         'ndims'      : 0,
+                         'dim'        : None,
+                         'is_deferred': False,
+                         'is_char'    : False,
+                         'char_len'   : 0
+                       }
             if d['cls'] == 23:
                 ei = _resolve(d['elem'], _depth+1)
                 if not ei:
                     clen = _resolve_char_len(d['elem'])
                     if clen:
-                        ei = {'ctype'      : c_char_p,
-                              'size'       : clen,
-                              'is_derived' : False,
-                              'derived'    :'',
-                              'ndims'      : 0,
-                              'dim'        : None,
-                              'is_deferred': False,
-                              'is_char'    : True,
-                              'char_len'   : clen}
+                        ei = { 'ctype'      : c_char_p,
+                               'size'       : clen,
+                               'is_derived' : False,
+                               'derived'    :'',
+                               'ndims'      : 0,
+                               'dim'        : None,
+                               'is_deferred': False,
+                               'is_char'    : True,
+                               'char_len'   : clen
+                             }
                     else:
                         return None
                 ndims = d['ndims']
@@ -2277,15 +2660,16 @@ class DL_DL(CDLL):
             if d['cls'] == 20:
                 clen = _resolve_char_len(dtype_ref)
                 if clen:
-                    return {'ctype'      : c_char_p,
-                            'size'       : clen,
-                            'is_derived' : False,
-                            'derived'    : '',
-                            'ndims'      : 0,
-                            'dim'        : None,
-                            'is_deferred': False,
-                            'is_char'    : True,
-                            'char_len'   : clen}
+                    return { 'ctype'      : c_char_p,
+                             'size'       : clen,
+                             'is_derived' : False,
+                             'derived'    : '',
+                             'ndims'      : 0,
+                             'dim'        : None,
+                             'is_deferred': False,
+                             'is_char'    : True,
+                             'char_len'   : clen
+                           }
                 return _resolve(d['target'], _depth+1)
             return None
         dbuff = self._DL_MOD(self, {'_name': basename})
@@ -2307,10 +2691,12 @@ class DL_DL(CDLL):
             types2ids[tname]   = sid
             ids2types[sid]     = tname
             types2sizes[tname] = d['size']
-            entry = {'_index'     : sid,
-                     '_is_derived': True,
-                     '_type_id'   : sid,
-                     '_size_chunk': d['size']}
+            entry = { '_index'     : sid,
+                      '_is_derived': True,
+                      '_type_id'   : sid,
+                      '_size_chunk': d['size'],
+                      '_desc_spec' : _NV_DESC_SPEC
+                    }
             cur = d['first_mem']
             visited = set()
             while cur and cur in s_recs and cur not in visited:
@@ -2332,8 +2718,8 @@ class DL_DL(CDLL):
                 is_def   = bool(fl & NV_DEFERRED_FLAG)
                 is_deferred_char = (di['ctype'] == c_char_p and di['char_len'] == 0
                                     and m.get('dtype') == 52)
-                mem = {'_index' : m['id'],
-                       '_offset': m.get('offset', 0)}
+                mem = { '_index' : m['id'],
+                        '_offset': m.get('offset', 0) }
                 if di['is_char']:
                     mem['_is_char'] = True
                     mem['_type']    = c_char_p
@@ -2406,7 +2792,7 @@ class DL_DL(CDLL):
                 di = _resolve(s['dtype'])
                 if not di:
                     continue
-                e = {'_index': sid, '_is_var': True}
+                e = { '_index': sid, '_is_var': True }
                 if di['is_derived']:
                     e['_type']       = di['derived']
                     _inst_dt[vn]     = di['derived']
@@ -2554,3 +2940,6 @@ setters = {
             c_bool  : DL_DL.setBool,
             str     : DL_DL.setChar,
           }
+
+
+
