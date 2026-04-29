@@ -29,7 +29,7 @@ A comprehensive [Reference Manual](REFERENCE_MANUAL.md) is available, covering i
 
 The Python-to-Fortran interoperability has been comprehensively tested using GNU, Intel, and Flang/Clang++ compilers. It also works with NVIDIA HPC compilers although currently arrays must be retrieved and altered in the "safe mode" (`readonly=.true.`) due to a bug in nvfortran.
 
-:warning: **Warning:** However, the method for Fortran-to-Python interoperability is still undergoing testing and validation, and is currently limited to use with the GNU compiler **gfortran** and the NVIDIA HPC compiler **nvfortran**, as the proprietary .mod file format used by the Intel compiler or other compilers' .mod format is not yet supported.
+:warning: **Warning:** However, the method for Fortran-to-Python interoperability is still undergoing testing and validation. It currently supports the GNU compiler **gfortran**, the Intel compiler **ifx**, the LLVM compiler **Flang**, and the NVIDIA HPC compiler **nvfortran**.
 
 # Getting started
 
@@ -39,8 +39,8 @@ The Python-to-Fortran interoperability has been comprehensively tested using GNU
 | Tools & Libraries             | Min. version | Note |
 |:------------------------------|:-------------|:-----|
 | g++/gfortran                  | 11           |      |
-| OR icpc/ifort                 | 17           | :warning: |
-| OR icpx/ifx                   | 2024         | :warning: |
+| OR icpc/ifort                 | 17           |      |
+| OR icpx/ifx                   | 2024         |      |
 | OR clang++/flang              | 22           |      |
 | OR nvc++/nvfortran            | 26.1         |      |
 | cmake                         | 3.16         |      |
@@ -49,10 +49,6 @@ The Python-to-Fortran interoperability has been comprehensively tested using GNU
 
 :bulb: The above package names are based on Ubuntu Linux. They may vary on other
        operating systems.
-
-:warning: The Fortran-to-Python method does **NOT** yet work with the Intel compilers.[^a]
-
-[^a]: Intel's proprietary .mod file format is unpublished and unsupported.
 
 ## Using and testing `DL_PY2F`
 
@@ -89,8 +85,6 @@ or Flang/Clang++
 or NVIDIA HPC compilers
 
 `export FC=nvfortran; export CXX=nvc++`
-
-:warning: Please keep in mind that only the Python-to-Fortran interoperability works with Intel compilers. Both directions work with GNU (gfortran/g++), LLVM (Flang/Clang++), and NVIDIA (nvfortran/nvc++) compilers.
 
 `$ python3 -m venv .venv`
 
