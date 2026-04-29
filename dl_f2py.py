@@ -15,20 +15,20 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with DL_PY2F. If not, see
 #  <https://www.gnu.org/licenses/>.
-
 # you.lu@stfc.ac.uk
 __email__ = 'you.lu@stfc.ac.uk'
 __author__ = f'You Lu <{__email__}>'
-import os, utils
+import gzip, math, os, re, struct, sys, traceback, utils
 from importlib.resources import files
 from ctypes    import addressof, CDLL, memset, RTLD_GLOBAL, sizeof
 from ctypes    import c_bool, c_char_p, c_double, c_float, c_int, c_long, c_void_p, POINTER, Structure
 from ctypes    import c_byte, c_char, c_short, c_size_t, c_uint, c_ubyte, c_ulong, c_void_p, c_wchar
 from _ctypes   import _SimpleCData
-from numpy     import array, dtype, empty, full, ndindex
+from numpy     import array, dtype, empty, full, ndindex, float16, float32, float64, int32, int64
 from math      import ceil, prod
 from itertools import product
 from inspect   import stack
+from os        import path, sep, walk
 from weakref   import WeakValueDictionary
 from time      import time
 from .         import libpath
@@ -49,6 +49,14 @@ _LLVM_DESC_SPEC = { 'esize_pos'    : 1,
                     'nread_base'   : 3,
                     'nread_per_dim': 3,
                     'shape_fn'     : lambda d, s, dd, k: d[s+k*dd+1] }
+_INTEL_DESC_SPEC= { 'esize_pos'    : 1,
+                    'ndims_pos'    : 4,
+                    'dim_start'    : 6,
+                    'dim_stride'   : 3,
+                    'lb_off'       : 2,
+                    'nread_base'   : 6,
+                    'nread_per_dim': 3,
+                    'shape_fn'     : lambda d, s, dd, k: d[s+k*dd] }
 _NV_DESC_SPEC   = { 'esize_pos'    : 5,
                     'dim_start'    : 12,
                     'dim_stride'   : 4,
@@ -74,9 +82,9 @@ selectcases = { float      : c_double,
                'INTEGER8'  : c_long,
                'REAL4'     : c_float,
                'REAL8'     : c_double,
-               'LOGICAL1'  : c_bool, # TODO logical of other lengths
-               'LOGICAL4'  : c_bool, # TODO logical of other lengths
-               'LOGICAL8'  : c_bool, # TODO logical of other lengths
+               'LOGICAL1'  : c_bool,
+               'LOGICAL4'  : c_bool,
+               'LOGICAL8'  : c_bool,
               }
 typestrs = { c_double  : 'f8',
              c_float   : 'f4',
@@ -519,7 +527,6 @@ class DL_DT(_SimpleCData):
                         indices.reverse()
                         is_linked_list = caller.split('%')[-1].split('(')[0] == k
                         is_allocated = True
-
                         if is_linked_list:
                             if debug:
                                 print(f' >>> NB: {_clr._bE}{caller}%{k}{_clr.CLR_} is an {_clr._bW}array of linked list of a deferred shape{_clr.CLR_}! (type: {_clr._W_i}{v["_type"]}{_clr.CLR_})!')
@@ -932,7 +939,6 @@ class DL_DL(CDLL):
                     self.parseAllModules(moddir, caller='modules')
             return self._modules
         except Exception:
-            import traceback, sys
             traceback.print_exc()
             if not hasattr(self, '_modules'):
                 self._modules = self._DL_MOD(self, {'_name': '__modules__'})
@@ -1196,7 +1202,6 @@ class DL_DL(CDLL):
         for i in range(8):
             memset(addr+i, lbuff[i], 1)
     def parseAllModules(self, moddir, recursive=True, padding=True, overwrite=False, caller='', debug=False):
-        from os import path, sep, walk
         if not hasattr(self, '_modules'):
             self._modules = self._DL_MOD(self, {'_name': '__modules__'})
         mods = self._modules
@@ -1226,14 +1231,19 @@ class DL_DL(CDLL):
             pass
         return mods
     def parseModule(self, modpath, padding=True, debug=False):
-        import gzip
-        from os import path
         if not path.isfile(modpath):
             return
         try:
             with gzip.open(modpath) as fp:
                 fp.read()
             return self._parseModuleGNU(modpath, padding=padding, debug=debug)
+        except:
+            pass
+        try:
+            with open(modpath, 'rb') as fp:
+                _hdr = fp.read(4)
+            if _hdr == b'\x0d\x00\x01\x00':
+                return self._parseModuleIntel(modpath, padding=padding, debug=debug)
         except:
             pass
         try:
@@ -1247,10 +1257,6 @@ class DL_DL(CDLL):
             pass
         return
     def _parseModuleGNU(self, modpath, padding=True, debug=False):
-        import gzip
-        from time  import time
-        from math  import prod
-        from os    import path
         fortran_internals = [ '__vtab_', '__vtype_', '__def_init_', '__copy_', '__final_', '__convert' ]
         basename = utils.fileutils.getBaseName(path.basename(modpath))
         def _printSummary(_dbuff):
@@ -1583,6 +1589,14 @@ class DL_DL(CDLL):
                                 dict_entry.update({'_is_pointer':True})
                             if lbuff3[-1] == 'TARGET':
                                 dict_entry.update({'_is_target':True})
+                            if 'ALLOCATABLE' in lbuff3:
+                                dict_entry.update({'_is_pointer':True,
+                                                   '_is_allocatable':True})
+                        if 'PROCEDURE' in lbuff3 and 'PROC_POINTER' in lbuff3:
+                            dict_entry.update({'_is_var': True,
+                                               '_is_pointer': True,
+                                               '_is_proc': True,
+                                               '_type': c_void_p})
                         if dict_entry.get('_is_const', False) or dict_entry.get('_is_var', False):
                             if len(lbuff3) == 6:
                                 if lbuff3[0] + lbuff3[1] in selectcases:
@@ -2125,10 +2139,836 @@ class DL_DL(CDLL):
         dbuff.update({'_filename':modpath})
         object.__setattr__(self.modules, dbuff['_name'], dbuff)
         return dbuff
+    def _parseModuleIntel(self, modpath, padding=True, debug=False):
+        basename = utils.fileutils.getBaseName(path.basename(modpath))
+        INTEL_MAGICS = (0x1f010000, 0x1f050000)
+        INTEL_TYPES = {  2: (c_bool  , 4),
+                         7: (c_int   , 4),
+                         8: (c_long  , 8),
+                         9: (c_float , 4),
+                        10: (c_double, 8)
+                      }
+        INTEL_ESZ   = { 4: c_int, 8: c_double }
+        with open(modpath, 'rb') as fp:
+            data = fp.read()
+        src_start = data.find(b'/', 0x80)
+        src_end   = data.index(b'\x00', src_start) if src_start > 0 else 0
+        src_file  = data[src_start:src_end].decode('ascii', errors='replace') if src_start > 0 else ''
+        names_all = {}
+        pos = 0
+        while pos < len(data) - 8:
+            if data[pos:pos+1] == b'#':
+                end = data.index(b'\x00', pos)
+                nm  = data[pos+1:end].decode('ascii', errors='replace').lower()
+                nid = struct.unpack_from('<I', data, end + 1)[0]
+                if nid not in names_all:
+                    names_all[nid] = nm
+                pos = end + 5
+            else:
+                pos += 1
+        type_ids = {nid: nm for nid, nm in names_all.items() if nm.startswith('type_')}
+        recs = {}
+        for _mag in INTEL_MAGICS:
+            magic_bytes = struct.pack('<I', _mag)
+            pos = 0
+            while True:
+                idx = data.find(magic_bytes, pos)
+                if idx < 0:
+                    break
+                mid = struct.unpack_from('<I', data, idx - 4)[0]
+                f   = [struct.unpack_from('<I', data, idx + i)[0] for i in range(0, 24, 4)]
+                if mid not in recs:
+                    recs[mid] = (idx, f)
+                pos = idx + 1
+        def _type_ref(mpos):
+            for soff in range(mpos + 28, min(mpos + 80, len(data))):
+                if data[soff:soff+1] == b'#':
+                    end2 = data.index(b'\x00', soff)
+                    return data[soff+1:end2].decode('ascii', errors='replace').lower()
+            return ''
+        INTEL_MARKER = 459120
+        def _extract_dims(mpos, total_elems):
+            if total_elems <= 1:
+                return None
+            dims = []
+            off = mpos + 52
+            while off < min(mpos + 7 * 16 + 64, len(data) - 4):
+                marker = struct.unpack_from('<I', data, off)[0]
+                if marker == INTEL_MARKER and off + 4 < len(data):
+                    v = struct.unpack_from('<i', data, off + 4)[0]
+                    if v != 0:
+                        dims.append(v)
+                    off += 16
+                else:
+                    break
+            if not dims:
+                return (total_elems,)
+            product = 1
+            for d in dims:
+                product *= d
+            if product == total_elems:
+                return tuple(dims)
+            extents = []
+            for i in range(0, len(dims) - 1, 2):
+                lb, ub = dims[i], dims[i+1]
+                extents.append(ub - lb + 1)
+            product = 1
+            for e in extents:
+                product *= e
+            if product == total_elems and extents:
+                return tuple(extents)
+            return (total_elems,)
+        type_sizes_est = {}
+        for tid, tn in type_ids.items():
+            needle = b'#' + tn.upper().encode()
+            idx2 = data.find(needle)
+            if idx2 > 16:
+                best_v = 0
+                for back in [16, 24, 8]:
+                    check = idx2 - back
+                    if check >= 4:
+                        v = struct.unpack_from('<I', data, check)[0]
+                        prev = struct.unpack_from('<I', data, check - 4)[0]
+                        if v >= 8 and v % 4 == 0 and v < len(data) and (prev == 0 or prev in INTEL_MAGICS):
+                            if v > best_v:
+                                best_v = v
+                if best_v:
+                    type_sizes_est[tid] = best_v
+                else:
+                    candidates = []
+                    for back in range(4, 36, 4):
+                        check = idx2 - back
+                        if check >= 0:
+                            v = struct.unpack_from('<I', data, check)[0]
+                            if v >= 8 and v % 8 == 0 and v < len(data):
+                                candidates.append(v)
+                    if candidates:
+                        type_sizes_est[tid] = max(candidates)
+        type_members = {tid: {} for tid in type_ids}
+        type_id_list = sorted(type_ids.keys())
+        stack  = []
+        all_ids = sorted(set(recs.keys()) | set(type_ids.keys()))
+        skip_names = {'xx', 'self', 'i', 'f', 'fn',
+                      'procedure_xx', 'procedure_xxx', 'procedure_yy', 'procedure_yyy',
+                      'xx_int', 'xx_float'}
+        for mid in all_ids:
+            if mid in type_ids:
+                stack.append(mid)
+                continue
+            mname = names_all.get(mid, '')
+            if not mname or mname in skip_names:
+                continue
+            if mid not in recs:
+                continue
+            mpos, f = recs[mid]
+            is_scalar = (f[4] != 0 and f[4] in INTEL_TYPES)
+            offset    = f[1] if is_scalar else f[3]
+            while len(stack) > 1:
+                top = stack[-1]
+                tsz = type_sizes_est.get(top, 0)
+                if tsz and offset >= tsz:
+                    stack.pop()
+                else:
+                    break
+            ptid = stack[-1] if stack else (type_id_list[0] if type_id_list else None)
+            if ptid is None:
+                continue
+            mem = {'_offset': offset}
+            if is_scalar:
+                ti = INTEL_TYPES.get(f[4])
+                if not ti:
+                    continue
+                ct, sz      = ti
+                mem['_type']   = ct
+                mem['_size']   = sz
+                mem['_stride'] = sz
+                mem['_nbytes'] = sz
+            else:
+                dim_or_sz = f[1]
+                esz       = f[5]
+                if esz & 0x10000:
+                    mem['_is_char'] = True
+                    mem['_type']    = c_char_p
+                    mem['_length']  = dim_or_sz if dim_or_sz > 0 else 0
+                    mem['_size']    = max(dim_or_sz, 1)
+                    mem['_stride']  = max(dim_or_sz, 1)
+                    if dim_or_sz == 0:
+                        mem['_is_deferred_char'] = True
+                        mem['_size'] = mem['_stride'] = 8
+                else:
+                    dt = _type_ref(mpos)
+                    if dt and dt in type_ids.values():
+                        mem['_type']       = dt
+                        mem['_is_derived'] = True
+                        mem['_size']       = esz if esz > 0 else dim_or_sz
+                        mem['_stride']     = 8
+                        if dim_or_sz > 1 and dim_or_sz != esz:
+                            dims = _extract_dims(mpos, dim_or_sz)
+                            mem['_ndims'] = len(dims)
+                            mem['_dim']   = dims
+                        if dim_or_sz <= 1 and esz > 0:
+                            if dim_or_sz == 1:
+                                mem['_is_deferred'] = True
+                                mem['_ndims']       = 1
+                    elif esz > 0 and dim_or_sz > 1:
+                        mem['_type']   = INTEL_ESZ.get(esz, c_int)
+                        mem['_size']   = esz
+                        mem['_stride'] = esz
+                        dims = _extract_dims(mpos, dim_or_sz)
+                        mem['_ndims']  = len(dims)
+                        mem['_dim']    = dims
+                    elif dim_or_sz <= 1 and esz > 0:
+                        mem['_type']        = INTEL_ESZ.get(esz, c_int)
+                        mem['_size']        = esz
+                        mem['_stride']      = esz
+                        mem['_is_deferred'] = True
+                        mem['_ndims']       = 1
+                    else:
+                        continue
+            type_members[ptid][mname] = mem
+        dbuff     = self._DL_MOD(self, {'_name': basename})
+        dbuff['_title'] = f'Intel module from {path.basename(src_file)}'
+        types2ids   = {}
+        types2sizes = {}
+        _inst_dt    = {}
+        for tid in type_id_list:
+            tname = type_ids[tid]
+            mems  = type_members[tid]
+            if not mems:
+                continue
+            entry = {'_is_derived': True, '_type_id': tid, '_desc_spec': _INTEL_DESC_SPEC}
+            entry.update(mems)
+            last_off = max(v.get('_offset', 0) for v in mems.values())
+            last_v   = [v for v in mems.values() if v.get('_offset') == last_off][0]
+            last_sz  = last_v.get('_size', 4)
+            if last_v.get('_ndims') and last_v.get('_dim'):
+                last_sz *= prod(last_v['_dim'])
+            if last_v.get('_is_deferred'):
+                last_sz = 72
+            total = last_off + last_sz
+            total += (8 - total % 8) % 8
+            entry['_size_chunk'] = total
+            types2sizes[tname]   = total
+            types2ids[tname]     = tid
+            dbuff[tname] = entry
+        for k, v in dbuff.items():
+            if isinstance(v, dict) and v.get('_is_derived'):
+                for kk, vv in v.items():
+                    if isinstance(vv, dict) and vv.get('_is_derived'):
+                        dn = vv.get('_type', '')
+                        if isinstance(dn, str) and dn in dbuff:
+                            vv['_size_chunk'] = dbuff[dn].get('_size_chunk', vv.get('_size', 8))
+                            vv['_type_id']    = types2ids.get(dn, 0)
+        _sym_sz   = {}
+        _sym_addr = {}
+        _so_progbits = []
+        _so_nobits   = []
+        _so_path = self._name
+        try:
+            with open(_so_path, 'rb') as _ef:
+                _ehdr = _ef.read(64)
+                _shoff  = struct.unpack_from('<Q', _ehdr, 40)[0]
+                _shsz   = struct.unpack_from('<H', _ehdr, 58)[0]
+                _shnum  = struct.unpack_from('<H', _ehdr, 60)[0]
+                _ef.seek(_shoff)
+                _shdrs = [_ef.read(_shsz) for _ in range(_shnum)]
+                for _sh in _shdrs:
+                    _stype = struct.unpack_from('<I', _sh, 4)[0]
+                    _svaddr = struct.unpack_from('<Q', _sh, 16)[0]
+                    _sfoff  = struct.unpack_from('<Q', _sh, 24)[0]
+                    _sssz   = struct.unpack_from('<Q', _sh, 32)[0]
+                    if _stype == 1 and _svaddr and _sssz:
+                        _so_progbits.append((_svaddr, _sssz, _sfoff))
+                    elif _stype == 8 and _svaddr and _sssz:
+                        _so_nobits.append((_svaddr, _sssz))
+                    if _stype not in (2, 11):
+                        continue
+                    _slink  = struct.unpack_from('<I', _sh, 40)[0]
+                    _strtab_sh = _shdrs[_slink]
+                    _stroff = struct.unpack_from('<Q', _strtab_sh, 24)[0]
+                    _strsz  = struct.unpack_from('<Q', _strtab_sh, 32)[0]
+                    _ef.seek(_stroff)
+                    _strtab = _ef.read(_strsz)
+                    _ef.seek(_sfoff)
+                    _symdata = _ef.read(_sssz)
+                    for _si in range(0, len(_symdata), 24):
+                        _noff = struct.unpack_from('<I', _symdata, _si)[0]
+                        _sva  = struct.unpack_from('<Q', _symdata, _si + 8)[0]
+                        _sz   = struct.unpack_from('<Q', _symdata, _si + 16)[0]
+                        if _sz == 0 or _noff >= len(_strtab):
+                            continue
+                        _ne = _strtab.find(b'\x00', _noff)
+                        _sn = _strtab[_noff:_ne].decode('ascii', errors='replace')
+                        if _sn.startswith(f'{basename}_mp_'):
+                            _sym_sz[_sn]   = _sz
+                            _sym_addr[_sn] = _sva
+                        elif _sn and _sn[0].isalpha() and '.' not in _sn \
+                                and not _sn.startswith('_') and _sz == 8:
+                            _sym_sz.setdefault(_sn, _sz)
+                            _sym_addr.setdefault(_sn, _sva)
+        except Exception:
+            pass
+        def _read_at_vaddr(vaddr, nbytes):
+            for _vs, _sz, _fo in _so_progbits:
+                if _vs <= vaddr < _vs + _sz:
+                    _off = _fo + (vaddr - _vs)
+                    try:
+                        with open(_so_path, 'rb') as _f:
+                            _f.seek(_off)
+                            return _f.read(nbytes)
+                    except Exception:
+                        return b''
+            for _vs, _sz in _so_nobits:
+                if _vs <= vaddr < _vs + _sz:
+                    return b'\x00' * nbytes
+            return b''
+        _ref_idx = {}
+        _ref_rec = {}
+        _rp = len(data) - 1
+        while _rp > len(data) // 2:
+            if data[_rp] == 0 and _rp + 17 <= len(data):
+                _ns = _rp
+                while _ns > 0 and (0x41 <= data[_ns-1] <= 0x5A or \
+                      0x30 <= data[_ns-1] <= 0x39 or data[_ns-1] == 0x5F):
+                    _ns -= 1
+                if _ns < _rp and _rp - _ns >= 2:
+                    _rn = data[_ns:_rp].decode('ascii', errors='replace').lower()
+                    _rv = struct.unpack_from('<4I', data, _rp + 1)
+                    if _rv[3] == 0 and 0 < _rv[1] < len(data):
+                        _ref_idx[_rn] = _rv[1]
+                        _ref_rec[_rn] = _rv[2]
+                    _rp = _ns - 1
+                    continue
+            _rp -= 1
+        _mod_vrefs = sorted(set(_ref_idx.values()))
+        pub_end = data.find(b'\x00', data.index(b'\x00', src_end) + 1)
+        pub_start = pub_end + 1
+        if pub_start + 16 < len(data):
+            pub_header = struct.unpack_from('<4I', data, pub_start)
+            pub_count  = pub_header[2]
+            pub_pos    = pub_start + 16
+            _pub_iter  = 0
+            while _pub_iter < pub_count or pub_pos < len(data):
+                if pub_pos >= len(data):
+                    break
+                end2 = data.find(b'\x00', pub_pos)
+                if end2 < 0 or end2 == pub_pos:
+                    break
+                _raw = data[pub_pos:end2]
+                try:
+                    vn = _raw.decode('ascii').lower()
+                    if not all(c.isalnum() or c == '_' for c in vn):
+                        break
+                except (UnicodeDecodeError, ValueError):
+                    break
+                pub_pos = end2 + 1
+                _pub_iter += 1
+                if not vn:
+                    continue
+                _has_sym = False
+                for _pat in [f'{basename}_mp_{vn}_', f'__{basename}_MOD_{vn}',
+                             f'_QM{basename}E{vn}', vn]:
+                    if _pat in _sym_sz:
+                        _has_sym = True
+                        break
+                    try:
+                        c_byte.in_dll(self, _pat)
+                        _has_sym = True
+                        break
+                    except:
+                        pass
+                e = {'_index': 0, '_is_var': True} if _has_sym else {'_index': 0, '_is_const': True}
+                for tn in types2sizes:
+                    short = tn.replace('type_0', 't0').replace('type_', 't')
+                    if vn.endswith('_' + short) or vn.endswith('_' + tn.split('_')[-1]):
+                        e['_type']       = tn
+                        e['_size_chunk'] = types2sizes[tn]
+                        _inst_dt[vn]     = tn
+                        _elf_sz = _sym_sz.get(f'{basename}_mp_{vn}_', 0) \
+                                  or _sym_sz.get(vn, 0)
+                        if _elf_sz == 8 and types2sizes[tn] != 8:
+                            e['_is_pointer'] = True
+                        break
+                _vref = _ref_idx.get(vn, 0)
+                if '_type' not in e and _vref and 0 < _vref < len(data) - 84:
+                    _b80_cx = struct.unpack_from('<I', data, _vref + 80)[0]
+                    _tc_cx  = struct.unpack_from('<I', data, _vref     )[0]
+                    _fl_cx  = struct.unpack_from('<I', data, _vref +  8)[0]
+                    if _tc_cx == 15 and (_b80_cx & 0xff) == 0x0d \
+                            and not (_fl_cx & 0x8):
+                        e['_type'] = c_complex8
+                if '_type' not in e and _vref and 0 < _vref < len(data) - 68:
+                    _tc = struct.unpack_from('<I', data, _vref)[0]
+                    _fl = struct.unpack_from('<I', data, _vref + 8)[0]
+                    _ssz_check = _sym_sz.get(f'{basename}_mp_{vn}_', 0) \
+                                 or _sym_sz.get(vn, 0)
+                    _is_descr_size = (_ssz_check == 8) or (
+                        _ssz_check >= 48 and (_ssz_check - 48) % 24 == 0
+                        and _ssz_check <= 48 + 24 * 7)
+                    _sva_peek = _sym_addr.get(f'{basename}_mp_{vn}_', 0) \
+                                or _sym_addr.get(vn, 0)
+                    _peek_len = min(_ssz_check, 16) if _ssz_check > 0 else 16
+                    _peek = _read_at_vaddr(_sva_peek, _peek_len) \
+                            if _sva_peek and _peek_len > 0 else b''
+                    _is_ascii_init = (len(_peek) == _peek_len and _peek_len > 0
+                                      and all(0x20 <= b < 0x7f for b in _peek))
+                    if _tc == 43:
+                        if (_fl & 0x40000) and not (_fl & 0x8) \
+                                and _is_ascii_init:
+                            e['_type']    = c_char_p
+                            e['_is_char'] = True
+                        elif _is_descr_size or _ssz_check == 0:
+                            e['_is_pointer'] = True
+                        elif _is_ascii_init and not (_fl & 0x8):
+                            e['_type']    = c_char_p
+                            e['_is_char'] = True
+                    else:
+                        if (_fl & 0x40000) and _is_ascii_init:
+                            e['_type']    = c_char_p
+                            e['_is_char'] = True
+                        elif (_fl & 0x200000) and not (_fl & 0x40000) \
+                                and not (_fl & 0x8) and _is_ascii_init:
+                            e['_type']    = c_char_p
+                            e['_is_char'] = True
+                        elif _tc == 12 and _is_ascii_init and _ssz_check > 0 \
+                                and not (_fl & 0x8):
+                            e['_type']    = c_char_p
+                            e['_is_char'] = True
+                        elif _tc == 13 and _is_ascii_init and _ssz_check > 0:
+                            e['_type']    = c_char_p
+                            e['_is_char'] = True
+                        elif (_fl & 0x40000) and (_is_descr_size or _ssz_check == 0):
+                            if _ssz_check == 8:
+                                _sva8 = _sym_addr.get(f'{basename}_mp_{vn}_', 0) \
+                                        or _sym_addr.get(vn, 0)
+                                _peek8 = _read_at_vaddr(_sva8, 8) if _sva8 else b''
+                                if len(_peek8) == 8 and any(_peek8):
+                                    if _tc == 15:
+                                        e['_type'] = c_double
+                                    elif _tc == 14:
+                                        e['_type'] = c_int
+                                    elif _tc == 13:
+                                        e['_type'] = c_float
+                                    elif _tc == 12:
+                                        e['_type'] = c_bool
+                                else:
+                                    e['_is_pointer'] = True
+                            else:
+                                e['_is_pointer'] = True
+                        elif _tc == 15 and _fl == 0x00200000 and _is_descr_size \
+                                and _ssz_check > 8:
+                            e['_type']       = c_char_p
+                            e['_is_char']    = True
+                            e['_is_pointer'] = True
+                        elif _tc == 15 and (_fl & 0x200000) \
+                                and not (_fl & 0x40000) and not (_fl & 0x8) \
+                                and _ssz_check == 8 and not _is_ascii_init \
+                                and not any(_peek):
+                            e['_is_pointer'] = True
+                        elif _tc == 12:
+                            e['_type'] = c_bool
+                        elif _tc == 13:
+                            e['_type'] = c_float
+                        elif _tc == 14:
+                            e['_type'] = c_int
+                        elif _tc == 15:
+                            e['_type'] = c_double
+                if '_type' not in e and _vref and _vref in _mod_vrefs:
+                    _vi_bs = _mod_vrefs.index(_vref)
+                    if _vi_bs > 0:
+                        _pv_bs = _mod_vrefs[_vi_bs - 1]
+                        if 0 < _pv_bs < len(data) - 84:
+                            _pb80_bs = struct.unpack_from('<I', data, _pv_bs + 80)[0]
+                            _pcode_bs = _pb80_bs & 0xff
+                            _pinfo_bs = INTEL_TYPES.get(_pcode_bs)
+                            if _pinfo_bs and _ssz_check > 0 \
+                                    and _ssz_check % _pinfo_bs[1] == 0:
+                                e['_type'] = _pinfo_bs[0]
+                if _vref and 0 < _vref < len(data) - 68 \
+                        and not e.get('_is_char') and not e.get('_is_pointer'):
+                    _tc2 = struct.unpack_from('<I', data, _vref)[0]
+                    _fl2 = struct.unpack_from('<I', data, _vref + 8)[0]
+                    _b64_2 = struct.unpack_from('<I', data, _vref + 64)[0]
+                    _ssz2 = _sym_sz.get(f'{basename}_mp_{vn}_', 0) \
+                            or _sym_sz.get(vn, 0)
+                    if _tc2 == 15 and (_fl2 & 0x200000) and not (_fl2 & 0x40000) \
+                            and _b64_2 > 20 and _b64_2 == _ssz2:
+                        e['_type']    = c_char_p
+                        e['_is_char'] = True
+                        e.pop('_ndims', None)
+                        e.pop('_dim',   None)
+                if '_type' in e and not isinstance(e['_type'], str) \
+                        and not e.get('_is_pointer') and not e.get('_is_char'):
+                    _esz = sizeof(e['_type'])
+                    _ssz = _sym_sz.get(f'{basename}_mp_{vn}_', 0) \
+                           or _sym_sz.get(vn, 0)
+                    if _ssz and _esz and _ssz != _esz and _ssz == 8:
+                        e['_is_pointer'] = True
+                        del e['_type']
+                if _vref and 0 < _vref < len(data) - 68 \
+                        and not e.get('_is_pointer') and not e.get('_is_const') \
+                        and not e.get('_is_char') and '_type' in e \
+                        and not isinstance(e['_type'], str):
+                    _p16  = struct.unpack_from('<I', data, _vref + 64)[0]
+                    _fl16 = struct.unpack_from('<I', data, _vref +  8)[0]
+                    if _fl16 == 0 and _vref in _mod_vrefs:
+                        _vi16 = _mod_vrefs.index(_vref)
+                        if _vi16 > 0:
+                            _pv16 = _mod_vrefs[_vi16 - 1]
+                            if 0 < _pv16 < len(data) - 68:
+                                _pp16 = struct.unpack_from('<I', data, _pv16 + 64)[0]
+                                if INTEL_TYPES.get(_pp16) is not None:
+                                    _p16 = _pp16
+                    _p16c = INTEL_TYPES.get(_p16)
+                    if _p16c:
+                        _esz = _p16c[1]
+                        _ssz = _sym_sz.get(f'{basename}_mp_{vn}_', 0)
+                        if _ssz == 0 or _ssz == _esz or (_ssz > _esz and _ssz % _esz == 0):
+                            e['_type'] = _p16c[0]
+                if _vref and _vref in _mod_vrefs and '_type' in e \
+                        and not isinstance(e['_type'], str) \
+                        and not e.get('_is_char'):
+                    _vi2 = _mod_vrefs.index(_vref)
+                    if _vi2 > 0:
+                        _pv2 = _mod_vrefs[_vi2 - 1]
+                        if 0 < _pv2 < len(data) - 84:
+                            _pb80 = struct.unpack_from('<I', data, _pv2 + 80)[0]
+                            _pcode = _pb80 & 0xff
+                            _pinfo = INTEL_TYPES.get(_pcode)
+                            if _pinfo:
+                                _ssz_v = _sym_sz.get(f'{basename}_mp_{vn}_', 0)
+                                _esz_v = _pinfo[1]
+                                if _ssz_v == 0 or _ssz_v == _esz_v \
+                                        or (_ssz_v > _esz_v and _ssz_v % _esz_v == 0):
+                                    e['_type'] = _pinfo[0]
+                if _vref and _vref in _mod_vrefs:
+                    _vi = _mod_vrefs.index(_vref)
+                    if _vi > 0:
+                        _pv = _mod_vrefs[_vi - 1]
+                        if 0 < _pv < len(data) - 100:
+                            _pt  = struct.unpack_from('<I', data, _pv + 64)[0]
+                            _b96 = struct.unpack_from('<I', data, _pv + 96)[0]
+                            _own_tc = struct.unpack_from('<I', data, _vref)[0]
+                            if _pt > 0 and _b96 == _pt + 1 and _own_tc == 13:
+                                e['_type']    = c_char_p
+                                e['_is_char'] = True
+                                e['_length']  = _pt
+                            elif e.get('_is_pointer') and _pt > 0:
+                                _rrec = _ref_rec.get(vn, 0)
+                                _ssz_e = _sym_sz.get(f'{basename}_mp_{vn}_', 0)
+                                _tc_disc = struct.unpack_from('<I', data, _vref)[0] \
+                                           if 0 < _vref < len(data) - 4 else 0
+                                _fl_sclp = 0
+                                if _ref_idx.get(vn, 0):
+                                    _fl_sclp = struct.unpack_from(
+                                        '<I', data, _ref_idx[vn] + 8)[0]
+                                _prev_b25_a = 0xff
+                                _vref_e = _ref_idx.get(vn, 0)
+                                if _vref_e and _vref_e in _mod_vrefs:
+                                    _vi_x = _mod_vrefs.index(_vref_e)
+                                    if _vi_x > 0:
+                                        _pv_x = _mod_vrefs[_vi_x - 1]
+                                        if 0 < _pv_x + 25 < len(data):
+                                            _prev_b25_a = data[_pv_x + 25]
+                                if _ssz_e == 8 and _rrec > 72 and _tc_disc == 15 \
+                                        and not (_fl_sclp & 0x8) \
+                                        and _prev_b25_a != 0x00:
+                                    _vref_e = _ref_idx.get(vn, 0)
+                                    _has_m = _vref_e and struct.pack('<I', INTEL_MARKER) in \
+                                             data[_vref_e:_vref_e + _rrec] if _vref_e else False
+                                    if not _has_m:
+                                        e['_type']    = c_char_p
+                                        e['_is_char'] = True
+                                        e['_length']  = _pt
+                                else:
+                                    _ptc = INTEL_TYPES.get(_pt)
+                                    if _ptc:
+                                        e['_type'] = _ptc[0]
+                            else:
+                                _ptc = INTEL_TYPES.get(_pt)
+                                if _ptc:
+                                    if e.get('_is_pointer') or e.get('_is_const'):
+                                        e['_type'] = _ptc[0]
+                dbuff[vn] = e
+        _dim_groups_p = []
+        _DIM_MARKERS = []
+        _dpos = 0
+        while _dpos + 4 <= len(data):
+            _mi = data.find(b'\x70\x01', _dpos)
+            if _mi < 0:
+                break
+            if _mi + 12 <= len(data) and data[_mi + 3] == 0x00:
+                _DIM_MARKERS.append(_mi)
+            _dpos = _mi + 1
+        _cur_g, _cur_start, _prev_mi = [], 0, -1
+        for _mi in _DIM_MARKERS:
+            _prev4 = struct.unpack_from('<I', data, _mi - 4)[0] if _mi >= 4 else 0
+            _val   = struct.unpack_from('<q', data, _mi + 4)[0]
+            _gap   = (_mi - _prev_mi) if _prev_mi >= 0 else -1
+            _continues = (_gap == 12) or (_gap == 16 and _prev4 == 0x40002)
+            if not _cur_g:
+                _cur_g    = [_val]
+                _cur_start = _mi
+            elif _continues:
+                _cur_g.append(_val)
+            else:
+                _dim_groups_p.append((_cur_start, tuple(_cur_g)))
+                _cur_g    = [_val]
+                _cur_start = _mi
+            _prev_mi = _mi
+        if _cur_g:
+            _dim_groups_p.append((_cur_start, tuple(_cur_g)))
+        _dim_groups = [g for _, g in _dim_groups_p]
+        _sorted_mod = sorted([(v, n) for n, v in _ref_idx.items()])
+        _groups_in_rec = {}
+        for _vv, _nn in _sorted_mod:
+            _rr = _ref_rec.get(_nn, 0)
+            if not _rr:
+                continue
+            _groups_in_rec[_nn] = [(p, g) for p, g in _dim_groups_p if _vv <= p < _vv + _rr]
+        for vn, e in dbuff.items():
+            if not isinstance(e, dict) or not e.get('_is_var'):
+                continue
+            _pat = f'{basename}_mp_{vn}_'
+            _ssz = _sym_sz.get(_pat, 0)
+            if not _ssz:
+                if vn in _sym_sz:
+                    _pat = vn
+                    _ssz = _sym_sz[vn]
+                else:
+                    continue
+            if not e.get('_is_pointer') and not e.get('_is_char') and _ssz == 8 \
+                    and _ref_idx.get(vn, 0):
+                _vref_e = _ref_idx[vn]
+                if _vref_e + 20 <= len(data):
+                    _b16 = struct.unpack_from('<I', data, _vref_e + 16)[0]
+                    if _b16 & 0x80000000:
+                        e['_type']       = c_char_p
+                        e['_is_pointer'] = True
+                        e['_is_char']    = True
+            if e.get('_is_pointer') and not e.get('_is_char') and _ssz == 8:
+                _rrec = _ref_rec.get(vn, 0)
+                _vref_e = _ref_idx.get(vn, 0)
+                _tc_disc = struct.unpack_from('<I', data, _vref_e)[0] \
+                           if _vref_e and 0 < _vref_e < len(data) - 4 else 0
+                _fl_sclp2 = struct.unpack_from('<I', data, _vref_e + 8)[0] \
+                            if _vref_e and _vref_e + 12 <= len(data) else 0
+                _prev_b25 = 0xff
+                if _vref_e and _vref_e in _mod_vrefs:
+                    _vi_pb25 = _mod_vrefs.index(_vref_e)
+                    if _vi_pb25 > 0:
+                        _pv_pb25 = _mod_vrefs[_vi_pb25 - 1]
+                        if 0 < _pv_pb25 + 25 < len(data):
+                            _prev_b25 = data[_pv_pb25 + 25]
+                if _rrec > 72 and _vref_e and _vref_e + _rrec <= len(data) \
+                        and _tc_disc == 15 and not (_fl_sclp2 & 0x8) \
+                        and _prev_b25 != 0x00:
+                    _rec_data = data[_vref_e:_vref_e + _rrec]
+                    if struct.pack('<I', INTEL_MARKER) not in _rec_data:
+                        e['_type']    = c_char_p
+                        e['_is_char'] = True
+            if _ssz >= 48:
+                _sva = _sym_addr.get(_pat, 0)
+                if _sva:
+                    _desc_bytes = _read_at_vaddr(_sva, 16)
+                    if len(_desc_bytes) == 16:
+                        _base, _desc_esz = struct.unpack_from('<qq', _desc_bytes)
+                        _tc_now = struct.unpack_from('<I', data,
+                                  _ref_idx.get(vn, 0))[0] \
+                                  if _ref_idx.get(vn, 0) else 0
+                        if _base == 0 and _desc_esz == 0 and _tc_now == 43 \
+                                and _groups_in_rec.get(vn):
+                            if e.get('_is_pointer'):
+                                e.pop('_is_pointer', None)
+                        elif _base == 0:
+                            _my_vref = _ref_idx.get(vn, 0)
+                            _tc_from_prev = None
+                            if _my_vref and _my_vref in _mod_vrefs:
+                                _vi = _mod_vrefs.index(_my_vref)
+                                if _vi > 0:
+                                    _pv = _mod_vrefs[_vi - 1]
+                                    if 0 < _pv < len(data) - 84:
+                                        _pb80 = struct.unpack_from('<I', data, _pv + 80)[0]
+                                        _tc_from_prev = _pb80 & 0xff
+                            _ptype_from_code = INTEL_TYPES.get(_tc_from_prev) if _tc_from_prev else None
+                            _fl_own = 0
+                            if _ref_idx.get(vn, 0):
+                                _fl_own = struct.unpack_from('<I', data,
+                                          _ref_idx[vn] + 8)[0]
+                            _is_char_flag = ((_fl_own & 0x200000)
+                                             and not (_fl_own & 0x40000))
+                            if (8 < _desc_esz < 65536 or
+                                _desc_esz in (1, 2, 3, 5, 6, 7)) \
+                                    and not e.get('_is_char'):
+                                e['_type']       = c_char_p
+                                e['_is_char']    = True
+                                e['_is_pointer'] = True
+                                e['_length']     = _desc_esz
+                            elif _ptype_from_code and _desc_esz in (4, 8):
+                                e['_type']       = _ptype_from_code[0]
+                                e['_is_pointer'] = True
+                                e.pop('_ndims', None)
+                                e.pop('_dim',   None)
+                            elif _desc_esz in (4, 8) and _is_char_flag \
+                                    and not e.get('_is_char'):
+                                e['_type']       = c_char_p
+                                e['_is_char']    = True
+                                e['_is_pointer'] = True
+                                e['_length']     = _desc_esz
+                            elif _base == 0 and _desc_esz == 0 and _ssz == 48 \
+                                    and _fl_own != 0 and not e.get('_is_char') \
+                                    and not _groups_in_rec.get(vn):
+                                e['_type']       = c_char_p
+                                e['_is_char']    = True
+                                e['_is_pointer'] = True
+                            elif _desc_esz == 4 and _fl_own == 0 \
+                                    and _ref_idx.get(vn, 0) \
+                                    and not e.get('_is_char'):
+                                e['_type']       = c_char_p
+                                e['_is_char']    = True
+                                e['_is_pointer'] = True
+                                e['_length']     = _desc_esz
+            if '_type' not in e and not e.get('_is_pointer') and not e.get('_is_char'):
+                _descr_sizes = {8, 48, 72, 96, 120, 144, 168, 192, 216}
+                if _ssz in _descr_sizes and not _ref_idx.get(vn, 0):
+                    e['_is_pointer'] = True
+                elif _ssz % 8 != 0:
+                    e['_type'] = c_float if _ssz > 4 else c_int
+                elif _ssz == 8:
+                    e['_type'] = c_double
+                else:
+                    e['_type'] = c_int
+            if _ssz == 8 and not _ref_idx.get(vn, 0) and not e.get('_is_pointer') \
+                    and not e.get('_is_char') and not isinstance(e.get('_type'), str):
+                e['_is_pointer'] = True
+            if '_type' in e and not isinstance(e['_type'], str) and '_ndims' not in e \
+                    and not e.get('_is_pointer') and not e.get('_is_char') and _ssz > 0:
+                _my_vref = _ref_idx.get(vn, 0)
+                _prev_n  = None
+                for _idx_m, (_vv, _nn) in enumerate(_sorted_mod):
+                    if _vv == _my_vref and _idx_m > 0:
+                        _prev_n = _sorted_mod[_idx_m - 1][1]
+                        break
+                _cand_groups = [g for _, g in _groups_in_rec.get(_prev_n, [])] \
+                               if _prev_n else _dim_groups
+                _esz = sizeof(e['_type'])
+                _total = _ssz // _esz if _esz > 0 else 0
+                _matched = sorted([g for g in _cand_groups
+                                   if prod(g) == _total and all(d > 1 for d in g)],
+                                  key=len) if _total > 1 else []
+                if not _matched and _total == 1 and _ssz == _esz:
+                    for _g in _cand_groups:
+                        if tuple(_g) == (1,):
+                            _matched = [(1,)]
+                            break
+                if not _matched:
+                    for _try_esz in [16, 8, 4, 2, 1]:
+                        if _try_esz == _esz or _ssz % _try_esz != 0:
+                            continue
+                        _try_total = _ssz // _try_esz
+                        if _try_total <= 1:
+                            continue
+                        _try_m = sorted([g for g in _cand_groups
+                                         if prod(g) == _try_total and all(d > 1 for d in g)],
+                                        key=len)
+                        if _try_m:
+                            e['_type']  = {1 : c_byte,  2: c_short,
+                                           4 : c_int,   8: c_double,
+                                           16: c_complex8 }.get(_try_esz, e['_type'])
+                            _matched    = _try_m
+                            _total      = _try_total
+                            break
+                if _matched:
+                    e['_ndims'] = len(_matched[0])
+                    e['_dim']   = _matched[0]
+                else:
+                    _esz = sizeof(e['_type'])
+                    if _esz > 0 and _ssz > _esz:
+                        _total = _ssz // _esz
+                        if _total > 1:
+                            e['_ndims'] = 1
+                            e['_dim']   = (_total,)
+            if e.get('_is_char') and '_length' not in e and _ssz > 0:
+                _my_vref = _ref_idx.get(vn, 0)
+                _prev_n  = None
+                for _idx_m, (_vv, _nn) in enumerate(_sorted_mod):
+                    if _vv == _my_vref and _idx_m > 0:
+                        _prev_n = _sorted_mod[_idx_m - 1][1]
+                        break
+                _cand_groups = [g for _, g in _groups_in_rec.get(_prev_n, [])] \
+                               if _prev_n else _dim_groups
+                _best = None
+                for _g in sorted(_cand_groups, key=lambda g: (-len(g), g)):
+                    if not _g or any(d <= 0 for d in _g):
+                        continue
+                    _p = prod(_g)
+                    if _p > 0 and _ssz % _p == 0 and _ssz // _p > 1:
+                        _best = _g
+                        break
+                if _best is None:
+                    for _g in sorted(_cand_groups, key=len):
+                        if not _g or any(d <= 0 for d in _g):
+                            continue
+                        if prod(_g) == _ssz:
+                            _best = _g
+                            break
+                if _best is not None:
+                    _clen = _ssz // prod(_best)
+                    e['_length'] = _clen
+                    e['_ndims']  = len(_best)
+                    e['_dim']    = _best
+                elif _sym_addr.get(_pat, 0) and not e.get('_is_pointer'):
+                    _buf = _read_at_vaddr(_sym_addr[_pat], _ssz)
+                    if len(_buf) == _ssz and any(_buf):
+                        for _cl in range(2, _ssz + 1):
+                            if _ssz % _cl != 0:
+                                continue
+                            _chunk0 = _buf[:_cl]
+                            if all(_buf[_off:_off+_cl] == _chunk0
+                                   for _off in range(_cl, _ssz, _cl)):
+                                e['_length'] = _cl
+                                break
+        for vn, e in dbuff.items():
+            if not isinstance(e, dict):
+                continue
+            _t = e.get('_type')
+            if _t not in (c_double, c_long, c_bool):
+                continue
+            _pat = f'{basename}_mp_{vn}_'
+            _sva = _sym_addr.get(_pat, 0)
+            if not _sva:
+                _sva = _sym_addr.get(vn, 0)
+                if not _sva:
+                    continue
+            if _t == c_bool:
+                _ssz_e = _sym_sz.get(_pat, 0) or _sym_sz.get(vn, 0)
+                if _ssz_e == 4:
+                    _buf4 = _read_at_vaddr(_sva, 4)
+                    if len(_buf4) == 4 and any(_buf4):
+                        _fv = struct.unpack('<f', _buf4)[0]
+                        if math.isfinite(_fv) and _fv != 0.0 \
+                                and 1e-30 < abs(_fv) < 1e30:
+                            e['_type'] = c_float
+                            e.pop('_ndims', None)
+                            e.pop('_dim',   None)
+                continue
+            _buf = _read_at_vaddr(_sva, 8)
+            if len(_buf) != 8:
+                continue
+            _dv = struct.unpack('<d', _buf)[0]
+            _iv = struct.unpack('<q', _buf)[0]
+            if _t == c_double and _dv != 0.0 and abs(_dv) < 1e-300:
+                e['_type'] = c_long
+            elif _t == c_long and _iv != 0 and _dv != 0.0 \
+                    and abs(_iv) > (1 << 50) and 1e-10 < abs(_dv) < 1e10:
+                e['_type'] = c_double
+        self._instances_derived_types.update({basename: _inst_dt})
+        dt = {k: v for k, v in dbuff.items() if isinstance(v, dict) and v.get('_is_derived')}
+        self._derived_types.update({basename: dt})
+        dbuff.update({'_filename': modpath})
+        object.__setattr__(self.modules, dbuff['_name'], dbuff)
+        return dbuff
     def _parseModuleLLVM(self, modpath, padding=True, debug=False):
-        import re
-        from os   import path
-        from math import prod
         basename = utils.fileutils.getBaseName(path.basename(modpath))
         LLVM_TYPES = { 'integer(4)' : (c_int,    4),
                        'integer(8)' : (c_long,   8),
@@ -2237,6 +3077,7 @@ class DL_DL(CDLL):
                         'ndims'           : 0,
                         'dim'             : None,
                         'is_pointer'      : is_ptr,
+                        'is_alloc'        : is_alloc,
                         'is_deferred'     : is_ptr or is_alloc,
                         'is_derived'      : False,
                         'derived'         : '',
@@ -2275,6 +3116,7 @@ class DL_DL(CDLL):
                         'ndims'           : ndims,
                         'dim'             : dim,
                         'is_pointer'      : is_ptr,
+                        'is_alloc'        : is_alloc,
                         'is_deferred'     : is_deferred,
                         'is_derived'      : False,
                         'derived'         : '',
@@ -2320,6 +3162,7 @@ class DL_DL(CDLL):
                         'ndims'      : ndims,
                         'dim'        : dim,
                         'is_pointer' : is_ptr,
+                        'is_alloc'   : is_alloc,
                         'is_deferred': is_deferred or (is_ptr and not dim and is_derived),
                         'is_derived' : is_derived,
                         'derived'    : derived_name,
@@ -2423,8 +3266,10 @@ class DL_DL(CDLL):
                 e['_length'] = mem['char_len']
             else:
                 e['_type'] = mem['ctype']
-            if mem['is_pointer']:
+            if mem['is_pointer'] or mem.get('is_alloc'):
                 e['_is_pointer'] = True
+                if mem.get('is_alloc'):
+                    e['_is_allocatable'] = True
             if mem['is_target']:
                 e['_is_target'] = True
             if mem['ndims']:
@@ -2448,8 +3293,6 @@ class DL_DL(CDLL):
         object.__setattr__(self.modules, dbuff['_name'], dbuff)
         return dbuff
     def _parseModuleNV(self, modpath, padding=True, debug=False):
-        from os    import path
-        from math  import prod
         basename = utils.fileutils.getBaseName(path.basename(modpath))
         NV_DTYPES          = {6: c_int, 7: c_long, 9: c_float, 10: c_double, 18: c_bool, 19: c_bool}
         NV_DTYPE_SIZES     = {6: 4, 7: 8, 9: 4, 10: 8, 18: 4, 19: 8}
@@ -2468,6 +3311,7 @@ class DL_DL(CDLL):
                     or name.startswith(f'{basename}$'))
         with open(modpath, 'r') as fp:
             raw_lines = fp.readlines()
+        _mod_size = sum(len(_l) for _l in raw_lines)
         header  = raw_lines[0].strip()
         version = header.split()[0]
         src_file = raw_lines[1].strip().split()[1] if len(raw_lines) > 1 else ''
@@ -2562,6 +3406,8 @@ class DL_DL(CDLL):
                 sr = s_recs.get(a.get('s_ref', -1))
                 if sr and sr['cls'] == 3:
                     return sr.get('value', None)
+            if a is None and a_id >= 10:
+                return a_id - 10
             return None
         def _resolve_char_len(d_id):
             d = d_recs.get(d_id)
@@ -2569,7 +3415,7 @@ class DL_DL(CDLL):
                 return 0
             if d['cls'] == 20:
                 v = _a_val(d['target'])
-                if v is not None and 1 <= v <= 100000:
+                if v is not None and 1 <= v <= _mod_size:
                     return v
                 d2 = d_recs.get(d['target'])
                 if d2 and d2['cls'] == 20:
@@ -2591,7 +3437,7 @@ class DL_DL(CDLL):
                        }
             d = d_recs.get(dtype_ref)
             if not d:
-                clen = _resolve_char_len(dtype_ref) if dtype_ref > 100 else 0
+                clen = _resolve_char_len(dtype_ref) if dtype_ref not in NV_DTYPES else 0
                 if clen:
                     return { 'ctype'      : c_char_p,
                              'size'       : clen,
@@ -2745,7 +3591,6 @@ class DL_DL(CDLL):
                     mem['_size']   = di['size']
                     mem['_stride'] = di['size']
                     mem['_nbytes'] = di['size']
-
                 if di['ndims'] or is_def:
                     nd = di['ndims'] or (1 if is_def else 0)
                     mem['_ndims'] = nd
@@ -2807,6 +3652,9 @@ class DL_DL(CDLL):
                 at = s.get('attr', 0)
                 if (at & NV_ATTR_POINTER) == NV_ATTR_POINTER or (fl & NV_POINTER_FLAG):
                     e['_is_pointer'] = True
+                if (at & NV_ATTR_ALLOC) == NV_ATTR_ALLOC and not e.get('_is_pointer'):
+                    e['_is_pointer'] = True
+                    e['_is_allocatable'] = True
                 if (at & NV_ATTR_TARGET) == NV_ATTR_TARGET:
                     e['_is_target'] = True
                 if di['ndims']:
@@ -2899,7 +3747,6 @@ class DL_DL(CDLL):
          return list(self._derived_types.keys())
     @staticmethod
     def hexadecimal2number(sbuff, tp, return_ctype=False):
-        from numpy import float16, float32, float64, int32, int64
         ctypes2ptypes = { c_int   : int32,
                           c_long  : int64,
                           c_float : float32,
@@ -2940,6 +3787,3 @@ setters = {
             c_bool  : DL_DL.setBool,
             str     : DL_DL.setChar,
           }
-
-
-
