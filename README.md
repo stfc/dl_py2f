@@ -68,6 +68,8 @@ Apart from the source code on the [github repository](https://github.com/stfc/dl
 
 :warning: Since Debian PPA does not allow underscore `_`, the package name published on [launchpad.net](https://launchpad.net/~dl-py2f/+archive/ubuntu/ppa) is **`dl-py2f`** but not `dl_py2f`.
 
+:warning: The PPA package (amd64 only) may lag behind the latest release, so please check the version published on [launchpad.net](https://launchpad.net/~dl-py2f/+archive/ubuntu/ppa) and use a matching revision of the [example](https://github.com/stfc/dl_py2f-example), or install from source or [PyPI](https://pypi.org/project/dl-py2f) which always track the latest release.
+
 :bulb: `sudo` access is required for installing system-wide packages using `apt`.
 
 Alternatively, `DL_PY2F` can be installed via [PyPI](https://pypi.org/project/dl-py2f) (the `pip` command):

@@ -1,3 +1,14 @@
+dl-py2f (1.4.1-0) noble; urgency=medium
+
+  * Fixed a segmentation fault in the Fortran-to-Python symbol lookup on
+    non-x86_64 architectures (e.g. aarch64) by replacing the glibc-internal
+    link_map usage with the public dynamic-section interface
+  * Made parseAllModules() skip files that are not parseable Fortran
+    module files instead of aborting
+  * Corrected and improved the JOSS paper and README
+
+ -- You Lu <you.lu@stfc.ac.uk>  Mon, 20 Jul 2026 21:53:43 +0100
+
 dl-py2f (1.1-0) noble; urgency=medium
 
   * Enabled full duplication-free mode for the Python-to-Fortran interoperability
