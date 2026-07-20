@@ -1224,6 +1224,8 @@ class DL_DL(CDLL):
                             continue
                     if to_parse:
                         mod = self.parseModule(filepath, debug=debug)
+                        if mod is None:
+                            continue
                         mods.update({mod['_name']:mod})
                         object.__setattr__(mods, mod['_name'], mod)
                         self._to_parse = True

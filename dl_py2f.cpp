@@ -21,76 +21,66 @@
 #include <dl_py2f.h>
 #include <cstdio>
 #include <string.h>
-#include <bits/stdc++.h> 
+#include <bits/stdc++.h>
 #include <fcntl.h>
-using namespace std; 
-static inline bool dl_relocate_ld(const struct dl_py2f_link_map *lm) {
-    return !(lm->l_ld_readonly || DL_RO_DYN_SECTION);
-}
-#define D_PTR(map, i) ((map)->i->d_un.d_ptr + (dl_relocate_ld (map) ? 0 : (map)->l_addr))
+using namespace std;
 static const char *tag = "dl_util";
-static uint_fast32_t dl_gnu_hash(const char *s) {
-    uint_fast32_t h = 5381;
-    for (unsigned char c = *s; c != '\0'; c = *++s)
-      h = h * 33 + c;
-    return h & 0xffffffff;
-}
 class DL_F2PY {
-    const char *dyn_tag_to_name(ElfW(Sxword) d_tag) {
-        switch (d_tag) {
-            case DT_STRTAB  : return("DT_STRTAB");
-            case DT_SYMTAB  : return("DT_SYMTAB");
-            case DT_GNU_HASH: return("DT_GNU_HASH");
-            case DT_HASH    : return("DT_HASH");
-            default: return("UNKNOWN");
-        }
-    }
-    const char *dl_py2f_get_dl_symbols(const dl_py2f_link_map *lm) {
+    const char *dl_py2f_get_dl_symbols(const struct link_map *lm) {
         const ElfW(Addr)  load_addr = lm->l_addr;
-        const char       *strtab    = (const char *) D_PTR(lm, l_info[DT_STRTAB]);
-        const ElfW(Sym)  *symtab    = (const ElfW(Sym) *) D_PTR(lm, l_info[DT_SYMTAB]);
-        const char *undef_name = " ";
-        const uint_fast32_t gnu_hash = dl_gnu_hash(undef_name);
+        const char       *strtab    = NULL;
+        const ElfW(Sym)  *symtab    = NULL;
+        const uint32_t   *gnuhash   = NULL;
+        const uint32_t   *elfhash   = NULL;
+        for (const ElfW(Dyn) *dyn = lm->l_ld; dyn->d_tag != DT_NULL; dyn++) {
+            ElfW(Addr) ptr = dyn->d_un.d_ptr;
+            if (ptr < load_addr)
+                ptr += load_addr;
+            switch (dyn->d_tag) {
+                case DT_STRTAB  : strtab  = (const char *)      ptr; break;
+                case DT_SYMTAB  : symtab  = (const ElfW(Sym) *) ptr; break;
+                case DT_GNU_HASH: gnuhash = (const uint32_t *)  ptr; break;
+                case DT_HASH    : elfhash = (const uint32_t *)  ptr; break;
+            }
+        }
         static std::string sbuff;
         sbuff = "";
+        if (strtab == NULL || symtab == NULL)
+            return sbuff.c_str();
+        size_t nsyms = 0;
+        if (elfhash != NULL) {
+            nsyms = elfhash[1];
+        } else if (gnuhash != NULL) {
+            const uint32_t  nbuckets  = gnuhash[0];
+            const uint32_t  symoffset = gnuhash[1];
+            const uint32_t  bloomsize = gnuhash[2];
+            const uint32_t *buckets   = gnuhash + 4 + bloomsize*(sizeof(ElfW(Addr))/sizeof(uint32_t));
+            const uint32_t *chains    = buckets + nbuckets;
+            uint32_t last = 0;
+            for (uint32_t ibucket = 0; ibucket < nbuckets; ibucket++)
+                if (buckets[ibucket] > last)
+                    last = buckets[ibucket];
+            if (last >= symoffset) {
+                while (!(chains[last-symoffset] & 1))
+                    last++;
+                nsyms = last + 1;
+            } else {
+                nsyms = symoffset;
+            }
+        }
         std::string sep = ";";
-        Elf_Symndx symidx;
         const char *type;
-        const ElfW(Addr) *bitmask = lm->l_gnu_bitmask;
-        if (__glibc_likely (bitmask != NULL)) {
-            ElfW(Addr) bitmask_word = bitmask[(gnu_hash/__ELF_NATIVE_CLASS) & lm->l_gnu_bitmask_idxbits];
-            unsigned int hashbit1 = gnu_hash & (__ELF_NATIVE_CLASS - 1);
-            unsigned int hashbit2 = ((gnu_hash >> lm->l_gnu_shift) & (__ELF_NATIVE_CLASS - 1));
-            if (__glibc_unlikely ((bitmask_word >> hashbit1) & (bitmask_word >> hashbit2) & 1)) {
-            }
-            Elf32_Word bucket = lm->l_gnu_buckets[gnu_hash%lm->l_nbuckets];
-            const Elf32_Word *hasharr = &lm->l_gnu_chain_zero[bucket];
-            for (symidx=1; &symtab[symidx] != NULL; symidx++) {
-                const ElfW(Sym) *const sym = &symtab[symidx];
-                type = (ELFW(ST_BIND) (sym->st_info) == STB_WEAK)       ? "STB_WEAK":
-                       (ELFW(ST_BIND) (sym->st_info) == STB_GLOBAL)     ? "STB_GLOBAL" :
-                       (ELFW(ST_BIND) (sym->st_info) == STB_GNU_UNIQUE) ? "STB_GNU_UNIQUE" : NULL;
-                if (type != NULL) {
-                    if (ELFW(ST_BIND) (sym->st_info) != STB_WEAK && sym->st_value != 0) {
-                        sbuff += strtab + sym->st_name + sep;
-                    }
-                } else {
-                    break;
+        for (size_t symidx = 1; nsyms == 0 || symidx < nsyms; symidx++) {
+            const ElfW(Sym) *const sym = &symtab[symidx];
+            type = (ELFW(ST_BIND) (sym->st_info) == STB_WEAK)       ? "STB_WEAK":
+                   (ELFW(ST_BIND) (sym->st_info) == STB_GLOBAL)     ? "STB_GLOBAL" :
+                   (ELFW(ST_BIND) (sym->st_info) == STB_GNU_UNIQUE) ? "STB_GNU_UNIQUE" : NULL;
+            if (type != NULL) {
+                if (ELFW(ST_BIND) (sym->st_info) != STB_WEAK && sym->st_value != 0) {
+                    sbuff += strtab + sym->st_name + sep;
                 }
-            }
-        } else {
-            for (symidx=1; &symtab[symidx] != NULL; symidx++) {
-                const ElfW(Sym) *const sym = &symtab[symidx];
-                type = (ELFW(ST_BIND) (sym->st_info) == STB_WEAK)       ? "STB_WEAK":
-                       (ELFW(ST_BIND) (sym->st_info) == STB_GLOBAL)     ? "STB_GLOBAL" :
-                       (ELFW(ST_BIND) (sym->st_info) == STB_GNU_UNIQUE) ? "STB_GNU_UNIQUE" : NULL;
-                if (type != NULL) {
-                    if (ELFW(ST_BIND) (sym->st_info) != STB_WEAK && sym->st_value != 0) {
-                        sbuff += strtab + sym->st_name + sep;
-                    }
-                } else {
-                    break;
-                }
+            } else {
+                break;
             }
         }
         const char *cbuff = sbuff.c_str();
@@ -104,7 +94,7 @@ class DL_F2PY {
             printf("Error[%s]: %s\n", tag, dlerror());
             return NULL;
         }
-        struct dl_py2f_link_map *lm;
+        struct link_map *lm;
         int ld_ret = dlinfo(handle, RTLD_DI_LINKMAP, &lm);
         if (ld_ret) {
             printf("Error[%s]: %s\n", tag, dlerror());
