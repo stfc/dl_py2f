@@ -1,5 +1,7 @@
 # DL_PY2F
 
+[![DOI](https://joss.theoj.org/papers/10.21105/joss.08992/status.svg)](https://doi.org/10.21105/joss.08992)
+
 # About
 
 [`DL_PY2F`](https://github.com/stfc/dl_py2f) is an open-source library for the creation of modern interfaces and data structures in Python that can interoperate with existing scientific software written in Fortran and manipulate their data.
@@ -19,7 +21,7 @@ A great advantage of `DL_PY2F` for the application developers is that the attrib
 
 Applications using `DL_PY2F` should cite:
 
-You Lu and Thomas W. Keal, *Journal of Open Source Software*, in preparation
+You Lu and Thomas W. Keal, "DL_PY2F: A library for Python-Fortran interoperability", *Journal of Open Source Software*, **11**(123), 8992 (2026). https://doi.org/10.21105/joss.08992
 
 ## Documentation
 
@@ -98,7 +100,7 @@ or NVIDIA HPC compilers
 
 The use of system installed `DL_PY2F` is also demonstrated in the [example](https://github.com/stfc/dl_py2f-example) package.
 
-For more information about the usage of `DL_PY2F` please also read the paper: [You Lu and Thomas W. Keal, *Journal of Open Source Software*, in preparation](https://joss.theoj.org/papers/).
+For more information about the usage of `DL_PY2F` please also read the paper: [You Lu and Thomas W. Keal, *Journal of Open Source Software*, **11**(123), 8992 (2026)](https://doi.org/10.21105/joss.08992).
 
 # Miscellaneous
 

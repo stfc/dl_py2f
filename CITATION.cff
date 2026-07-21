@@ -1,0 +1,38 @@
+cff-version: "1.2.0"
+authors:
+- family-names: Lu
+  given-names: You
+  orcid: "https://orcid.org/0000-0002-7524-4179"
+- family-names: Keal
+  given-names: Thomas W.
+  orcid: "https://orcid.org/0000-0001-8747-3975"
+contact:
+- family-names: Lu
+  given-names: You
+  orcid: "https://orcid.org/0000-0002-7524-4179"
+doi: 10.5281/zenodo.21479185
+message: If you use this software, please cite our article in the
+  Journal of Open Source Software.
+preferred-citation:
+  authors:
+  - family-names: Lu
+    given-names: You
+    orcid: "https://orcid.org/0000-0002-7524-4179"
+  - family-names: Keal
+    given-names: Thomas W.
+    orcid: "https://orcid.org/0000-0001-8747-3975"
+  date-published: 2026-07-21
+  doi: 10.21105/joss.08992
+  issn: 2475-9066
+  issue: 123
+  journal: Journal of Open Source Software
+  publisher:
+    name: Open Journals
+  start: 8992
+  title: "DL_PY2F: A library for Python-Fortran interoperability"
+  type: article
+  url: "https://joss.theoj.org/papers/10.21105/joss.08992"
+  volume: 11
+title: "DL_PY2F: A library for Python-Fortran interoperability"
+
+
