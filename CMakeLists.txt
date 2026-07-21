@@ -37,8 +37,8 @@ set_property(DIRECTORY ${PROJECT_BINARY_DIR}
 
 # YL 11/08/2025: rules for installation (Debian only)
 
-set(CMAKE_INSTALL_LIBDIR /lib/x86_64-linux-gnu)
-set(CMAKE_INSTALL_INCLUDEDIR /usr/include/x86_64-linux-gnu)
+set(CMAKE_INSTALL_LIBDIR /lib/${CMAKE_LIBRARY_ARCHITECTURE})
+set(CMAKE_INSTALL_INCLUDEDIR /usr/include/${CMAKE_LIBRARY_ARCHITECTURE})
 
 install(TARGETS dl_py2f
         LIBRARY
