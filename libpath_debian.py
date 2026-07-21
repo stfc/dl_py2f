@@ -1,1 +1,2 @@
-libpath = '/lib/x86_64-linux-gnu'
+from sysconfig import get_config_var
+libpath = '/lib/' + get_config_var('MULTIARCH')
