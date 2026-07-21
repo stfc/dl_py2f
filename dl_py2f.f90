@@ -416,7 +416,7 @@ module DL_PY2F
             nullify(metaObj%twodimcdbl)
             nullify(metaObj%cfuncptr)
         endif
-        call flush(6)
+        flush(6)
     endsubroutine private_finalise
     recursive subroutine assignScalar(metaObj, key, source)
         class(dictType) ,         intent(inout) :: metaObj
@@ -824,7 +824,7 @@ module DL_PY2F
         type(c_funptr)  , pointer             :: val
         if(associated(metaObj%key)) then
             if(metaObj%key.eq.key) then
-                call flush(6)
+                flush(6)
                 val => metaObj%cfuncptr
             else
                 if(.not.associated(metaObj%next)) then
@@ -837,7 +837,7 @@ module DL_PY2F
             endif
         else
             print *, '>>> DL_PY2F ERROR: keyword \"', key, '\"not found in dictionary.'
-            call flush(6)
+            flush(6)
         endif
     endfunction returnCFuncPtr
     recursive function returnPyPtr(metaObj, key) result(val)
@@ -852,7 +852,7 @@ module DL_PY2F
             endif
         else
             print *, '\n>>> DL_PY2F ERROR: keyword \"', key, '\"not found in dictionary.\n'
-            call flush(6)
+            flush(6)
         endif
     endfunction returnPyPtr
     recursive function returnSize(metaObj, key) result(size)
@@ -874,7 +874,7 @@ module DL_PY2F
         character(len=*), intent(in) :: key
         integer                      :: shp(2)
         if(associated(metaObj%key)) then
-            call flush(6)
+            flush(6)
             if(metaObj%key.eq.trim(key)) then
                 shp(1) = metaObj%sizem
                 shp(2) = metaObj%sizen
@@ -890,7 +890,7 @@ module DL_PY2F
         character(len=*), intent(in) :: key
         character(len=16)            :: type
         if(associated(metaObj%key)) then
-            call flush(6)
+            flush(6)
             if(metaObj%key.eq.trim(key)) then
                 if(associated(metaObj%onedimchar)) type = 'character'
                 if(associated(metaObj%onedimlng))  type = 'long'
